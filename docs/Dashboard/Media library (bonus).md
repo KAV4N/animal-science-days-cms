@@ -1,0 +1,1 @@
+Showcase stored media with the option to upload new media such as images and PDFs

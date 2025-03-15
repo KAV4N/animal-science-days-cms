@@ -1,0 +1,4 @@
+- Logo + text
+- current year of the page
+- Dynamically show list of the previous 5 years (Recent) in the navbar with clickable button that takes the user to -> [[Archive]]
+- Allow editors and admins to login using predefined login data and enter the Dashboard
