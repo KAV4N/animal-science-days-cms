@@ -1,0 +1,36 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Conference;
+use App\Models\MediaUserConference;
+use App\Models\User;
+use Illuminate\Http\UploadedFile;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
+
+class ConferenceMediaService
+{
+    public function addMedia(Conference $conference, UploadedFile $file, User $user, string $collection = 'conference_files')
+    {
+        $media = $conference->addMedia($file)
+            ->toMediaCollection($collection);
+        
+        MediaUserConference::create([
+            'media_id' => $media->id,
+            'user_id' => $user->id,
+            'conference_id' => $conference->id,
+        ]);
+        
+        return $media;
+    }
+    
+    public function getMediaWithUserInfo(Conference $conference, string $collection = 'conference_files')
+    {
+        return MediaUserConference::where('conference_id', $conference->id)
+            ->with(['media', 'user'])
+            ->whereHas('media', function ($query) use ($collection) {
+                $query->where('collection_name', $collection);
+            })
+            ->get();
+    }
+}
