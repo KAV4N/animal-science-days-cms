@@ -14,9 +14,9 @@ return new class extends Migration
         Schema::create('conference_editors', function (Blueprint $table) {
             $table->id();
 
-            $table->foreignId('conference_id')->constrained('conferences', 'id');
-            $table->foreignId('user_id')->constrained('users', 'id');
-            $table->foreignId('assigned_by')->constrained('users', 'id');
+            $table->foreignId('conference_id')->constrained('conferences', 'id')->cascadeOnDelete();
+            $table->foreignId('user_id')->constrained('users', 'id')->cascadeOnDelete();
+            $table->foreignId('assigned_by')->constrained('users', 'id')->cascadeOnDelete();
 
             $table->timestamp('assigned_at')->useCurrent();
 

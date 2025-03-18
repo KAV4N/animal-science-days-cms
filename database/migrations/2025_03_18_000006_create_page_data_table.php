@@ -14,9 +14,9 @@ return new class extends Migration
         Schema::create('page_data', function (Blueprint $table) {
             $table->id();
 
-            $table->foreignId('menu_id')->constrained('page_menus', 'id');
-            $table->foreignId('created_by')->constrained('users', 'id');
-            $table->foreignId(column: 'updated_by')->constrained('users', 'id');
+            $table->foreignId('menu_id')->constrained('page_menus', 'id')->cascadeOnDelete();
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
 
             $table->string('component_type');
             $table->integer('order');

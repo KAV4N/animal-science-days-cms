@@ -14,10 +14,10 @@ return new class extends Migration
         Schema::create('page_menus', function (Blueprint $table) {
             $table->id();
             
-            $table->foreignId('conference_id')->constrained('conferences', 'id');
-            $table->foreignId('created_by')->constrained('users', 'id');
-            $table->foreignId('updated_by')->constrained('users', 'id');
-            
+            $table->foreignId('conference_id')->constrained('conferences', 'id')->cascadeOnDelete();
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
+
             $table->string('title');
             $table->string('slug');
 

@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('conferences', function (Blueprint $table) {
             $table->id();
 
-            $table->foreignId('university_id')->constrained('universities', 'id');
-            $table->foreignId('created_by')->constrained('users', 'id');
+            $table->foreignId('university_id')->constrained('universities', 'id')->cascadeOnDelete();
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
 
             $table->string('title');
             $table->string('slug')->unique();
