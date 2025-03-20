@@ -9,7 +9,7 @@ export default {
 
 <template>
     <div class="card flex justify-center align-center pt-4">
-      <Button label="Click" />
+      <Button label="CLICK FOR TEST" />
     </div>
   </template>
 
