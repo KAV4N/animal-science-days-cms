@@ -27,5 +27,11 @@ return new class extends Migration
             
             $table->nullableTimestamps();
         });
+
+        Schema::table('media', function (Blueprint $table) {
+            $table->foreignId('uploaded_by')->nullable()->constrained('users')->nullOnDelete();
+        });
+
+
     }
 };

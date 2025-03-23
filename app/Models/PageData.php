@@ -3,9 +3,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
-class PageData extends Model
+class PageData extends Model implements HasMedia
 {
+
+    use InteractsWithMedia;
+
     protected $fillable = [
         'menu_id',
         'component_type',
@@ -23,6 +28,6 @@ class PageData extends Model
 
     public function pageMenu(): BelongsTo
     {
-        return $this->belongsTo(PageMenu::class, 'menu_id', 'id');
+        return $this->belongsTo(related: PageMenu::class, foreignKey: 'menu_id', ownerKey: 'id');
     }
 }
