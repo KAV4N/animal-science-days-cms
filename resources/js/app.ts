@@ -6,6 +6,7 @@ import { createApp, h } from 'vue';
 import { ZiggyVue } from 'ziggy-js';
 import PrimeVue from 'primevue/config';
 import { primevueConfig } from './primevue-config';
+import 'primeicons/primeicons.css'
 
 
 declare module 'vite/client' {
