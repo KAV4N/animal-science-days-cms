@@ -56,10 +56,6 @@ class User extends Authenticatable
         return $this->hasMany(ConferenceEditor::class, 'assigned_by', 'id');
     }
 
-    public function mediaUserConference()
-    {
-        return $this->hasMany(MediaUserConference::class, 'user_id', 'id');
-    }
 
     /**
      * Get the attributes that should be cast.
