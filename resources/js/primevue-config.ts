@@ -668,7 +668,7 @@ const defaultTheme = definePreset(Aura, {
       preset: defaultTheme,
       options: {
         prefix: 'p',
-        darkModeSelector: false || 'none',
+        darkModeSelector: 'system',
         cssLayer: {
           name: 'primevue',
           order: 'tailwind-base, primevue, tailwind-utilities'

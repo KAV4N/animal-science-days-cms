@@ -105,16 +105,16 @@ export default defineComponent({
 
 <template>
   <nav class="landing-container fixed top-4 left-1/2 -translate-x-1/2 w-full z-[1000] transition-all duration-300 "
-    :class="{ 'lg:max-w-[1190px] backdrop-blur-[10px]': !isScrolled, 'md:min-w-[360px] max-w-[320px] md:max-w-[720px] lg:max-w-[900px] backdrop-blur-[5px]': isScrolled }">
+    :class="{ 'lg:max-w-[1190px] backdrop-blur-[5px]': !isScrolled, 'md:min-w-[360px] max-w-[320px] md:max-w-[720px] lg:max-w-[900px] backdrop-blur-[5px]': isScrolled }">
     <div
       class="py-2 pl-4 md:pl-7 pr-4 rounded-3xl lg:rounded-full border border-transparent transition-all duration-300"
-      :class="{ 'bg-white/60  shadow-lg ': isScrolled }">
+      :class="{ 'bg-surface-200/60  shadow-lg ': isScrolled }">
       <div class="flex items-center justify-between">
         <!-- Logo section -->
         <div class="flex-1 flex">
           <a href="/" class="w-fit">
             <div class="flex items-center">
-              <img class="h-8 w-auto" src="/school-logo.png" alt="School Conference Logo" />
+              <img class="h-10 w-auto" src="/school-logo.png" alt="School Conference Logo" />
               <span class="ml-3 font-bold text-lg hidden sm:block"
                 :class="{ 'text-white': !isScrolled, 'text-gray-800': isScrolled }">CMS</span>
             </div>

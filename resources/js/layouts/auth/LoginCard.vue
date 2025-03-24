@@ -39,10 +39,10 @@ export default defineComponent({
     modal
   >
     <template #container="{ closeCallback }">
-      <div class="flex flex-col px-8 py-8 gap-6 rounded-2xl" style="background-image: radial-gradient(circle at left top, var(--p-primary-400), var(--p-primary-700))">
+      <div class="flex flex-col px-8 py-8 gap-6 rounded-2xl" style="background-image: radial-gradient(circle at left top, var(--p-surface-400), var(--p-surface-700))">
         <img src="/school-logo.png" alt="School Logo" class="block mx-auto h-20 w-auto" />
         <div class="inline-flex flex-col gap-2">
-          <label for="username" class="primary-0 font-semibold text-primary-50">Username</label>
+          <label for="username" class="primary-0 font-semibold text-surface-50">Username</label>
           <InputText id="username" class="!bg-white/20 !border-0 !p-4 !text-primary-50 w-80"></InputText>
         </div>
         <div class="inline-flex flex-col gap-2">
