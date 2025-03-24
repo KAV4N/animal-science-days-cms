@@ -11,5 +11,5 @@ export default {
     theme: {
         extend: {},
       },
-    plugins: [require('tailwindcss-animate')],
+    plugins: [require('tailwindcss-animate'), require('tailwindcss-primeui')],
 };
