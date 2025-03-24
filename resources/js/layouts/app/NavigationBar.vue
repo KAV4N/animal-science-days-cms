@@ -104,10 +104,10 @@ export default defineComponent({
 
 <template>
   <nav
-    class="landing-container fixed top-4 left-1/2 transform -translate-x-1/2 w-full z-[1000] transition-all duration-300 md:min-w-[360px] max-w-[320px] md:max-w-[720px] lg:max-w-[900px]">
+    class="landing-container fixed top-4 left-1/2 -translate-x-1/2 w-full z-[1000] transition-all duration-300 " :class="{ 'lg:max-w-[1190px] backdrop-blur-[10px]': !isScrolled, 'md:min-w-[360px] max-w-[320px] md:max-w-[720px] lg:max-w-[900px] backdrop-blur-[5px]': isScrolled }">
     <div
-      class="py-4 pl-4 md:pl-7 pr-4 rounded-3xl lg:rounded-full border border-transparent transition-all duration-300 "
-      :class="{ ' py-2 lg:py-2': isScrolled, '': !isScrolled, 'bg-white/80 rounded-3xl lg:rounded-full ': isScrolled }">
+      class="py-2 pl-4 md:pl-7 pr-4 rounded-3xl lg:rounded-full border border-transparent transition-all duration-300"
+      :class="{ 'bg-white/60  shadow-lg ': isScrolled}">
       <div class="flex items-center justify-between">
         <!-- Logo section -->
         <div class="flex-1 flex">
@@ -153,17 +153,17 @@ export default defineComponent({
           </li>
         </ul>
 
-        <!-- Login/Register buttons -->
+        <!-- Login buttons -->
         <div class="flex-1 hidden md:flex items-center justify-end gap-4">
-          <Button icon="pi pi-key" severity="secondary" variant="text" rounded aria-label="Bookmark"
-            @click="handleLogin" class="transition-all duration-200"
-            :class="{ 'bg-white': !isScrolled, 'bg-gray-100  hover:bg-indigo-50': isScrolled }">
+          <Button @click="handleLogin" variant="outlined"
+            class="flex items-center rounded-full transition-all duration-200"
+            :class="{ 'text-white border-none hover:bg-white/20': !isScrolled, 'bg-white/60 text-gray-800 hover:bg-gray-200': isScrolled }">
+            <i class="pi pi-key text-sm"></i>
           </Button>
         </div>
-
         <!-- Mobile menu button -->
         <button @click="toggleMobileMenu"
-          class="flex md:hidden items-center justify-center rounded-lg w-9 h-9 border transition-all"
+          class="flex md:hidden items-center justify-center rounded-lg w-9 h-9 border transition-all" 
           :class="{ 'text-white border-white/30 hover:bg-white/20': !isScrolled, 'text-gray-800 border-gray-200 hover:bg-gray-100': isScrolled }">
           <i class="leading-none pi pi-bars"></i>
         </button>
@@ -206,10 +206,13 @@ export default defineComponent({
             </li>
           </ul>
           <div class="flex flex-col items-center gap-4 pb-4">
-            <Button @click="handleLogin" class="rounded-full py-2 w-full transition-all duration-200"
-              :class="{ 'bg-white text-indigo-600 hover:bg-indigo-50': !isScrolled, 'bg-gray-100 text-indigo-600 hover:bg-indigo-50': isScrolled }">
-              Login
-            </Button>
+            <button @click="handleLogin" 
+  class="flex items-center py-2 px-4 w-full rounded-lg hover:bg-white/20 transition-all text-left"
+  :class="{ 'text-white': !isScrolled, 'text-gray-800': isScrolled }">
+  <i class="pi pi-key mr-2"></i>
+  Login
+</button>
+
           </div>
         </div>
       </div>
