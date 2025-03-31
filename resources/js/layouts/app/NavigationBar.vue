@@ -40,7 +40,7 @@ export default defineComponent({
       user: null as User | null,
       conferences: [] as Conference[],
       isScrolled: false,
-      loginCardVisible : false,
+      loginCardVisible: false,
       items: [
         {
           label: 'Home',
@@ -58,7 +58,7 @@ export default defineComponent({
           url: '/schedule'
         },
         {
-          label: 'Previous Conferences',
+          label: 'Conferences',
           icon: 'pi pi-history',
           items: conferenceItems,
           badge: conferenceItems.length.toString(),
@@ -91,13 +91,10 @@ export default defineComponent({
     }
   },
   mounted() {
-    // Add scroll event listener
     window.addEventListener('scroll', this.handleScroll);
-    // Initial check for scroll position
     this.handleScroll();
   },
   beforeUnmount() {
-    // Remove scroll event listener
     window.removeEventListener('scroll', this.handleScroll);
   }
 });
@@ -105,47 +102,49 @@ export default defineComponent({
 
 <template>
   <nav class="landing-container fixed top-4 left-1/2 -translate-x-1/2 w-full z-[1000] transition-all duration-300 "
-    :class="{ 'lg:max-w-[1190px] backdrop-blur-[5px]': !isScrolled, 'md:min-w-[360px] max-w-[320px] md:max-w-[720px] lg:max-w-[900px] backdrop-blur-[5px]': isScrolled }">
+    :class="{ 'lg:max-w-[1190px] backdrop-blur-[5px]': !isScrolled, 'md:max-w-[720px] lg:max-w-[900px] backdrop-blur-[5px]': isScrolled }">
     <div
-      class="py-2 pl-4 md:pl-7 pr-4 rounded-3xl lg:rounded-full border border-transparent transition-all duration-300"
-      :class="{ 'bg-surface-200/60  shadow-lg ': isScrolled }">
+      class="py-2 pl-4 md:pl-4 pr-4 rounded-3xl md:rounded-full lg:rounded-full border border-transparent transition-all duration-300"
+      :class="{ 'bg-surface-200/60 shadow-lg': isScrolled }">
       <div class="flex items-center justify-between">
-        <!-- Logo section -->
-        <div class="flex-1 flex">
-          <a href="/" class="w-fit">
-            <div class="flex items-center">
-              <img class="h-10 w-auto" src="/school-logo.png" alt="School Conference Logo" />
-              <span class="ml-3 font-bold text-lg hidden sm:block"
-                :class="{ 'text-white': !isScrolled, 'text-gray-800': isScrolled }">CMS</span>
-            </div>
+
+        <div class="flex items-center min-w-0">
+          <a href="/" class="w-fit flex items-center">
+            <img class="h-10 w-auto flex-shrink-0" src="/school-logo.png" alt="School Conference Logo" />
           </a>
         </div>
 
-        <!-- Desktop navigation links -->
-        <ul class="flex-none hidden md:flex items-center gap-2">
+        <ul class="flex-none hidden md:flex items-center gap-2 mx-4">
           <li v-for="item in items" :key="item.label" class="relative">
             <a v-if="!item.items" :href="item.url"
-              class="hover:bg-white/20 rounded-full px-4 py-2 transition-all flex items-center"
+              class="hover:bg-white/20 rounded-full px-4 py-2 transition-all flex items-center whitespace-nowrap"
               :class="{ 'text-white': !isScrolled, 'text-gray-800': isScrolled }">
               <i v-if="item.icon" :class="[item.icon, 'mr-2']"></i>
               <span>{{ item.label }}</span>
-              <Badge v-if="(item as any).badge" class="ml-2" :value="(item as any).badge" severity="warning" />
+              <Badge v-if="(item as any).badge" class="ml-2 flex-shrink-0" :value="(item as any).badge"
+                severity="warning" />
             </a>
 
-            <div v-else class="relative group">
-              <a href="#" class="hover:bg-white/20 rounded-full px-4 py-2 transition-all flex items-center"
-                :class="{ 'text-white': !isScrolled, 'text-gray-800': isScrolled }">
+            <div v-else class="relative">
+              <button @click="item.isOpen = !item.isOpen"
+                class="hover:bg-white/20 rounded-full px-4 py-2 transition-all flex items-center whitespace-nowrap"
+                :class="[
+                  { 'text-white': !isScrolled, 'text-gray-800': isScrolled },
+                  { 'bg-white/20': item.isOpen }
+                ]">
                 <i v-if="item.icon" :class="[item.icon, 'mr-2']"></i>
                 <span>{{ item.label }}</span>
-                <Badge v-if="(item as any).badge" class="ml-2" :value="(item as any).badge" severity="warning" />
+                <Badge v-if="(item as any).badge" class="ml-2 flex-shrink-0" :value="(item as any).badge"
+                  severity="warning" />
                 <i class="pi pi-angle-down ml-2"></i>
-              </a>
-              <!-- Dropdown menu -->
-              <div
-                class="absolute left-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 hidden group-hover:block z-10">
+              </button>
+
+              <div v-if="item.isOpen" class="absolute left-2 mt-2 w-48 rounded-md shadow-lg z-10  backdrop-blur-[5px]"
+                :class="{ 'bg-white/20 text-white': !isScrolled, 'bg-surface-200/60 text-gray-800': isScrolled }">
                 <div class="py-1">
                   <a v-for="subItem in item.items" :key="subItem.label" :href="subItem.url"
-                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                    class="block px-4 py-2 text-sm hover:bg-white/20 transition-all"
+                    :class="{ 'text-white': !isScrolled, 'text-gray-800': isScrolled }">
                     {{ subItem.label }}
                   </a>
                 </div>
@@ -154,23 +153,21 @@ export default defineComponent({
           </li>
         </ul>
 
-        <!-- Login buttons -->
-        <div class="flex-1 hidden md:flex items-center justify-end gap-4">
+        <div class="md:flex hidden items-center justify-end gap-4 min-w-0">
           <Button @click="showLogin" variant="outlined"
-            class="flex items-center rounded-full transition-all duration-200"
+            class="flex items-center rounded-full transition-all duration-200 flex-shrink-0"
             :class="{ 'text-white border-none hover:bg-white/20': !isScrolled, 'bg-white/60 text-gray-800 hover:bg-gray-200': isScrolled }">
             <i class="pi pi-key text-sm"></i>
           </Button>
         </div>
-        <!-- Mobile menu button -->
+
         <button @click="toggleMobileMenu"
-          class="flex md:hidden items-center justify-center rounded-lg w-9 h-9 border transition-all"
+          class="flex md:hidden items-center justify-center rounded-lg w-9 h-9 border transition-all flex-shrink-0"
           :class="{ 'text-white border-white/30 hover:bg-white/20': !isScrolled, 'text-gray-800 border-gray-200 hover:bg-gray-100': isScrolled }">
           <i class="leading-none pi pi-bars"></i>
         </button>
       </div>
 
-      <!-- Mobile menu -->
       <div class="md:hidden block transition-all duration-300 ease-out overflow-hidden"
         :style="{ maxHeight: isMobileMenuOpen ? '500px' : '0px', opacity: isMobileMenuOpen ? '1' : '0' }">
         <div class="flex flex-col gap-8 transition-all pt-4">
@@ -186,7 +183,7 @@ export default defineComponent({
 
               <div v-else>
                 <button @click="item.isOpen = !item.isOpen"
-                  class="flex items-center justify-between py-2 px-4 w-full rounded-lg hover:bg-white/20 transition-all"
+                  class="flex items-center justify-between py-2 px-4 w-full  rounded-full hover:bg-white/20 transition-all"
                   :class="{ 'text-white': !isScrolled, 'text-gray-800': isScrolled }">
                   <div class="flex items-center">
                     <i v-if="item.icon" :class="[item.icon, 'mr-2']"></i>
@@ -195,7 +192,7 @@ export default defineComponent({
                   </div>
                   <i class="pi pi-angle-down"></i>
                 </button>
-                <!-- Mobile dropdown -->
+
                 <div v-if="item.isOpen" class="pl-4 mt-1">
                   <a v-for="subItem in item.items" :key="subItem.label" :href="subItem.url"
                     class="block py-2 px-4 rounded-lg hover:bg-white/20 transition-all"
@@ -218,11 +215,8 @@ export default defineComponent({
       </div>
     </div>
   </nav>
-<!-- Login Dialog Component -->
-  <LoginCard 
-    v-model:visible="loginCardVisible"
-    @login="handleLoginSubmit"
-  />
+
+  <LoginCard v-model:visible="loginCardVisible" @login="handleLoginSubmit" />
 </template>
 
 <style scoped>
