@@ -1,1 +1,0 @@
-Dynamically shows the latest Year page
