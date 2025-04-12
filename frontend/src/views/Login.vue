@@ -1,134 +1,72 @@
 <template>
-    <div class="login-container">
+    <div>
       <h1>Login</h1>
       
-      <div v-if="authStore.getErrors.general" class="error-message">
-        {{ authStore.getErrors.general[0] }}
+      <div v-if="store.error" class="error">
+        {{ store.error }}
       </div>
       
-      <form @submit.prevent="login">
-        <div class="form-group">
-          <label for="email">Email</label>
+      <form @submit.prevent="handleLogin">
+        <div>
+          <label for="email">Email:</label>
           <input 
             type="email" 
             id="email" 
-            v-model="form.email" 
-            required 
-            autocomplete="email"
+            v-model="email" 
+            required
           />
-          <div v-if="authStore.getErrors.email" class="field-error">
-            {{ authStore.getErrors.email[0] }}
-          </div>
         </div>
         
-        <div class="form-group">
-          <label for="password">Password</label>
+        <div>
+          <label for="password">Password:</label>
           <input 
             type="password" 
             id="password" 
-            v-model="form.password" 
-            required 
-            autocomplete="current-password"
+            v-model="password" 
+            required
           />
-          <div v-if="authStore.getErrors.password" class="field-error">
-            {{ authStore.getErrors.password[0] }}
-          </div>
         </div>
         
-        <div class="actions">
-          <button type="submit" :disabled="authStore.isLoading">
-            {{ authStore.isLoading ? 'Logging in...' : 'Login' }}
-          </button>
-        </div>
+        <button type="submit" :disabled="store.loading">
+          {{ store.loading ? 'Logging in...' : 'Login' }}
+        </button>
       </form>
       
-      <div class="links">
-        <router-link to="/register">Don't have an account? Register</router-link>
+      <div>
+        Don't have an account? 
+        <router-link to="/register">Register</router-link>
       </div>
     </div>
   </template>
   
-  <script>
-  import { defineComponent, reactive } from 'vue';
-  import { useAuthStore } from '../stores/auth';
+  <script lang="ts">
+  import { useAuthStore } from '@/stores/auth';
   
-  export default defineComponent({
+  export default {
     name: 'LoginView',
     
-    setup() {
-      const authStore = useAuthStore();
-      
-      // Reset any previous errors when component mounts
-      authStore.resetErrors();
-      
-      const form = reactive({
-        email: '',
-        password: ''
-      });
-      
-      const login = async () => {
-        await authStore.login({
-          email: form.email,
-          password: form.password
-        });
-      };
-      
+    data() {
       return {
-        authStore,
-        form,
-        login
+        email: '',
+        password: '',
+        store: useAuthStore(),
       };
+    },
+    
+    methods: {
+      async handleLogin() {
+        try {
+          await this.store.login(this.email, this.password);
+          
+          // Store login state in localStorage to persist through page refresh
+          localStorage.setItem('isLoggedIn', 'true');
+          
+          // Redirect to dashboard after successful login
+          this.$router.push({ name: 'dashboard' });
+        } catch (error) {
+          console.error('Login failed', error);
+        }
+      }
     }
-  });
+  };
   </script>
-  
-  <style scoped>
-  .login-container {
-    max-width: 400px;
-    margin: 0 auto;
-    padding: 20px;
-  }
-  
-  .form-group {
-    margin-bottom: 15px;
-  }
-  
-  .form-group label {
-    display: block;
-    margin-bottom: 5px;
-  }
-  
-  .form-group input {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-  }
-  
-  .error-message, .field-error {
-    color: red;
-    margin: 5px 0;
-  }
-  
-  .actions {
-    margin-top: 20px;
-  }
-  
-  button {
-    padding: 8px 16px;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-  
-  button:disabled {
-    background-color: #cccccc;
-    cursor: not-allowed;
-  }
-  
-  .links {
-    margin-top: 20px;
-  }
-  </style>

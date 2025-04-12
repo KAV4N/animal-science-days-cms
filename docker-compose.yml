@@ -1,82 +1,71 @@
 version: '3.8'
 
 services:
-  # Backend - Laravel
+  # Laravel Backend Service
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile
-    container_name: laravel-app
-    restart: unless-stopped
+      dockerfile: ../docker/php/Dockerfile
+    container_name: laravel-backend
     volumes:
-      - ./backend:/var/www/html:delegated
-      - ./backend/vendor:/var/www/html/vendor:delegated
+      - ./backend:/var/www/html
+    depends_on:
+      - db
     networks:
       - app-network
-    depends_on:
-      - database
 
-  # Frontend - Vue
+  # Node Frontend Service
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
-    container_name: vue-app
-    restart: unless-stopped
+      dockerfile: ../docker/node/Dockerfile
+    container_name: node-frontend
     volumes:
-      - ./frontend:/app:delegated
+      - ./frontend:/app
       - /app/node_modules
     ports:
-      - "5173:5173" 
+      - "5173:5173"
     networks:
       - app-network
-    environment:
-      - CHOKIDAR_USEPOLLING=true 
-      - NODE_ENV=development
 
-  # Nginx - Web Server
+  # Nginx Service
   nginx:
-    image: nginx:alpine
-    container_name: nginx
-    restart: unless-stopped
+    build:
+      context: ./docker/nginx
+      dockerfile: Dockerfile
+    container_name: nginx-proxy
     ports:
       - "80:80"
     volumes:
-      - ./backend:/var/www/html:delegated
-      - ./nginx/conf.d:/etc/nginx/conf.d
-    networks:
-      - app-network
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+      - ./backend:/var/www/html
     depends_on:
       - backend
       - frontend
+    networks:
+      - app-network
 
-  # MySQL - Database
-  database:
+  # MySQL Service
+  db:
     image: mysql:8.0
-    container_name: mysql
+    container_name: mysql-db
     restart: unless-stopped
     ports:
       - "3306:3306"
     environment:
       MYSQL_DATABASE: ${DB_DATABASE}
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
       MYSQL_USER: ${DB_USERNAME}
-      SERVICE_TAGS: dev
-      SERVICE_NAME: mysql
+      MYSQL_PASSWORD: ${DB_PASSWORD}
     volumes:
-      - mysql-data:/var/lib/mysql
+      - dbdata:/var/lib/mysql
     networks:
       - app-network
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-p${DB_PASSWORD}"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
 
 networks:
   app-network:
     driver: bridge
 
 volumes:
-  mysql-data:
+  dbdata:
+    driver: local

@@ -1,29 +1,71 @@
-import { createRouter, createWebHistory } from 'vue-router';
-import { useAuthStore } from '../stores/auth';
+// src/router/index.ts
+import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
 
-// Components
-import Login from '../views/Login.vue';
-import Register from '../views/Register.vue';
-import Dashboard from '../views/Dashboard.vue';
+import Home from '@/views/Home.vue';
+import Login from '@/views/Login.vue';
+import Register from '@/views/Register.vue';
+import Dashboard from '@/views/Dashboard.vue';
+import EditorPage from '@/views/EditorPage.vue';
+import AdminPage from '@/views/AdminPage.vue';
+import SuperAdminPage from '@/views/SuperAdminPage.vue';
 
-const routes = [
+const routes: Array<RouteRecordRaw> = [
+  {
+    path: '/',
+    name: 'home',
+    component: Home
+  },
   {
     path: '/login',
     name: 'login',
     component: Login,
-    meta: { guestOnly: true }
+    meta: { 
+      requiresGuest: true 
+    }
   },
   {
     path: '/register',
     name: 'register',
     component: Register,
-    meta: { guestOnly: true }
+    meta: { 
+      requiresGuest: true 
+    }
   },
   {
     path: '/dashboard',
     name: 'dashboard',
     component: Dashboard,
-    meta: { requiresAuth: true }
+    meta: { 
+      requiresAuth: true 
+    }
+  },
+  {
+    path: '/editor',
+    name: 'editor',
+    component: EditorPage,
+    meta: { 
+      requiresAuth: true,
+      permission: 'access.editor'
+    }
+  },
+  {
+    path: '/admin',
+    name: 'admin',
+    component: AdminPage,
+    meta: { 
+      requiresAuth: true,
+      permission: 'access.admin'
+    }
+  },
+  {
+    path: '/super-admin',
+    name: 'super-admin',
+    component: SuperAdminPage,
+    meta: { 
+      requiresAuth: true,
+      permission: 'access.super_admin'
+    }
   }
 ];
 
@@ -32,25 +74,28 @@ const router = createRouter({
   routes
 });
 
-// Navigation guards
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
-  
-  // If no user is loaded yet, try to fetch user data
-  if (!authStore.isAuthenticated && !to.meta.guestOnly) {
-    await authStore.fetchUser();
+  if (!authStore.user && localStorage.getItem('isLoggedIn') === 'true') {
+    try {
+      await authStore.fetchCurrentUser();
+    } catch (error) {
+      localStorage.removeItem('isLoggedIn');
+    }
   }
   
-  // Check if route requires authentication
-  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    next({ name: 'login' });
-    return;
+  if (to.matched.some(record => record.meta.requiresAuth)) {
+    if (!authStore.isAuthenticated) {
+      return next({ name: 'login' });
+    }
+    
+    if (to.meta.permission && !authStore.permissions.includes(to.meta.permission as string)) {
+      return next({ name: 'dashboard' });
+    }
   }
   
-  // Check if route is for guests only (like login, register)
-  if (to.meta.guestOnly && authStore.isAuthenticated) {
-    next({ name: 'dashboard' });
-    return;
+  if (to.matched.some(record => record.meta.requiresGuest) && authStore.isAuthenticated) {
+    return next({ name: 'dashboard' });
   }
   
   next();

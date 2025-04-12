@@ -1,6 +1,6 @@
+// src/stores/auth.ts
 import { defineStore } from 'pinia';
-import api, { getCsrfToken } from '../utils/api';
-import router from '../router';
+import apiService from '@/services/apiService';
 
 interface User {
   id: number;
@@ -8,147 +8,141 @@ interface User {
   email: string;
 }
 
-interface LoginCredentials {
-  email: string;
-  password: string;
-}
-
-interface RegisterData {
-  name: string;
-  email: string;
-  password: string;
-  password_confirmation: string;
-}
-
 interface AuthState {
   user: User | null;
-  authenticated: boolean;
+  roles: string[];
+  permissions: string[];
+  isAuthenticated: boolean;
   loading: boolean;
-  errors: Record<string, string[]>;
+  error: string | null;
 }
 
 export const useAuthStore = defineStore('auth', {
   state: (): AuthState => ({
     user: null,
-    authenticated: false,
+    roles: [],
+    permissions: [],
+    isAuthenticated: false,
     loading: false,
-    errors: {}
+    error: null
   }),
   
   getters: {
-    isAuthenticated: (state) => state.authenticated,
-    getUser: (state) => state.user,
-    isLoading: (state) => state.loading,
-    getErrors: (state) => state.errors
+    isEditor: (state) => state.roles.includes('editor'),
+    isAdmin: (state) => state.roles.includes('admin'),
+    isSuperAdmin: (state) => state.roles.includes('super_admin'),
+    
+    hasEditorAccess: (state) => state.permissions.includes('access.editor'),
+    hasAdminAccess: (state) => state.permissions.includes('access.admin'),
+    hasSuperAdminAccess: (state) => state.permissions.includes('access.super_admin'),
+    
+    currentUser: (state) => state.user
   },
   
   actions: {
-    // Reset errors
-    resetErrors() {
-      this.errors = {};
-    },
-    
-    // Register a new user
-    async register(data: RegisterData) {
+    async register(name: string, email: string, password: string, passwordConfirmation: string) {
+      this.loading = true;
+      this.error = null;
+      
       try {
-        this.loading = true;
-        this.resetErrors();
+        const response = await apiService.auth.register(
+          name, 
+          email, 
+          password, 
+          passwordConfirmation
+        );
         
-        // Get CSRF token first
-        await getCsrfToken();
-        console.log(data);
+        const { user, roles, permissions } = response.data.data;
         
-        // Register request
-        const response = await api.post('/register', data);
+        this.user = user;
+        this.roles = roles;
+        this.permissions = permissions;
+        this.isAuthenticated = true;
         
-        if (response.status === 201) {
-          this.authenticated = true;
-          this.user = response.data.user;
-          router.push({ name: 'dashboard' });
-          return true;
-        }
-        return false;
+        return response;
       } catch (error: any) {
-        if (error.response && error.response.data && error.response.data.errors) {
-          this.errors = error.response.data.errors;
-        } else {
-          this.errors = { general: ['An unexpected error occurred'] };
-        }
-        return false;
+        this.error = error.response?.data?.message || 'Registration failed';
+        throw error;
       } finally {
         this.loading = false;
       }
     },
     
-    // Login user
-    async login(credentials: LoginCredentials) {
+    async login(email: string, password: string) {
+      this.loading = true;
+      this.error = null;
+      
       try {
-        this.loading = true;
-        this.resetErrors();
+        const response = await apiService.auth.login(email, password);
         
-        // Get CSRF token first
-        await getCsrfToken();
+        const { user, roles, permissions } = response.data.data;
         
-        // Login request
-        const response = await api.post('/login', credentials);
+        this.user = user;
+        this.roles = roles;
+        this.permissions = permissions;
+        this.isAuthenticated = true;
         
-        if (response.status === 200) {
-          this.authenticated = true;
-          this.user = response.data.user;
-          router.push({ name: 'dashboard' });
-          return true;
-        }
-        return false;
+        return response;
       } catch (error: any) {
-        if (error.response && error.response.status === 401) {
-          this.errors = { 
-            email: ['These credentials do not match our records.'] 
-          };
-        } else if (error.response && error.response.data && error.response.data.errors) {
-          this.errors = error.response.data.errors;
-        } else {
-          this.errors = { general: ['An unexpected error occurred'] };
-        }
-        return false;
+        this.error = error.response?.data?.message || 'Login failed';
+        throw error;
       } finally {
         this.loading = false;
       }
     },
     
-    // Logout user
     async logout() {
+      this.loading = true;
+      this.error = null;
+      
       try {
-        this.loading = true;
-        await api.post('/logout');
+        const response = await apiService.auth.logout();
+        
         this.user = null;
-        this.authenticated = false;
-        router.push({ name: 'login' });
-        return true;
-      } catch (error) {
-        console.error('Logout failed:', error);
-        return false;
+        this.roles = [];
+        this.permissions = [];
+        this.isAuthenticated = false;
+        
+        return response;
+      } catch (error: any) {
+        this.error = error.response?.data?.message || 'Logout failed';
+        throw error;
       } finally {
         this.loading = false;
       }
     },
     
-    // Fetch authenticated user
-    async fetchUser() {
+    async fetchCurrentUser() {
+      this.loading = true;
+      this.error = null;
+      
       try {
-        this.loading = true;
-        const response = await api.get('/user');
-        if (response.status === 200) {
-          this.user = response.data;
-          this.authenticated = true;
-          return true;
-        }
-        return false;
-      } catch (error) {
-        this.user = null;
-        this.authenticated = false;
-        return false;
+        const response = await apiService.auth.getCurrentUser();
+        
+        const { user, roles, permissions } = response.data.data;
+        
+        this.user = user;
+        this.roles = roles;
+        this.permissions = permissions;
+        this.isAuthenticated = true;
+        
+        return response;
+      } catch (error: any) {
+        this.error = error.response?.data?.message || 'Failed to fetch user';
+        this.isAuthenticated = false;
+        throw error;
       } finally {
         this.loading = false;
+      }
+    },
+    
+    async checkAccess(accessType: string) {
+      try {
+        const response = await apiService.access.check(accessType);
+        return response.data;
+      } catch (error) {
+        console.error(`Access check failed for ${accessType}`, error);
+        throw error;
       }
     }
   }
