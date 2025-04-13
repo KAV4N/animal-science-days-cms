@@ -14,27 +14,33 @@ class LoginController extends Controller
      */
     public function __invoke(LoginRequest $request): JsonResponse
     {
-        if (!Auth::attempt($request->only('email', 'password'))) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Invalid credentials'
-            ], 401);
+        try {
+            if (Auth::attempt($request->only('email', 'password'))) {
+                $request->session()->regenerate();
+               
+                $user = Auth::user();
+        
+                $roles = $user->roles->pluck('name');
+                $permissions = $user->getAllPermissions()->pluck('name');
+
+               
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Login successful',
+                    'data' => [
+                        'user' => $user,
+                        'roles' => $roles,
+                        'permissions' => $permissions
+                    ]
+                ], 200);
+            }
+
+            return response()->json(['message' => 'Invalid credentials'], 401);
+        } catch (ValidationException $e) {
+            return response()->json(['errors' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 500);
         }
 
-        $request->session()->regenerate();
-        $user = Auth::user();
-        
-        $roles = $user->roles->pluck('name');
-        $permissions = $user->getAllPermissions()->pluck('name');
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Successfully authenticated',
-            'data' => [
-                'user' => $user,
-                'roles' => $roles,
-                'permissions' => $permissions
-            ]
-        ], 200);
     }
 }

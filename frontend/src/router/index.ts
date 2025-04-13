@@ -44,7 +44,7 @@ const routes: Array<RouteRecordRaw> = [
     path: '/admin',
     name: 'admin',
     component: AdminPage,
-    //beforeEnter: middleware.permission('access.admin')
+    beforeEnter: middleware.permission('access.admin')
   },
   {
     path: '/super-admin',

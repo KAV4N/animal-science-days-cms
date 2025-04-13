@@ -14,30 +14,37 @@ class RegisterController extends Controller
     /**
      * Handle the incoming request.
      */
+    // TODO: Remove automatic login in the future bc when admin creates new user, then the user should not be automatically logged in
     public function __invoke(RegisterRequest $request): JsonResponse
     {
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
+        try {
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+            ]);
 
-        $user->assignRole('editor'); 
+            $user->assignRole('editor'); 
 
-        Auth::login($user);
-        $request->session()->regenerate();
-        
-        $roles = $user->roles->pluck('name');
-        $permissions = $user->getAllPermissions()->pluck('name');
+            Auth::login($user);
+            $request->session()->regenerate();
+            
+            $roles = $user->roles->pluck('name');
+            $permissions = $user->getAllPermissions()->pluck('name');
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'User registered successfully',
-            'data' => [
-                'user' => $user,
-                'roles' => $roles,
-                'permissions' => $permissions
-            ]
-        ], 201);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'User registered successfully',
+                'data' => [
+                    'user' => $user,
+                    'roles' => $roles,
+                    'permissions' => $permissions
+                ]
+            ], 201);
+        } catch (ValidationException $e) {
+            return response()->json(['errors' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 500);
+        }
     }
 }

@@ -33,7 +33,7 @@ export const apiService = {
   },
   
   access: {
-    //TODO: test routes remove in future or update
+    //TODO: test routes, remove in future or update
     checkEditor() {
       return api.get('/api/access/editor');
     },
@@ -54,7 +54,7 @@ export const apiService = {
   get(url: string, config = {}) {
     return api.get(url, config);
   },
-  
+  //TODO: maybe add automatic csrf token refresh??
   post(url: string, data = {}, config = {}) {
     return api.post(url, data, config);
   },

@@ -113,6 +113,8 @@ export const useAuthStore = defineStore('auth', {
         this.isAuthenticated = false;
         
         localStorage.removeItem('isLoggedIn');
+
+        apiService.auth.getCsrfCookie();
         
         return response;
       } catch (error: any) {
