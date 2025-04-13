@@ -36,7 +36,16 @@ export const useAuthStore = defineStore('auth', {
     hasAdminAccess: (state) => state.permissions.includes('access.admin'),
     hasSuperAdminAccess: (state) => state.permissions.includes('access.super_admin'),
     
-    currentUser: (state) => state.user
+    currentUser: (state) => state.user,
+
+    hasRole: (state) => {
+      return (roleName: string): boolean => state.roles.includes(roleName);
+    },
+  
+    hasPermission: (state) => {
+      return (permissionName: string): boolean => state.permissions.includes(permissionName);
+    }
+
   },
   
   actions: {
