@@ -33,13 +33,14 @@ Route::prefix('auth/token')->group(function () {
 });
 */
 
+
 // Protected Routes
 Route::middleware('auth:sanctum')->group(function () {
     // User information
     Route::get('/user', [UserController::class, 'current']);
-    
     // TODO: REMOVE IN FUTURE, THESE ARE TEST ROUTES
     Route::get('/access/editor', [AccessController::class, 'editor'])->middleware('permission:access.editor');
     Route::get('/access/admin', [AccessController::class, 'admin'])->middleware('permission:access.admin');
     Route::get('/access/super-admin', [AccessController::class, 'superAdmin'])->middleware('permission:access.super_admin');
+
 });

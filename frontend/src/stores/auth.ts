@@ -112,6 +112,8 @@ export const useAuthStore = defineStore('auth', {
         this.permissions = [];
         this.isAuthenticated = false;
         
+        localStorage.removeItem('isLoggedIn');
+        
         return response;
       } catch (error: any) {
         this.error = error.response?.data?.message || 'Logout failed';
@@ -146,6 +148,7 @@ export const useAuthStore = defineStore('auth', {
     },
     
     async checkAccess(accessType: string) {
+      console.log(accessType);
       try {
         const response = await apiService.access.check(accessType);
         return response.data;
