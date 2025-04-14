@@ -1,1 +1,0 @@
-Component with static position (at the bottom of the page) with editor being able to edit its content
