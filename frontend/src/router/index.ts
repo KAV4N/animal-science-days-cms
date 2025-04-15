@@ -1,39 +1,47 @@
+// src/router/index.ts 
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import middleware from './middleware';
 
 import Login from '@/views/auth/Login.vue';
 import Register from '@/views/auth/Register.vue';
-import Dashboard from '@/views/Dashboard.vue';
 
+import Dashboard from '@/views/Dashboard.vue';
+import Home from '../views/dashboard/Home.vue';
+import ConferenceManager from '@/views/dashboard/ConferenceManager.vue';
 
 const routes: Array<RouteRecordRaw> = [
-
   {
-    path: '/login',
-    name: 'login',
-    component: Login,
-    beforeEnter: middleware.guest
-  },
-  {
-    path: '/register',
-    name: 'register',
-    component: Register,
-    beforeEnter: middleware.guest
+    path: '/',
+    redirect: '/dashboard'
   },
   {
     path: '/dashboard',
-    name: 'dashboard',
     component: Dashboard,
-    //beforeEnter: middleware.requiresAuth
-  },
+    children: [
+      {
+        path: '',
+        redirect: '/dashboard/home'
+      },
+      {
+        path: 'home',
+        name: 'Home',
+        component: Home
+      },
+      {
+        path: 'conference-manager',
+        name: 'ConferenceManager',
+        component: ConferenceManager
+      }
+    ]
+  }
 ];
+
 
 const router = createRouter({
   history: createWebHistory(),
   routes
 });
-
 
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();

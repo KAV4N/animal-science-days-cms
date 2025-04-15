@@ -33,7 +33,7 @@ export const apiService = {
   },
   
   access: {
-    //TODO: test routes, remove in future or update
+    //TODO: test routes, remove in future or update NOT USED THIS WAS ONLY FOR TESTING
     checkEditor() {
       return api.get('/api/access/editor');
     },
