@@ -2,8 +2,8 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth';
 import middleware from './middleware';
 
-import Login from '@/views/pages/auth/Login.vue';
-import Register from '@/views/pages/auth/Register.vue';
+import Login from '@/views/auth/Login.vue';
+import Register from '@/views/auth/Register.vue';
 import Dashboard from '@/views/Dashboard.vue';
 
 

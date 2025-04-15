@@ -1,90 +1,71 @@
-<template>
-    <div>
-      <h1>Dashboard</h1>
-      
-      <div v-if="user">
-        <h2>Welcome, {{ user.name }}!</h2>
-        
-        <div>
-          <h3>Your Information</h3>
-          <p>Email: {{ user.email }}</p>
-          
-          <h3>Your Roles</h3>
-          <ul>
-            <li v-for="role in roles" :key="role">{{ role }}</li>
-          </ul>
-          
-          <h3>Your Permissions</h3>
-          <ul>
-            <li v-for="permission in permissions" :key="permission">{{ permission }}</li>
-          </ul>
-        </div>
-        
-        <div>
-          <h3>Access Pages</h3>
-          <div>
-            <router-link to="/editor" v-if="hasEditorAccess">Editor Page</router-link>
-          </div>
-          <div>
-            <router-link to="/admin" v-if="hasAdminAccess">Admin Page</router-link>
-          </div>
-          <div>
-            <router-link to="/super-admin" v-if="hasSuperAdminAccess">Super Admin Page</router-link>
-          </div>
-        </div>
-        
-        <button @click="logout">Logout</button>
-      </div>
-      
-      <div v-else>
-        Loading user information...
-      </div>
-    </div>
-  </template>
-  
-  <script lang="ts">
-  import { useAuthStore } from '@/stores/auth';
-  
-  export default {
-    name: 'DashboardView',
-    
-    data() {
-      return {
-        store: useAuthStore(),
-      };
-    },
-    
-    computed: {
-      user() {
-        return this.store.user;
-      },
-      roles() {
-        return this.store.roles;
-      },
-      permissions() {
-        return this.store.permissions;
-      },
-      hasEditorAccess() {
-        return this.store.hasEditorAccess;
-      },
-      hasAdminAccess() {
-        return this.store.hasAdminAccess;
-      },
-      hasSuperAdminAccess() {
-        return this.store.hasSuperAdminAccess;
-      }
-    },
-    
-    methods: {
-      async logout() {
-        try {
-          await this.store.logout();
-          localStorage.removeItem('isLoggedIn');
-          this.$router.push({ name: 'login' });
-        } catch (error) {
-          console.error('Logout failed', error);
-        }
-      }
+<script setup>
+import { useLayout } from '@/composables/layout';
+import { computed, ref, watch } from 'vue';
+import AppFooter from '../components/dashboard/AppFooter.vue';
+import AppSidebar from '../components/dashboard/AppSidebar.vue';
+import AppTopbar from '../components/dashboard/AppTopbar.vue';
+
+const { layoutConfig, layoutState, isSidebarActive } = useLayout();
+
+const outsideClickListener = ref(null);
+
+watch(isSidebarActive, (newVal) => {
+    if (newVal) {
+        bindOutsideClickListener();
+    } else {
+        unbindOutsideClickListener();
     }
-  };
-  </script>
+});
+
+const containerClass = computed(() => {
+    return {
+        'layout-overlay': layoutConfig.menuMode === 'overlay',
+        'layout-static': layoutConfig.menuMode === 'static',
+        'layout-static-inactive': layoutState.staticMenuDesktopInactive && layoutConfig.menuMode === 'static',
+        'layout-overlay-active': layoutState.overlayMenuActive,
+        'layout-mobile-active': layoutState.staticMenuMobileActive
+    };
+});
+
+function bindOutsideClickListener() {
+    if (!outsideClickListener.value) {
+        outsideClickListener.value = (event) => {
+            if (isOutsideClicked(event)) {
+                layoutState.overlayMenuActive = false;
+                layoutState.staticMenuMobileActive = false;
+                layoutState.menuHoverActive = false;
+            }
+        };
+        document.addEventListener('click', outsideClickListener.value);
+    }
+}
+
+function unbindOutsideClickListener() {
+    if (outsideClickListener.value) {
+        document.removeEventListener('click', outsideClickListener);
+        outsideClickListener.value = null;
+    }
+}
+
+function isOutsideClicked(event) {
+    const sidebarEl = document.querySelector('.layout-sidebar');
+    const topbarEl = document.querySelector('.layout-menu-button');
+
+    return !(sidebarEl.isSameNode(event.target) || sidebarEl.contains(event.target) || topbarEl.isSameNode(event.target) || topbarEl.contains(event.target));
+}
+</script>
+
+<template>
+    <div class="layout-wrapper" :class="containerClass">
+        <app-topbar></app-topbar>
+        <app-sidebar></app-sidebar>
+        <div class="layout-main-container">
+            <div class="layout-main">
+                <router-view></router-view>
+            </div>
+            <app-footer></app-footer>
+        </div>
+        <div class="layout-mask animate-fadein"></div>
+    </div>
+    <Toast />
+</template>
