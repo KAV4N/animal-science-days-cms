@@ -23,7 +23,7 @@ const routes: Array<RouteRecordRaw> = [
     children: [
       {
         path: '',
-        redirect: '/dashboard/home'
+        redirect: '/dashboard/conference-manager'
       },
       {
         path: 'home',
