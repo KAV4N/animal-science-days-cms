@@ -31,6 +31,7 @@ declare module 'vue' {
     InputText: typeof import('primevue/inputtext')['default']
     MultiSelect: typeof import('primevue/multiselect')['default']
     Navbar: typeof import('./src/components/site/Navbar.vue')['default']
+    Password: typeof import('primevue/password')['default']
     RadioButton: typeof import('primevue/radiobutton')['default']
     Rating: typeof import('primevue/rating')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

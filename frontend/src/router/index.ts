@@ -9,6 +9,8 @@ import Register from '@/views/auth/Register.vue';
 import Dashboard from '@/views/Dashboard.vue';
 import Home from '../views/dashboard/Home.vue';
 import ConferenceManager from '@/views/dashboard/ConferenceManager.vue';
+import AdminUserManagement from '@/views/dashboard/AdminUserManagement.vue';
+
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -32,6 +34,11 @@ const routes: Array<RouteRecordRaw> = [
         path: 'conference-manager',
         name: 'ConferenceManager',
         component: ConferenceManager
+      },
+      {
+        path: 'users',
+        name: 'AdminUserManagement',
+        component: AdminUserManagement
       }
     ]
   }
