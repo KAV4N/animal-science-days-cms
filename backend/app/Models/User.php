@@ -3,11 +3,15 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-
 use Spatie\Permission\Traits\HasRoles;
+
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -24,6 +28,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'university_id'
     ];
 
     /**
@@ -35,6 +40,25 @@ class User extends Authenticatable
         'password',
         'remember_token',
     ];
+
+
+
+    public function university(): BelongsTo
+    {
+        return $this->belongsTo(University::class, 'university_id', 'id');
+    }
+
+
+    public function conferenceEditors(): HasMany
+    {
+        return $this->hasMany(ConferenceEditor::class, 'user_id', 'id');
+    }
+
+    public function assignedEditors(): HasMany
+    {
+        return $this->hasMany(ConferenceEditor::class, 'assigned_by', 'id');
+    }
+
 
     /**
      * Get the attributes that should be cast.
