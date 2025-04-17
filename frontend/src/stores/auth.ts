@@ -26,48 +26,48 @@ export const useAuthStore = defineStore('auth', {
     loading: false,
     error: null
   }),
-  
+
   getters: {
     isEditor: (state) => state.roles.includes('editor'),
     isAdmin: (state) => state.roles.includes('admin'),
     isSuperAdmin: (state) => state.roles.includes('super_admin'),
-    
+
     hasEditorAccess: (state) => state.permissions.includes('access.editor'),
     hasAdminAccess: (state) => state.permissions.includes('access.admin'),
     hasSuperAdminAccess: (state) => state.permissions.includes('access.super_admin'),
-    
+
     currentUser: (state) => state.user,
 
     hasRole: (state) => {
       return (roleName: string): boolean => state.roles.includes(roleName);
     },
-  
+
     hasPermission: (state) => {
       return (permissionName: string): boolean => state.permissions.includes(permissionName);
     }
 
   },
-  
+
   actions: {
     async register(name: string, email: string, password: string, passwordConfirmation: string) {
       this.loading = true;
       this.error = null;
-      
+
       try {
         const response = await apiService.auth.register(
-          name, 
-          email, 
-          password, 
+          name,
+          email,
+          password,
           passwordConfirmation
         );
-        
+
         const { user, roles, permissions } = response.data.data;
-        
+
         this.user = user;
         this.roles = roles;
         this.permissions = permissions;
         this.isAuthenticated = true;
-        
+
         return response;
       } catch (error: any) {
         this.error = error.response?.data?.message || 'Registration failed';
@@ -76,21 +76,21 @@ export const useAuthStore = defineStore('auth', {
         this.loading = false;
       }
     },
-    
+
     async login(email: string, password: string) {
       this.loading = true;
       this.error = null;
-      
+
       try {
         const response = await apiService.auth.login(email, password);
-        
+
         const { user, roles, permissions } = response.data.data;
-        
+
         this.user = user;
         this.roles = roles;
         this.permissions = permissions;
         this.isAuthenticated = true;
-        
+
         return response;
       } catch (error: any) {
         this.error = error.response?.data?.message || 'Login failed';
@@ -99,23 +99,23 @@ export const useAuthStore = defineStore('auth', {
         this.loading = false;
       }
     },
-    
+
     async logout() {
       this.loading = true;
       this.error = null;
-      
+
       try {
         const response = await apiService.auth.logout();
-        
+
         this.user = null;
         this.roles = [];
         this.permissions = [];
         this.isAuthenticated = false;
-        
+
         localStorage.removeItem('isLoggedIn');
 
         apiService.auth.getCsrfCookie();
-        
+
         return response;
       } catch (error: any) {
         this.error = error.response?.data?.message || 'Logout failed';
@@ -124,21 +124,21 @@ export const useAuthStore = defineStore('auth', {
         this.loading = false;
       }
     },
-    
+
     async fetchCurrentUser() {
       this.loading = true;
       this.error = null;
-      
+
       try {
         const response = await apiService.auth.getCurrentUser();
-        
+
         const { user, roles, permissions } = response.data.data;
-        
+
         this.user = user;
         this.roles = roles;
         this.permissions = permissions;
         this.isAuthenticated = true;
-        
+
         return response;
       } catch (error: any) {
         this.error = error.response?.data?.message || 'Failed to fetch user';
@@ -148,7 +148,7 @@ export const useAuthStore = defineStore('auth', {
         this.loading = false;
       }
     },
-    
+
     async checkAccess(accessType: string) {
       console.log(accessType);
       try {
@@ -157,6 +157,21 @@ export const useAuthStore = defineStore('auth', {
       } catch (error) {
         console.error(`Access check failed for ${accessType}`, error);
         throw error;
+      }
+    },
+
+    async changePassword(newPassword: string) {
+      this.loading = true;
+      this.error = null;
+
+      try {
+        const response = await apiService.auth.changePassword(newPassword);
+        return response;
+      } catch (error: any) {
+        this.error = error.response?.data?.message || 'Password change failed';
+        throw error;
+      } finally {
+        this.loading = false;
       }
     }
   }
