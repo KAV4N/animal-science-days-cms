@@ -1,4 +1,3 @@
-// src/router/index.ts 
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import middleware from './middleware';
@@ -9,11 +8,14 @@ import Register from '@/views/auth/Register.vue';
 import Dashboard from '@/views/Dashboard.vue';
 import Home from '../views/dashboard/Home.vue';
 import ConferenceManager from '@/views/dashboard/ConferenceManager.vue';
+import AdminUserManagement from '@/views/dashboard/AdminUserManagement.vue';
+
+import Site from '@/views/Site.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
     path: '/',
-    redirect: '/dashboard'
+    component: Site,
   },
   {
     path: '/dashboard',
@@ -32,11 +34,15 @@ const routes: Array<RouteRecordRaw> = [
         path: 'conference-manager',
         name: 'ConferenceManager',
         component: ConferenceManager
+      },
+      {
+        path: 'users',
+        name: 'AdminUserManagement',
+        component: AdminUserManagement
       }
     ]
   }
 ];
-
 
 const router = createRouter({
   history: createWebHistory(),
