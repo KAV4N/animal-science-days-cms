@@ -66,7 +66,7 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-import { useConferenceStore } from '@/stores/conferenceStore';
+import { useConferenceStore } from '@/stores/conferenceManagement';
 import { useToast } from 'primevue/usetoast';
 
 // Import the new Tabs components
@@ -76,12 +76,12 @@ import Tab from 'primevue/tab';
 import TabPanels from 'primevue/tabpanels';
 import TabPanel from 'primevue/tabpanel';
 
-import BasicInfoTab from '@/components/dashboard/ConferenceManager/FormTabs/BasicInfoTab.vue';
-import LocationDatesTab from '@/components/dashboard/ConferenceManager/FormTabs/LocationDatesTab.vue';
-import ThemeColorsTab from '@/components/dashboard/ConferenceManager/FormTabs/ThemeColorsTab.vue';
-import EditorsTab from '@/components/dashboard/ConferenceManager/FormTabs/EditorsTab.vue';
-import SettingsTab from '@/components/dashboard/ConferenceManager/FormTabs/SettingsTab.vue';
-import ConfirmationDialog from '@/components/dashboard/ConferenceManager/ConfirmationDialog.vue';
+import BasicInfoTab from '@/components/dashboard/ConferenceManagement/FormTabs/BasicInfoTab.vue';
+import LocationDatesTab from '@/components/dashboard/ConferenceManagement/FormTabs/LocationDatesTab.vue';
+import ThemeColorsTab from '@/components/dashboard/ConferenceManagement/FormTabs/ThemeColorsTab.vue';
+import EditorsTab from '@/components/dashboard/ConferenceManagement/FormTabs/EditorsTab.vue';
+import SettingsTab from '@/components/dashboard/ConferenceManagement/FormTabs/SettingsTab.vue';
+import ConfirmationDialog from '@/components/dashboard/ConferenceManagement/ConfirmationDialog.vue';
 
 export default defineComponent({
   name: 'ConferenceForm',

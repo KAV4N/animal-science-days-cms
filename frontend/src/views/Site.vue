@@ -6,6 +6,8 @@ import Home from '@/views/site/Home.vue';
 <template>
   <div class="min-h-screen">
     <Navbar />
-    <Home />
+    <main class="pt-24 px-4">
+      <Home />
+    </main>
   </div>
 </template>

@@ -1,9 +1,8 @@
 <!-- components/dashboard/ConferenceTable.vue -->
 <template>
-  <div class="card">
-    <Toolbar class="mb-6 flex flex-wrap gap-2">
+    <Toolbar class="mb-6 flex flex-wrap gap-2 rounded-md shadow" style="border:none;">
       <template #start>
-        <div class="flex flex-wrap gap-2">
+        <div class="flex flex-wrap gap-2 ">
           <Button label="New Conference" icon="pi pi-plus" class="mr-2" @click="store.openNewConference" />
           <Button 
             label="Delete" 
@@ -16,8 +15,9 @@
         </div>
       </template>
     </Toolbar>
-
-    <DataTable
+    <Card  class="card rounded-md">
+    <template #content>
+      <DataTable
       ref="dt"
       v-model:selection="store.selectedConferences"
       :value="store.conferences"
@@ -30,7 +30,7 @@
       currentPageReportTemplate="Showing {first} to {last} of {totalRecords} conferences"
       responsiveLayout="stack"
       breakpoint="960px"
-      class="p-datatable-sm"
+      class="p-datatable-sm shadow rounded"
       :loading="store.loading"
     >
       <template #header>
@@ -47,7 +47,11 @@
 
       <Column selectionMode="multiple" style="width: 3rem" :exportable="false"></Column>
       <Column field="name" header="Name" sortable style="min-width: 16rem"></Column>
-      <Column field="location" header="Location" sortable style="min-width: 12rem"></Column>
+      <Column field="university" header="University" sortable style="min-width: 12rem" class="hidden md:table-cell">
+        <template #body="slotProps">
+          {{ slotProps.data.university?.name }}
+        </template>
+      </Column>
       <Column field="startDate" header="Start Date" sortable style="min-width: 10rem">
         <template #body="slotProps">
           {{ formatDate(slotProps.data.startDate) }}
@@ -58,11 +62,7 @@
           {{ formatDate(slotProps.data.endDate) }}
         </template>
       </Column>
-      <Column field="university" header="University" sortable style="min-width: 12rem" class="hidden md:table-cell">
-        <template #body="slotProps">
-          {{ slotProps.data.university?.name }}
-        </template>
-      </Column>
+      
       <Column field="isPublished" header="Status" sortable style="min-width: 10rem">
         <template #body="slotProps">
           <Tag :value="slotProps.data.isPublished ? 'Published' : 'Draft'" :severity="getStatusSeverity(slotProps.data.isPublished)" />
@@ -78,13 +78,15 @@
         </template>
       </Column>
     </DataTable>
-  </div>
+    </template>
+    
+  </Card >
 </template>
 
 <script lang="ts">
 import { defineComponent } from 'vue';
 import { FilterMatchMode } from '@primevue/core/api';
-import { useConferenceStore } from '@/stores/conferenceStore';
+import { useConferenceStore } from '@/stores/conferenceManagement';
 import { useToast } from 'primevue/usetoast';
 import { type Conference } from '@/types';
 

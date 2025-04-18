@@ -11,7 +11,7 @@
       <div class="bg-gray-50 p-4 rounded-lg mb-2 border-l-4 border-blue-500">
         <div class="flex items-start">
           <i class="pi pi-info-circle text-blue-500 mr-2 mt-1"></i>
-          <p class="text-gray-700">
+          <p >
             Select editors to grant access to this conference. Only users with the 'editor' role can be added.
             Administrators automatically have edit access.
           </p>
@@ -63,7 +63,7 @@
       <div class="flex flex-column sm:flex-row justify-between gap-3">
         <Button label="Cancel" icon="pi pi-times" text @click="store.closeEditorSelector" class="w-full sm:w-auto order-2 sm:order-1" />
         <div class="flex flex-column sm:flex-row items-center gap-3 order-1 sm:order-2">
-          <span class="text-gray-700" v-if="store.selectedEditorsForDialog.length > 0">
+          <span v-if="store.selectedEditorsForDialog.length > 0">
             <b>{{ store.selectedEditorsForDialog.length }}</b> editor(s) selected
           </span>
           <Button 
@@ -82,7 +82,7 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-import { useConferenceStore } from '@/stores/conferenceStore';
+import { useConferenceStore } from '@/stores/conferenceManagement';
 
 export default defineComponent({
   name: 'EditorSelectorDialog',

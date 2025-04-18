@@ -6,9 +6,8 @@ import Login from '@/views/auth/Login.vue';
 import Register from '@/views/auth/Register.vue';
 
 import Dashboard from '@/views/Dashboard.vue';
-import Home from '../views/dashboard/Home.vue';
-import ConferenceManager from '@/views/dashboard/ConferenceManager.vue';
-import AdminUserManagement from '@/views/dashboard/AdminUserManagement.vue';
+import ConferenceManagement from '@/views/dashboard/ConferenceManagement.vue';
+import UserManagement from '@/views/dashboard/UserManagement.vue';
 
 import Site from '@/views/Site.vue';
 
@@ -18,32 +17,36 @@ const routes: Array<RouteRecordRaw> = [
     component: Site,
   },
   {
+    path: '/auth/login',
+    name: 'Login',
+    component: Login
+  },
+  {
+    path: '/auth/register',
+    name: 'Register',
+    component: Register
+  },
+  {
     path: '/dashboard',
     component: Dashboard,
     children: [
       {
         path: '',
-        redirect: '/dashboard/conference-manager'
+        redirect: 'dashboard/conferences'
       },
       {
-        path: 'home',
-        name: 'Home',
-        component: Home
-      },
-      {
-        path: 'conference-manager',
-        name: 'ConferenceManager',
-        component: ConferenceManager
+        path: 'conferences',
+        name: 'ConferenceManagement',
+        component: ConferenceManagement
       },
       {
         path: 'users',
-        name: 'AdminUserManagement',
-        component: AdminUserManagement
+        name: 'UserManagement',
+        component: UserManagement
       }
     ]
   }
 ];
-
 const router = createRouter({
   history: createWebHistory(),
   routes

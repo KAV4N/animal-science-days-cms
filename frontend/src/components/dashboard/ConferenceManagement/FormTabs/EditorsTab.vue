@@ -3,11 +3,11 @@
   <div class="p-3 md:p-5">
     <div class="mb-6">
       <div class="flex flex-column md:flex-row md:justify-between md:items-center gap-3 mb-3">
-        <h3 class="text-xl font-semibold text-gray-800">Conference Editors</h3>
+        <h3 class="text-xl font-semibold ">Conference Editors</h3>
         <Button label="Add Editors" icon="pi pi-plus" severity="success" @click="store.openEditorSelector" class="w-full md:w-auto" />
       </div>
       <Divider />
-      <p class="text-gray-600 mb-4">
+      <p class="mb-4">
         Editors have permission to modify content for this conference. 
         Admin and superadmin users automatically have edit access.
       </p>
@@ -33,8 +33,8 @@
         </template>
         <template #empty>
           <div class="text-center p-4">
-            <i class="pi pi-users text-gray-300 text-5xl mb-3 block"></i>
-            <p class="text-gray-500">No editors have been assigned to this conference.</p>
+            <i class="pi pi-users text-5xl mb-3 block"></i>
+            <p>No editors have been assigned to this conference.</p>
             <Button label="Add Editors" icon="pi pi-plus" severity="secondary" 
                     class="mt-3" outlined @click="store.openEditorSelector" />
           </div>
@@ -80,8 +80,8 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-import { useConferenceStore } from '@/stores/conferenceStore';
-import EditorSelectorDialog from '@/components/dashboard/ConferenceManager/EditorSelectorDialog.vue';
+import { useConferenceStore } from '@/stores/conferenceManagement';
+import EditorSelectorDialog from '@/components/dashboard/ConferenceManagement/EditorSelectorDialog.vue';
 
 export default defineComponent({
   name: 'EditorsTab',

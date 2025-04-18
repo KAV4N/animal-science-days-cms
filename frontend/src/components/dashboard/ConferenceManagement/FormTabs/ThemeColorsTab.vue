@@ -31,8 +31,8 @@
 
 <script>
 import { defineComponent } from 'vue';
-import { useConferenceStore } from '@/stores/conferenceStore';
-import TransparentColorPicker from '@/components/dashboard/ConferenceManager/TransparentColorPicker.vue';
+import { useConferenceStore } from '@/stores/conferenceManagement';
+import TransparentColorPicker from '@/components/dashboard/ConferenceManagement/TransparentColorPicker.vue';
 
 export default defineComponent({
   name: 'ThemeColorsTab',

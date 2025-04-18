@@ -21,15 +21,15 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-import { useConferenceStore } from '@/stores/conferenceStore';
+import { useConferenceStore } from '@/stores/conferenceManagement';
 import { useToast } from 'primevue/usetoast';
 
-import ConferenceTable from '@/components/dashboard/ConferenceManager/ConferenceTable.vue';
-import ConferenceForm from '@/components/dashboard/ConferenceManager/ConferenceForm.vue';
-import ConfirmationDialog from '@/components/dashboard/ConferenceManager/ConfirmationDialog.vue';
+import ConferenceTable from '@/components/dashboard/ConferenceManagement/ConferenceTable.vue';
+import ConferenceForm from '@/components/dashboard/ConferenceManagement/ConferenceForm.vue';
+import ConfirmationDialog from '@/components/dashboard/ConferenceManagement/ConfirmationDialog.vue';
 
 export default defineComponent({
-  name: 'ConferenceManager',
+  name: 'ConferenceManagement',
   components: {
     ConferenceTable,
     ConferenceForm,

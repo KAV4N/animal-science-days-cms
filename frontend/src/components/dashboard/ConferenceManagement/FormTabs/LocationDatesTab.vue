@@ -2,10 +2,10 @@
 <template>
   <div class="p-3 md:p-5">
     <div class="mb-6">
-      <h3 class="text-xl font-semibold mb-3 text-gray-800">Location Information</h3>
+      <h3 class="text-xl font-semibold mb-3 ">Location Information</h3>
       <Divider />
       <div class="mt-4">
-        <label for="location" class="block font-bold mb-2 text-gray-700">Location</label>
+        <label for="location" class="block font-bold mb-2 ">Location</label>
         <InputText 
           id="location" 
           v-model.trim="conference.location" 
@@ -15,11 +15,11 @@
           placeholder="City, Country" 
         />
         <small v-if="submitted && !conference.location" class="p-error">Location is required.</small>
-        <small class="text-gray-500 italic block mt-1">Specify the city and country where the conference will be held.</small>
+        <small class=" italic block mt-1">Specify the city and country where the conference will be held.</small>
       </div>
       
       <div class="mt-4">
-        <label for="venue" class="block font-bold mb-2 text-gray-700">Venue Details (Optional)</label>
+        <label for="venue" class="block font-bold mb-2 ">Venue Details (Optional)</label>
         <Textarea 
           id="venue" 
           v-model="conference.venueDetails" 
@@ -32,11 +32,11 @@
     </div>
 
     <div>
-      <h3 class="text-xl font-semibold mb-3 text-gray-800">Event Schedule</h3>
+      <h3 class="text-xl font-semibold mb-3 ">Event Schedule</h3>
       <Divider />
       <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
         <div>
-          <label for="startDate" class="block font-bold mb-2 text-gray-700">Start Date</label>
+          <label for="startDate" class="block font-bold mb-2 ">Start Date</label>
           <Datepicker 
             id="startDate" 
             v-model="conference.startDate" 
@@ -49,7 +49,7 @@
           <small v-if="submitted && !conference.startDate" class="p-error">Start date is required.</small>
         </div>
         <div>
-          <label for="endDate" class="block font-bold mb-2 text-gray-700">End Date</label>
+          <label for="endDate" class="block font-bold mb-2">End Date</label>
           <Datepicker 
             id="endDate" 
             v-model="conference.endDate" 
@@ -68,16 +68,16 @@
       
       <div class="mt-5 p-4 bg-gray-50 rounded border border-gray-200">
         <div class="flex items-center mb-2">
-          <i class="pi pi-info-circle text-blue-500 mr-2"></i>
+          <i class="pi pi-info-circle  mr-2"></i>
           <span class="font-medium">Date Summary</span>
         </div>
-        <p class="text-gray-600" v-if="conference.startDate && conference.endDate">
+        <p  v-if="conference.startDate && conference.endDate">
           This conference will run for 
           <span class="font-bold">{{ calculateDuration(conference.startDate, conference.endDate) }} days</span>, 
           from <span class="font-medium">{{ formatDate(conference.startDate) }}</span> 
           to <span class="font-medium">{{ formatDate(conference.endDate) }}</span>.
         </p>
-        <p class="text-gray-600" v-else>
+        <p v-else>
           Please select start and end dates to see conference duration.
         </p>
       </div>
@@ -87,7 +87,7 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-import { useConferenceStore } from '@/stores/conferenceStore';
+import { useConferenceStore } from '@/stores/conferenceManagement';
 
 export default defineComponent({
   name: 'LocationDatesTab',

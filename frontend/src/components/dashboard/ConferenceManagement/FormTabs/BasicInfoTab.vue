@@ -2,11 +2,11 @@
 <template>
   <div class="p-3 md:p-5">
     <div class="mb-6">
-      <h3 class="text-xl font-semibold mb-3 text-gray-800">Conference Identity</h3>
+      <h3 class="text-xl font-semibold mb-3">Conference Identity</h3>
       <Divider />
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
         <div class="col-span-1 md:col-span-2">
-          <label for="name" class="block font-bold mb-2 text-gray-700">Conference Name</label>
+          <label for="name" class="block font-bold mb-2 ">Conference Name</label>
           <InputText 
             id="name" 
             v-model.trim="conference.name" 
@@ -19,7 +19,7 @@
         </div>
         
         <div>
-          <label for="slug" class="block font-bold mb-2 text-gray-700">Slug</label>
+          <label for="slug" class="block font-bold mb-2">Slug</label>
           <InputText 
             id="slug" 
             v-model.trim="conference.slug" 
@@ -31,7 +31,7 @@
         </div>
         
         <div>
-          <label for="title" class="block font-bold mb-2 text-gray-700">Title</label>
+          <label for="title" class="block font-bold mb-2 ">Title</label>
           <InputText 
             id="title" 
             v-model.trim="conference.title" 
@@ -45,7 +45,7 @@
     </div>
     
     <div class="mb-6">
-      <h3 class="text-xl font-semibold mb-3 text-gray-800">Description</h3>
+      <h3 class="text-xl font-semibold mb-3 ">Description</h3>
       <Divider />
       <div class="mt-4">
         <Textarea 
@@ -56,15 +56,15 @@
           class="w-full shadow-sm" 
           placeholder="Enter a detailed description of the conference..." 
         />
-        <small class="text-gray-500 italic">Provide a comprehensive description to help attendees understand the conference goals and topics.</small>
+        <small class="italic">Provide a comprehensive description to help attendees understand the conference goals and topics.</small>
       </div>
     </div>
 
     <div>
-      <h3 class="text-xl font-semibold mb-3 text-gray-800">Hosting Institution</h3>
+      <h3 class="text-xl font-semibold mb-3 ">Hosting Institution</h3>
       <Divider />
       <div class="mt-4">
-        <label for="university" class="block font-bold mb-2 text-gray-700">Hosting University</label>
+        <label for="university" class="block font-bold mb-2">Hosting University</label>
         <Select
           id="university" 
           v-model="conference.university" 
@@ -82,7 +82,7 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-import { useConferenceStore } from '@/stores/conferenceStore';
+import { useConferenceStore } from '@/stores/conferenceManagement';
 
 export default defineComponent({
   name: 'BasicInfoTab',
