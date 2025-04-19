@@ -1,81 +1,101 @@
-import {api} from '@/plugins/axios';
+// src/services/api-service.ts
+import { api } from '@/plugins/axios';
+import { tokenService } from '@/services/tokenService';
+import type { LoginResponse, RegisterResponse, UserResponse, RefreshTokenResponse } from '@/types/user';
 
-export const apiService = {
-  auth: {
-    getCsrfCookie() {
-      return api.get('/api/csrf-cookie');
-    },
-
-    login(email: string, password: string) {
-      return this.getCsrfCookie().then(() => {
-        return api.post('/api/auth/login', { email, password });
-      });
-    },
-
-    register(name: string, email: string, password: string, password_confirmation: string) {
-      return this.getCsrfCookie().then(() => {
-        return api.post('/api/auth/register', {
-          name,
-          email,
-          password,
-          password_confirmation
-        });
-      });
-    },
-
-    logout() {
-      return api.post('/api/auth/logout');
-    },
-
-    getCurrentUser() {
-      return api.get('/api/user');
-    },
-
-    changePassword(new_password: string) {
-      return this.getCsrfCookie().then(() => {
-        return api.post('/api/auth/change-password', {
-          new_password,
-          new_password_confirmation: new_password
-        });
-      });
-    }
+/**
+ * Authentication related API calls
+ */
+const authService = {
+  /**
+   * Login with email and password
+   */
+  login(email: string, password: string) {
+    return api.post<LoginResponse>('/v1/auth/login', { email, password });
   },
 
-  access: {
-    //TODO: test routes, remove in future or update NOT USED THIS WAS ONLY FOR TESTING
-    checkEditor() {
-      return api.get('/api/access/editor');
-    },
-
-    checkAdmin() {
-      return api.get('/api/access/admin');
-    },
-
-    checkSuperAdmin() {
-      return api.get('/api/access/super-admin');
-    },
-
-    check(type: string) {
-      return api.get(`/api/access/${type}`);
-    }
+  /**
+   * Register a new user
+   */
+  register(name: string, email: string, password: string, password_confirmation: string) {
+    return api.post<RegisterResponse>('/v1/auth/register', {
+      name,
+      email,
+      password,
+      password_confirmation
+    });
   },
 
+  /**
+   * Logout the current user
+   */
+  logout() {
+    const refreshToken = tokenService.getRefreshToken();
+    return api.post('/v1/auth/logout', { refresh_token: refreshToken });
+  },
+
+  /**
+   * Refresh authentication tokens
+   */
+  refresh() {
+    const refreshToken = tokenService.getRefreshToken();
+    return api.post<RefreshTokenResponse>('/v1/auth/refresh', { refresh_token: refreshToken });
+  },
+
+  /**
+   * Get current authenticated user
+   */
+  getCurrentUser() {
+    return api.get<UserResponse>('/v1/users/me');
+  },
+
+  /**
+   * Change user password
+   */
+  changePassword(new_password: string, new_password_confirmation: string) {
+    //TODO: not defined on
+    return api.post('/v1/auth/change-password', {
+      new_password,
+      new_password_confirmation
+    });
+  }
+};
+
+
+
+/**
+ * General API methods
+ */
+const apiService = {
+  auth: authService,
+  
+  /**
+   * Generic GET request
+   */
   get(url: string, config = {}) {
     return api.get(url, config);
   },
-  //TODO: maybe add automatic csrf token refresh??
+  
+  /**
+   * Generic POST request
+   */
   post(url: string, data = {}, config = {}) {
     return api.post(url, data, config);
   },
 
+  /**
+   * Generic PUT request
+   */
   put(url: string, data = {}, config = {}) {
     return api.put(url, data, config);
   },
 
+  /**
+   * Generic DELETE request
+   */
   delete(url: string, config = {}) {
     return api.delete(url, config);
   }
 };
-
 
 export default apiService;

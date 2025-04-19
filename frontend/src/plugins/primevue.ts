@@ -534,7 +534,7 @@ const defaultTheme = definePreset(Aura, {
         },
         dark: {
           surface: {
-            0: '#ffffff',
+            0: '#000000',
             50: '#f7f8f9',
             100: '#d7dce4',
             200: '#b7c1ce',
@@ -668,7 +668,7 @@ const defaultTheme = definePreset(Aura, {
       preset: defaultTheme,
       options: {
         prefix: 'p',
-        darkModeSelector: 'none',
+        darkModeSelector: 'system',
         cssLayer: {
           name: 'primevue',
           order: 'theme, base, primevue'

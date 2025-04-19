@@ -40,7 +40,7 @@
   </template>
   
   <script lang="ts">
-  import { useAuthStore } from '@/stores/auth';
+  import { useAuthStore } from '@/stores/authStore';
   
   export default {
     name: 'LoginView',

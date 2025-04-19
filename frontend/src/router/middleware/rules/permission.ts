@@ -1,5 +1,5 @@
 import { type RouteLocationNormalized, type NavigationGuardNext } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';
+import { useAuthStore } from '@/stores/authStore';
 
 /**
  * Middleware factory for routes that require specific permissions

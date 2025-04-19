@@ -3,7 +3,7 @@ import { defineComponent } from 'vue';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
-import { useAuthStore } from '@/stores/auth';
+import { useAuthStore } from '@/stores/authStore';
 import { useRouter } from 'vue-router';
 
 export default defineComponent({
@@ -33,7 +33,8 @@ export default defineComponent({
 
       try {
         // Call the password change API
-        await authStore.changePassword(this.newPassword);
+        //TODO: ADD RETYPE AGAIN PASSWORD
+        await authStore.changePassword(this.newPassword, this.newPassword);
         this.success = 'Password changed successfully!';
 
         // Redirect to dashboard after 2 seconds

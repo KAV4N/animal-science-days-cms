@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';
+import { useAuthStore } from '@/stores/authStore';
 import middleware from './middleware';
 
 import Login from '@/views/auth/Login.vue';
@@ -17,18 +17,9 @@ const routes: Array<RouteRecordRaw> = [
     component: Site,
   },
   {
-    path: '/auth/login',
-    name: 'Login',
-    component: Login
-  },
-  {
-    path: '/auth/register',
-    name: 'Register',
-    component: Register
-  },
-  {
     path: '/dashboard',
     component: Dashboard,
+    beforeEnter: middleware.requiresAuth,
     children: [
       {
         path: '',

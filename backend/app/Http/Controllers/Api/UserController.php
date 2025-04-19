@@ -11,6 +11,8 @@ class UserController extends Controller
     /**
      * Get the authenticated user with roles and permissions.
      */
+
+    //TODO: add more user functions for CRUD operations
     public function current(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -19,12 +21,12 @@ class UserController extends Controller
         $permissions = $user->getAllPermissions()->pluck('name');
 
         return response()->json([
-            'status' => 'success',
             'data' => [
                 'user' => $user,
                 'roles' => $roles,
                 'permissions' => $permissions
-            ]
+            ],
+            'message'=>'success'
         ], 200);
     }
 }

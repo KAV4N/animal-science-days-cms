@@ -3,7 +3,7 @@ import { defineComponent } from 'vue';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
-import { useAuthStore } from '@/stores/auth';
+import { useAuthStore } from '@/stores/authStore';
 import { useRouter } from 'vue-router';
 
 export default defineComponent({
@@ -40,7 +40,6 @@ export default defineComponent({
         this.$emit('login');
         this.closeDialog();
 
-        // After successful login, show password change dialog
         router.push({ name: 'change-password' });
       } catch (error: any) {
         this.error = error.response?.data?.message || 'Login failed';

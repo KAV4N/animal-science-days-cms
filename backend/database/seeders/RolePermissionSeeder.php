@@ -13,15 +13,28 @@ class RolePermissionSeeder extends Seeder
         $superAdmin = Role::create(['name' => 'super_admin']);
         $admin = Role::create(['name' => 'admin']);
         $editor = Role::create(['name' => 'editor']);
-        
 
-        Permission::create(['name' => 'access.super_admin']);
-        Permission::create(['name' => 'access.admin']);  
-        Permission::create(['name' => 'access.editor']);
-        
+        $accessSuper = Permission::create(['name' => 'access.super_admin']);
+        $accessAdmin = Permission::create(['name' => 'access.admin']);  
+        $accessEditor = Permission::create(['name' => 'access.editor']);
 
-        $superAdmin->givePermissionTo(['access.super_admin', 'access.admin', 'access.editor']); 
-        $admin->givePermissionTo(['access.admin', 'access.editor']);
-        $editor->givePermissionTo('access.editor');
+        $manageEditor = Permission::create(['name' => 'manage.editor']);
+        $manageAdmin = Permission::create(['name' => 'manage.admin']);
+
+        $superAdmin->givePermissionTo([
+            $accessSuper,
+            $accessAdmin,
+            $accessEditor,
+            $manageEditor,
+            $manageAdmin,
+        ]);
+
+        $admin->givePermissionTo([
+            $accessAdmin,
+            $accessEditor,
+            $manageEditor,
+        ]);
+
+        $editor->givePermissionTo($accessEditor);
     }
 }
