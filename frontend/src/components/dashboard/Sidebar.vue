@@ -136,7 +136,7 @@
         
         <!-- User Profile -->
         <div class="mt-auto shrink-0">
-          <hr class="mb-2 mx-2 border-t border-0" />
+          <hr class="mb-2 mx-2 border-t border-0"/>
           <a v-ripple class="flex items-center cursor-pointer p-2 gap-2 rounded duration-150 transition-colors p-ripple text-sm" @click="handleLogout">
             <Avatar icon="pi pi-sign-out" size="small" shape="circle" />
             <span class="font-medium">Logout</span>
@@ -232,7 +232,8 @@ export default {
 
 <style scoped>
 .static-sidebar {
-  width: 220px; /* Reduced from 280px */
+  width: 220px; 
+  border-right-width: 1px !important;
   height: 100vh;
   flex-shrink: 0;
   z-index: 10;
@@ -249,6 +250,8 @@ export default {
 :deep(.p-card-body) {
   padding: 0;
   height: 100%;
+  border-color: rgba(82, 82, 82, 0.26);
+  border-right-width: 1px !important;
 }
 
 :deep(.p-card-content) {
@@ -259,7 +262,7 @@ export default {
 }
 
 :deep(.mobile-sidebar-drawer) {
-  width: 220px !important; /* Reduced from 280px */
+  width: 220px !important; 
   height: 100vh;
 }
 

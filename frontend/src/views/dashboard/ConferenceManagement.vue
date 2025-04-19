@@ -1,6 +1,12 @@
-<!-- views/ConferenceManagement.vue -->
+
 <template>
   <div>
+
+    <!-- 
+    TODO: Add LATEST conference. The user selects one conference to be latest and vissible on the main home page.
+      When the latest conference is delete, set the latest conference to be always the latest date/to be up to date.
+      New field in setting set latest, new field in database is_latest.
+    -->
     <ConferenceTable />
     
     <ConferenceForm />

@@ -66,6 +66,8 @@ export default {
 :deep(.p-card-body) {
   padding: 0;
   height: 100%;
+  border-color: rgba(82, 82, 82, 0.26);
+  border-bottom-width: 1px !important;
 }
 
 :deep(.p-card-content) {

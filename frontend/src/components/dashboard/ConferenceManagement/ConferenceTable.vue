@@ -145,18 +145,15 @@ overflow-x: auto;
 }
 
 .checkbox-column {
-background-color: white;
 z-index: 1;
 box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
 }
 
 .action-buttons-column {
-background-color: white;
 z-index: 1; 
 box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
 }
 
-/* Add shadow effect for better visibility of frozen columns in responsive mode */
 @media screen and (max-width: 960px) {
 :deep(.p-datatable-wrapper) {
   overflow-x: auto;
@@ -164,16 +161,16 @@ box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
 
 :deep(.p-datatable-tbody) tr td:first-child {
   position: sticky !important;
+  border-right-width: 1px !important;
   left: 0 !important;
-  background-color: white !important;
   z-index: 1 !important;
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1) !important;
 }
 
 :deep(.p-datatable-tbody) tr td:last-child {
   position: sticky !important;
+  border-left-width: 1px !important;
   right: 0 !important;
-  background-color: white !important;
   z-index: 1 !important;
   box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1) !important;
 }
