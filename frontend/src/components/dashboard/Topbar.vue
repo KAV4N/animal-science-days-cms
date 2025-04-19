@@ -2,9 +2,9 @@
   <Card class="fixed-topbar shadow rounded-md" :pt="cardPt">
     <template #content>
       <div class="flex items-center justify-between w-full">
-        <Button icon="pi pi-bars" text @click="toggleMobileMenu" class="md:hidden p-button-rounded"></Button>
+        <Button icon="pi pi-bars" text @click="toggleMobileMenu" class="md:hidden p-button-rounded p-button-sm"></Button>
         <div class="flex items-center gap-2 ml-auto">
-          <Button @click="handleLogout" icon="pi pi-sign-out" text rounded></Button>
+          <Button @click="handleLogout" icon="pi pi-sign-out" text rounded size="small"></Button>
         </div>
       </div>
     </template>
@@ -30,7 +30,6 @@ export default {
   data() {
     return {
       cardPt: {
-
         body: { class: 'p-0' },
         content: { class: 'p-0 flex items-center h-full' },
         root: { class: 'border-none rounded-none' }
@@ -49,13 +48,12 @@ export default {
 </script>
 
 <style scoped>
-
 .fixed-topbar {
   position: fixed;
   top: 0;
   right: 0;
   left: 0;
-  height: 64px; 
+  height: 48px; /* Reduced from 64px */
   z-index: 9;
   transition: left 0.3s ease;
 }
@@ -71,13 +69,13 @@ export default {
 }
 
 :deep(.p-card-content) {
-  padding: 0 1rem;
+  padding: 0 0.75rem;
   height: 100%;
 }
 
 @media (min-width: 769px) {
   .fixed-topbar {
-    left: 280px; 
+    left: 220px; /* Reduced from 280px to match sidebar width */
   }
 }
 

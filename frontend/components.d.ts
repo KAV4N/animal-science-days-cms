@@ -69,7 +69,7 @@ declare module 'vue' {
     SelectButton: typeof import('primevue/selectbutton')['default']
     SettignsTab: typeof import('./src/components/dashboard/ConferenceFormTabs/SettignsTab.vue')['default']
     SettingsTab: typeof import('./src/components/dashboard/ConferenceManagement/FormTabs/SettingsTab.vue')['default']
-    Sidebar: typeof import('primevue/sidebar')['default']
+    Sidebar: typeof import('./src/components/dashboard/Sidebar.vue')['default']
     Slider: typeof import('primevue/slider')['default']
     Tab: typeof import('primevue/tab')['default']
     TabList: typeof import('primevue/tablist')['default']

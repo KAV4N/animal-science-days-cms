@@ -2,7 +2,7 @@
 <template>
   <div>
     <div class="card ">
-      <Toolbar class="mb-6 flex flex-wrap gap-2 rounded-md shadow"  style="border:none;" >
+      <Toolbar class="mb-6 flex flex-wrap gap-2 rounded-md shadow"  style="border:none;  margin-bottom: 1rem;" >
 
         <template #start>
           <Button label="New User" icon="pi pi-plus" class="mr-2" @click="openNewUser" />

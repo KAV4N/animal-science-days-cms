@@ -4,17 +4,16 @@
     <template #content>
       <div class="flex flex-col h-full">
         <!-- Logo/Header -->
-        <div class="flex items-center justify-between px-7 py-4 shrink-0">
-          <span class="inline-flex items-center gap-2">
-            <span class="font-semibold text-2xl">BOKU</span>
+        <div class="flex items-center justify-between px-4 py-3 shrink-0">
+          <span class="inline-flex items-center">
+            <span class="font-semibold text-lg">BOKU</span>
           </span>
         </div>
   
-        
         <!-- Scrollable Content - Make it flex-grow to push user profile to bottom -->
         <div class="overflow-y-auto flex-grow">
           <!-- Management Section -->
-          <ul class="list-none p-4 m-0">
+          <ul class="list-none p-2 m-0">
             <li>
               <div
                 v-ripple
@@ -25,7 +24,7 @@
                   leaveToClass: 'hidden',
                   leaveActiveClass: 'animate-slideup'
                 }"
-                class="p-4 flex items-center justify-between cursor-pointer p-ripple"
+                class="p-2 flex items-center justify-between cursor-pointer p-ripple text-sm"
                 @click="toggleSection('management')"
               >
                 <span class="font-medium">MANAGEMENT</span>
@@ -36,7 +35,7 @@
                   <router-link 
                     v-ripple 
                     to="/dashboard/conferences" 
-                    class="flex items-center cursor-pointer p-4 rounded duration-150 transition-colors p-ripple"
+                    class="flex items-center cursor-pointer p-2 rounded duration-150 transition-colors p-ripple text-sm"
                     :class="{ 'bg-active': isActiveRoute('/dashboard/conferences') }"
                   >
                     <i class="pi pi-calendar-plus mr-2"></i>
@@ -47,7 +46,7 @@
                   <router-link 
                     v-ripple 
                     to="/dashboard/users" 
-                    class="flex items-center cursor-pointer p-4 rounded duration-150 transition-colors p-ripple"
+                    class="flex items-center cursor-pointer p-2 rounded duration-150 transition-colors p-ripple text-sm"
                     :class="{ 'bg-active': isActiveRoute('/dashboard/users') }"
                   >
                     <i class="pi pi-user-edit mr-2"></i>
@@ -61,10 +60,10 @@
         
         <!-- User Profile - Explicitly at the bottom -->
         <div class="mt-auto shrink-0">
-          <hr class="mb-4 mx-4 border-t border-0" />
-          <a v-ripple class="flex items-center cursor-pointer p-4 gap-2 rounded duration-150 transition-colors p-ripple" @click="handleLogout">
-            <Avatar icon="pi pi-user" shape="circle" />
-            <span class="font-bold">Logout</span>
+          <hr class="mb-2 mx-2 border-t border-0" />
+          <a v-ripple class="flex items-center cursor-pointer p-2 gap-2 rounded duration-150 transition-colors p-ripple text-sm" @click="handleLogout">
+            <Avatar icon="pi pi-sign-out" size="small" shape="circle" />
+            <span class="font-medium">Logout</span>
           </a>
         </div>
       </div>
@@ -76,19 +75,19 @@
     <template #container="{ closeCallback }">
       <div class="flex flex-col h-full">
         <!-- Logo/Header -->
-        <div class="flex items-center justify-between px-6 pt-4 shrink-0">
-          <span class="inline-flex items-center gap-2">
-            <span class="font-semibold text-2xl">BOKU</span>
+        <div class="flex items-center justify-between px-4 pt-2 shrink-0">
+          <span class="inline-flex items-center">
+            <span class="font-semibold text-lg">BOKU</span>
           </span>
           <span>
-            <Button type="button" @click="closeCallback" icon="pi pi-times" rounded outlined></Button>
+            <Button type="button" @click="closeCallback" icon="pi pi-times" rounded outlined size="small"></Button>
           </span>
         </div>
         
         <!-- Scrollable Content -->
         <div class="overflow-y-auto flex-grow">
           <!-- Management Section -->
-          <ul class="list-none p-4 m-0">
+          <ul class="list-none p-2 m-0">
             <li>
               <div
                 v-ripple
@@ -99,7 +98,7 @@
                   leaveToClass: 'hidden',
                   leaveActiveClass: 'animate-slideup'
                 }"
-                class="p-4 flex items-center justify-between cursor-pointer p-ripple"
+                class="p-2 flex items-center justify-between cursor-pointer p-ripple text-sm"
                 @click="toggleMobileSection('management')"
               >
                 <span class="font-medium">MANAGEMENT</span>
@@ -110,7 +109,7 @@
                   <router-link 
                     v-ripple 
                     to="/dashboard/conferences" 
-                    class="flex items-center cursor-pointer p-4 rounded duration-150 transition-colors p-ripple"
+                    class="flex items-center cursor-pointer p-2 rounded duration-150 transition-colors p-ripple text-sm"
                     :class="{ 'bg-active': isActiveRoute('/dashboard/conferences') }"
                     @click="closeMobileDrawer"
                   >
@@ -122,7 +121,7 @@
                   <router-link 
                     v-ripple 
                     to="/dashboard/users" 
-                    class="flex items-center cursor-pointer p-4 gap-2 rounded duration-150 transition-colors p-ripple"
+                    class="flex items-center cursor-pointer p-2 rounded duration-150 transition-colors p-ripple text-sm"
                     :class="{ 'bg-active': isActiveRoute('/dashboard/users') }"
                     @click="closeMobileDrawer"
                   >
@@ -137,10 +136,10 @@
         
         <!-- User Profile -->
         <div class="mt-auto shrink-0">
-          <hr class="mb-4 mx-4 border-t border-0" />
-          <a v-ripple class="flex items-center cursor-pointer p-4 gap-2 rounded duration-150 transition-colors p-ripple" @click="handleLogout">
-            <Avatar icon="pi pi-user" shape="circle" />
-            <span class="font-bold">Logout</span>
+          <hr class="mb-2 mx-2 border-t border-0" />
+          <a v-ripple class="flex items-center cursor-pointer p-2 gap-2 rounded duration-150 transition-colors p-ripple text-sm" @click="handleLogout">
+            <Avatar icon="pi pi-sign-out" size="small" shape="circle" />
+            <span class="font-medium">Logout</span>
           </a>
         </div>
       </div>
@@ -233,7 +232,7 @@ export default {
 
 <style scoped>
 .static-sidebar {
-  width: 280px;
+  width: 220px; /* Reduced from 280px */
   height: 100vh;
   flex-shrink: 0;
   z-index: 10;
@@ -260,7 +259,7 @@ export default {
 }
 
 :deep(.mobile-sidebar-drawer) {
-  width: 280px !important;
+  width: 220px !important; /* Reduced from 280px */
   height: 100vh;
 }
 

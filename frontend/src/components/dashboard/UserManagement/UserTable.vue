@@ -1,6 +1,6 @@
 // components/dashboard/UserManagement/UserTable.vue
 <template>
-    <Card  class="card rounded-md">
+    <Card class="card rounded-md">
         <template #content>
             <DataTable
             ref="dt"
@@ -13,6 +13,9 @@
             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
             :rowsPerPageOptions="[5, 10, 25]"
             currentPageReportTemplate="Showing {first} to {last} of {totalRecords} users"
+            class="fixed-columns-table"
+            scrollable
+            scrollHeight="flex"
             >
             <template #header>
                 <div class="flex flex-wrap gap-2 items-center justify-between">
@@ -30,7 +33,9 @@
                 </div>
             </template>
 
-            <Column selectionMode="multiple" style="width: 3rem" :exportable="false"></Column>
+            <!-- Fixed left column -->
+            <Column selectionMode="multiple" style="width: 3rem" frozen alignFrozen="left" class="checkbox-column" :exportable="false"></Column>
+            
             <Column field="name" header="Name" sortable style="min-width: 16rem"></Column>
             <Column field="email" header="Email" sortable style="min-width: 16rem"></Column>
             <Column field="role" header="Role" sortable style="min-width: 10rem">
@@ -48,16 +53,24 @@
                 {{ formatDate(slotProps.data.updatedAt) }}
                 </template>
             </Column>
-            <Column :exportable="false" style="min-width: 8rem">
+            
+            <!-- Fixed right column -->
+            <Column :exportable="false" style="min-width: 8rem" frozen alignFrozen="right" class="action-buttons-column">
+                <template #header>
+                  <div class="text-center">Actions</div>
+                </template>
                 <template #body="slotProps">
-                <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editUser(slotProps.data)" />
-                <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteUser(slotProps.data)" 
-                    :disabled="isCurrentUser(slotProps.data.id) || slotProps.data.role === 'super_admin'" />
+                  <div class="flex justify-center gap-2">
+                    <Button icon="pi pi-pencil" outlined rounded class="p-button-sm" @click="editUser(slotProps.data)" />
+                    <Button icon="pi pi-trash" outlined rounded severity="danger" class="p-button-sm" 
+                      @click="confirmDeleteUser(slotProps.data)" 
+                      :disabled="isCurrentUser(slotProps.data.id) || slotProps.data.role === 'super_admin'" />
+                  </div>
                 </template>
             </Column>
             </DataTable>
         </template>
-    </Card >    
+    </Card>    
 </template>
 
 <script lang="ts">
@@ -177,3 +190,43 @@ export default defineComponent({
   }
 });
 </script>
+
+<style scoped>
+.fixed-columns-table {
+  overflow-x: auto;
+}
+
+.checkbox-column {
+  background-color: white;
+  z-index: 1;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.action-buttons-column {
+  background-color: white;
+  z-index: 1;
+  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+@media screen and (max-width: 960px) {
+  :deep(.p-datatable-wrapper) {
+    overflow-x: auto;
+  }
+  
+  :deep(.p-datatable-tbody) tr td:first-child {
+    position: sticky !important;
+    left: 0 !important;
+    background-color: white !important;
+    z-index: 1 !important;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1) !important;
+  }
+  
+  :deep(.p-datatable-tbody) tr td:last-child {
+    position: sticky !important;
+    right: 0 !important;
+    background-color: white !important;
+    z-index: 1 !important;
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1) !important;
+  }
+}
+</style>
