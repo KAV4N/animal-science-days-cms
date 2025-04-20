@@ -31,8 +31,10 @@ declare module 'vue' {
     Chip: typeof import('primevue/chip')['default']
     ColorPicker: typeof import('primevue/colorpicker')['default']
     Column: typeof import('primevue/column')['default']
+    ConeferenceToolbar: typeof import('./src/components/dashboard/ConferenceManagement/ConeferenceToolbar.vue')['default']
     ConferenceForm: typeof import('./src/components/dashboard/ConferenceManagement/ConferenceForm.vue')['default']
     ConferenceTable: typeof import('./src/components/dashboard/ConferenceManagement/ConferenceTable.vue')['default']
+    ConferenceToolbar: typeof import('./src/components/dashboard/ConferenceManagement/ConferenceToolbar.vue')['default']
     ConfirmationDialog: typeof import('./src/components/dashboard/ConferenceManagement/ConfirmationDialog.vue')['default']
     ConfirmDialog: typeof import('primevue/confirmdialog')['default']
     DataTable: typeof import('primevue/datatable')['default']
@@ -52,6 +54,7 @@ declare module 'vue' {
     InputNumber: typeof import('primevue/inputnumber')['default']
     InputSwitch: typeof import('primevue/inputswitch')['default']
     InputText: typeof import('primevue/inputtext')['default']
+    LatestConferenceCard: typeof import('./src/components/dashboard/ConferenceManagement/LatestConferenceCard.vue')['default']
     LocationDatesTab: typeof import('./src/components/dashboard/ConferenceManagement/FormTabs/LocationDatesTab.vue')['default']
     LoginCard: typeof import('./src/components/auth/LoginCard.vue')['default']
     Menu: typeof import('primevue/menu')['default']
@@ -90,6 +93,7 @@ declare module 'vue' {
     TransparentColorPicker: typeof import('./src/components/dashboard/ConferenceManagement/TransparentColorPicker.vue')['default']
     UserDialog: typeof import('./src/components/dashboard/UserManagement/UserDialog.vue')['default']
     UserTable: typeof import('./src/components/dashboard/UserManagement/UserTable.vue')['default']
+    UserToolbar: typeof import('./src/components/dashboard/UserManagement/UserToolbar.vue')['default']
   }
   export interface ComponentCustomProperties {
     Ripple: typeof import('primevue/ripple')['default']

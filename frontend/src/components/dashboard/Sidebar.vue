@@ -1,6 +1,6 @@
 <template>
   <!-- Desktop Sidebar using Card -->
-  <Card v-if="!isMobileView" class="static-sidebar shadow" :class="{ 'hidden': !visible }" :pt="cardPt" style="border-radius: 0px;">
+  <Card v-if="!isMobileView" class="static-sidebar bg-surface-900 shadow text-white" :class="{ 'hidden': !visible }" :pt="cardPt" style="border-radius: 0px;">
     <template #content>
       <div class="flex flex-col h-full">
         <!-- Logo/Header -->
@@ -71,7 +71,7 @@
   </Card>
 
   <!-- Mobile Sidebar (Drawer) - No Card here -->
-  <Drawer v-model:visible="mobileDrawerVisible" :pt="{ root: { class: 'mobile-sidebar-drawer' } }" class="md:hidden">
+  <Drawer v-model:visible="mobileDrawerVisible" :pt="{ root: { class: 'mobile-sidebar-drawer' } }" class="md:hidden bg-surface-950">
     <template #container="{ closeCallback }">
       <div class="flex flex-col h-full">
         <!-- Logo/Header -->

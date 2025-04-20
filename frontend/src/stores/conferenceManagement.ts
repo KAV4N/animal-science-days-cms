@@ -66,6 +66,7 @@ export const useConferenceStore = defineStore('conference', {
             endDate: new Date(2025, 5, 18),
             university: { id: 'u1', name: 'University of Technology' },
             isPublished: true,
+            isLatest: true,
             primaryColor: '#3B82F6',
             secondaryColor: '#10B981',
             editors: [
@@ -85,6 +86,7 @@ export const useConferenceStore = defineStore('conference', {
             endDate: new Date(2025, 7, 12),
             university: { id: 'u2', name: 'National Science University' },
             isPublished: true,
+            isLatest: false,
             primaryColor: '#3B82F6',
             secondaryColor: '#10B981',
             editors: [
@@ -105,6 +107,7 @@ export const useConferenceStore = defineStore('conference', {
             endDate: new Date(2025, 9, 8),
             university: { id: 'u3', name: 'International University' },
             isPublished: false,
+            isLatest: false,
             primaryColor: '#3B82F6',
             secondaryColor: '#10B981',
             editors: [],
@@ -246,6 +249,7 @@ export const useConferenceStore = defineStore('conference', {
         endDate: null,
         university: null,
         isPublished: false,
+        isLatest:false,
         primaryColor: '#3B82F6',
         secondaryColor: '#10B981',
         editors: [],

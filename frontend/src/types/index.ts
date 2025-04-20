@@ -22,6 +22,7 @@ export interface Conference {
     startDate: Date | null;
     endDate: Date | null;
     university: University | null;
+    isLatest: boolean;
     isPublished: boolean;
     primaryColor: string;
     secondaryColor: string;

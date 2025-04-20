@@ -66,7 +66,7 @@
         </div>
       </div>
       
-      <div class="mt-5 p-4 bg-gray-50 rounded border border-gray-200">
+      <div class="mt-5 p-4 rounded border ">
         <div class="flex items-center mb-2">
           <i class="pi pi-info-circle  mr-2"></i>
           <span class="font-medium">Date Summary</span>

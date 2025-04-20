@@ -17,12 +17,21 @@ return new class extends Migration
             $table->foreignId('university_id')->constrained('universities', 'id')->cascadeOnDelete();
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
 
+            $table->string('name');
             $table->string('title');
             $table->string('slug')->unique();
 
-            $table->date('conference_date');
-            $table->json('settings');
+            $table->text('description')->nullable();
+            $table->string('location');
+            $table->text('venue_details')->nullable();
 
+            $table->date('start_date');
+            $table->date('end_date');
+
+            $table->string('primary_color');
+            $table->string('secondary_color');
+
+            $table->boolean('is_latest')->default(false);
             $table->boolean('is_published')->default(false);
             $table->timestamps();
         });

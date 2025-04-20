@@ -120,7 +120,6 @@ class AuthController extends Controller
             'access_token' => $newAccessToken->plainTextToken,
             'refresh_token' => $newRefreshToken->plainTextToken,
             'token_type' => 'Bearer',
-            'expires_in' => 3600
         ], 200);
     }
 

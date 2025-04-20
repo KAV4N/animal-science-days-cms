@@ -31,16 +31,18 @@ Route::prefix('v1')->group(function () {
         // CONFERENCE SECTION
            Route::apiResource('universities', UniversityController::class)
         ->middleware('permission:manage.universities');
-    
+        
+
         // Conference management
         Route::get('/conferences', [ConferenceController::class, 'index']);
         Route::get('/conferences/{id}', [ConferenceController::class, 'show']);
         
-        Route::middleware('permission:manage.conferences')->group(function () {
+        Route::middleware('permission:access.admin')->group(function () {
             Route::post('/conferences', [ConferenceController::class, 'store']);
             Route::put('/conferences/{id}', [ConferenceController::class, 'update']);
             Route::delete('/conferences/{id}', [ConferenceController::class, 'destroy']);
         });
+        
         
         // Conference editors
         Route::get('/conferences/{conferenceId}/editors', [ConferenceEditorController::class, 'index']);
@@ -78,8 +80,6 @@ Route::prefix('v1')->group(function () {
             Route::post('/media', [MediaController::class, 'store']);
             Route::delete('/media/{id}', [MediaController::class, 'destroy']);
         });
-
-
-        */
+*/
     });
 });

@@ -1,12 +1,21 @@
-
+<!-- components/dashboard/ConferenceManagement.vue -->
 <template>
   <div>
-
     <!-- 
     TODO: Add LATEST conference. The user selects one conference to be latest and vissible on the main home page.
       When the latest conference is delete, set the latest conference to be always the latest date/to be up to date.
       New field in setting set latest, new field in database is_latest.
     -->
+    <LatestConferenceCard />
+
+    <ConferenceToolbar 
+      :selectedConferences="store.selectedConferences" 
+      @new-conference="store.openNewConference" 
+      @confirm-delete-selected="store.confirmDeleteSelected" 
+    />
+
+
+
     <ConferenceTable />
     
     <ConferenceForm />
@@ -25,7 +34,7 @@
   </div>
 </template>
 
-<script lang="ts">
+<script>
 import { defineComponent } from 'vue';
 import { useConferenceStore } from '@/stores/conferenceManagement';
 import { useToast } from 'primevue/usetoast';
@@ -33,13 +42,17 @@ import { useToast } from 'primevue/usetoast';
 import ConferenceTable from '@/components/dashboard/ConferenceManagement/ConferenceTable.vue';
 import ConferenceForm from '@/components/dashboard/ConferenceManagement/ConferenceForm.vue';
 import ConfirmationDialog from '@/components/dashboard/ConferenceManagement/ConfirmationDialog.vue';
+import LatestConferenceCard from '@/components/dashboard/ConferenceManagement/LatestConferenceCard.vue';
+import ConferenceToolbar from '@/components/dashboard/ConferenceManagement/ConferenceToolbar.vue';
 
 export default defineComponent({
   name: 'ConferenceManagement',
   components: {
     ConferenceTable,
     ConferenceForm,
-    ConfirmationDialog
+    ConfirmationDialog,
+    LatestConferenceCard,
+    ConferenceToolbar
   },
   data() {
     return {

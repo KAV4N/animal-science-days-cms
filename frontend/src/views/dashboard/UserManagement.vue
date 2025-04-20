@@ -1,29 +1,20 @@
 // components/dashboard/UserManagement/UserManagementView.vue
 <template>
   <div>
-    <div class="card ">
-      <Toolbar class="mb-6 flex flex-wrap gap-2 rounded-md shadow"  style="border:none;  margin-bottom: 1rem;" >
+    <UserToolbar 
+      :has-selected-users="!!selectedUsers && selectedUsers.length > 0"
+      @new-user="openNewUser"
+      @delete-selected="confirmDeleteSelected"
+      @export="exportTable"
+    />
 
-        <template #start>
-          <Button label="New User" icon="pi pi-plus" class="mr-2" @click="openNewUser" />
-          <Button label="Delete" icon="pi pi-trash" severity="danger" outlined 
-            @click="confirmDeleteSelected" 
-            :disabled="!selectedUsers || !selectedUsers.length" />
-        </template>
-
-        <template #end>
-          <Button label="Export" icon="pi pi-upload" severity="secondary" @click="exportTable" />
-        </template>
-      </Toolbar>
-
-      <UserTable 
-        :users="store.users"
-        @edit-user="editUser"
-        @delete-user="confirmDeleteUser"
-        @selection-change="handleSelectionChange"
-        ref="userTable"
-      />
-    </div>
+    <UserTable 
+      :users="store.users"
+      @edit-user="editUser"
+      @delete-user="confirmDeleteUser"
+      @selection-change="handleSelectionChange"
+      ref="userTable"
+    />
 
     <UserDialog 
       v-model="userDialog" 
@@ -55,6 +46,7 @@ import { useUserManagementStore, type User } from '@/stores/userManagement';
 import UserTable from '@/components/dashboard/UserManagement/UserTable.vue';
 import UserDialog from '@/components/dashboard/UserManagement/UserDialog.vue';
 import DeleteConfirmDialog from '@/components/dashboard/UserManagement/DeleteConfirmDialog.vue';
+import UserToolbar from '@/components/dashboard/UserManagement/UserToolbar.vue';
 
 export default defineComponent({
   name: 'UserManagementView',
@@ -62,7 +54,8 @@ export default defineComponent({
   components: {
     UserTable,
     UserDialog,
-    DeleteConfirmDialog
+    DeleteConfirmDialog,
+    UserToolbar
   },
   
   data() {

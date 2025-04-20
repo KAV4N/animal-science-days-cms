@@ -1,5 +1,5 @@
 <template>
-  <div class="dashboard-container">
+  <div class="dashboard-container bg-surface-950">
     <Sidebar 
       :visible="sidebarVisible" 
       v-model:mobileVisible="mobileDrawerVisible"
