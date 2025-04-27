@@ -63,8 +63,7 @@ export const tokenService = {
       );
       
       const { access_token, refresh_token } = response.data;
-      
-      // Store the new tokens
+    
       this.setTokens(access_token, refresh_token);
       
       return response.data;

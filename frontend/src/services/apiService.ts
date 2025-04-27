@@ -2,7 +2,7 @@
 import { api } from '@/plugins/axios';
 import { tokenService } from '@/services/tokenService';
 import type { LoginResponse, RegisterResponse, UserResponse, RefreshTokenResponse } from '@/types/user';
-
+import axios, { type AxiosRequestConfig, type AxiosResponse } from 'axios';
 /**
  * Authentication related API calls
  */
@@ -72,30 +72,43 @@ const apiService = {
   /**
    * Generic GET request
    */
+  /*
   get(url: string, config = {}) {
     return api.get(url, config);
   },
   
-  /**
-   * Generic POST request
-   */
+
   post(url: string, data = {}, config = {}) {
     return api.post(url, data, config);
   },
 
-  /**
-   * Generic PUT request
-   */
+
   put(url: string, data = {}, config = {}) {
     return api.put(url, data, config);
   },
 
-  /**
-   * Generic DELETE request
-   */
+
   delete(url: string, config = {}) {
     return api.delete(url, config);
+  },
+*/
+
+  get<T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+    return api.get<T>(url, config);
+  },
+  
+  post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+    return api.post<T>(url, data, config);
+  },
+  
+  put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+    return api.put<T>(url, data, config);
+  },
+  
+  delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+    return api.delete<T>(url, config);
   }
+
 };
 
 export default apiService;

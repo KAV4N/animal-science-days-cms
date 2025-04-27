@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Http\Requests\Auth;
+namespace App\Http\Requests\University;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class RefreshTokenRequest extends FormRequest
+class UniversityUpdateRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -16,7 +16,9 @@ class RefreshTokenRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'refresh_token' => ['required', 'string'],
+            'full_name' => 'string|max:255',
+            'country' => 'string|max:255',
+            'city' => 'string|max:255',
         ];
     }
 

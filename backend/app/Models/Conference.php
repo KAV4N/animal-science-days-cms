@@ -10,7 +10,6 @@ class Conference extends Model
     protected static function boot()
     {
         parent::boot();
-        // To set only one conference is_Latest at the time
         static::saving(function ($conference) {
             if ($conference->is_latest) {
                 static::where('id', '!=', $conference->id)

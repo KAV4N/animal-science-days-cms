@@ -6,6 +6,29 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\UserController;
 
+use App\Http\Controllers\Api\ConferenceController;
+use App\Http\Controllers\Api\ConferenceEditorController;
+use App\Http\Controllers\Api\UniversityController;
+
+//ONLY FOR TESTING
+// Universities
+Route::apiResource('universities', UniversityController::class);
+// Conferences
+Route::apiResource('conferences', ConferenceController::class);
+Route::patch('conferences/{conference}/status', [ConferenceController::class, 'updateStatus'])->name('conferences.update-status');
+
+// Conference Editors
+Route::get('/conferences/{conference}/editors', [ConferenceEditorController::class, 'index']);
+Route::post('/conferences/{conference}/editors', [ConferenceEditorController::class, 'store']);
+Route::delete('/conferences/{conference}/editors/{user}', [ConferenceEditorController::class, 'destroy']);
+//--------------------------------
+
+
+Route::middleware('auth:sanctum')->group(function () {
+
+
+});
+
 Route::prefix('v1')->group(function () {
     Route::prefix('auth')->group(function () {
         Route::post('/login', [AuthController::class, 'login']);
@@ -18,6 +41,9 @@ Route::prefix('v1')->group(function () {
             //Route::post('/change-password', [AuthController::class, 'changePassword']);
         });
     });
+
+    
+
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/users/me', [UserController::class, 'current']);
