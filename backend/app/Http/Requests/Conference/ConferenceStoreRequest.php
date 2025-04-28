@@ -9,13 +9,14 @@ class ConferenceStoreRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return auth()->check();
     }
 
     public function rules(): array
     {
         return [
             'university_id' => 'required|exists:universities,id',
+            
             'name' => 'required|string|max:255',
             'title' => 'required|string|max:255',
             'slug' => 'required|string|max:255|unique:conferences',
@@ -26,6 +27,7 @@ class ConferenceStoreRequest extends FormRequest
             'end_date' => 'required|date|after_or_equal:start_date',
             'primary_color' => 'required|string|max:255',
             'secondary_color' => 'required|string|max:255',
+
             'is_latest' => 'boolean',
             'is_published' => 'boolean',
         ];

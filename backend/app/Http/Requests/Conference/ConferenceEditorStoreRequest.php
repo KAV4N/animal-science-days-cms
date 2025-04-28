@@ -21,15 +21,12 @@ class ConferenceEditorStoreRequest extends FormRequest
             'user_id' => [
                 'required',
                 'exists:users,id',
-                function ($attribute, $value, $fail) use ($conference) {
-                    $exists = ConferenceEditor::where('conference_id', $conference->id)
-                        ->where('user_id', $value)
-                        ->exists();
-                    if ($exists) {
-                        $fail('This user is already an editor for this conference.');
+                function ($attribute, $value, $fail) {
+                    if ($value == auth()->id()) {
+                        $fail('The user and the assigner cannot be the same person.');
                     }
                 },
-            ],
+            ]
         ];
     }
 

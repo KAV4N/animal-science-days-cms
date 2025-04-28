@@ -72,26 +72,6 @@ const apiService = {
   /**
    * Generic GET request
    */
-  /*
-  get(url: string, config = {}) {
-    return api.get(url, config);
-  },
-  
-
-  post(url: string, data = {}, config = {}) {
-    return api.post(url, data, config);
-  },
-
-
-  put(url: string, data = {}, config = {}) {
-    return api.put(url, data, config);
-  },
-
-
-  delete(url: string, config = {}) {
-    return api.delete(url, config);
-  },
-*/
 
   get<T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
     return api.get<T>(url, config);
@@ -103,6 +83,10 @@ const apiService = {
   
   put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
     return api.put<T>(url, data, config);
+  },
+
+  patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+    return api.patch<T>(url, data, config);
   },
   
   delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {

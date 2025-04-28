@@ -12,22 +12,8 @@ use App\Http\Controllers\Api\UniversityController;
 
 //ONLY FOR TESTING
 // Universities
-Route::apiResource('universities', UniversityController::class);
-// Conferences
-Route::apiResource('conferences', ConferenceController::class);
-Route::patch('conferences/{conference}/status', [ConferenceController::class, 'updateStatus'])->name('conferences.update-status');
-
-// Conference Editors
-Route::get('/conferences/{conference}/editors', [ConferenceEditorController::class, 'index']);
-Route::post('/conferences/{conference}/editors', [ConferenceEditorController::class, 'store']);
-Route::delete('/conferences/{conference}/editors/{user}', [ConferenceEditorController::class, 'destroy']);
-//--------------------------------
 
 
-Route::middleware('auth:sanctum')->group(function () {
-
-
-});
 
 Route::prefix('v1')->group(function () {
     Route::prefix('auth')->group(function () {
@@ -42,42 +28,32 @@ Route::prefix('v1')->group(function () {
         });
     });
 
-    
-
-
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/users/me', [UserController::class, 'current']);
         /*
         //TODO: implement this in admin controller its just a example code
-        Route::middleware('permission:access.admin')->group(function () {
+        Route::middleware('role:admin|super_admin')->group(function () {
             Route::apiResource('users', UserController::class);
         });
         //-----------------------------
+        */
+        Route::apiResource('universities', UniversityController::class)->only(['index', 'show']);
 
-        // CONFERENCE SECTION
-           Route::apiResource('universities', UniversityController::class)
-        ->middleware('permission:manage.universities');
-        
+        Route::middleware(['role:super_admin'])->group(function () {
+            Route::apiResource('universities', UniversityController::class)->except(['index', 'show']);
+        });
 
-        // Conference management
-        Route::get('/conferences', [ConferenceController::class, 'index']);
-        Route::get('/conferences/{id}', [ConferenceController::class, 'show']);
-        
-        Route::middleware('permission:access.admin')->group(function () {
-            Route::post('/conferences', [ConferenceController::class, 'store']);
-            Route::put('/conferences/{id}', [ConferenceController::class, 'update']);
-            Route::delete('/conferences/{id}', [ConferenceController::class, 'destroy']);
+
+        Route::apiResource('conferences', ConferenceController::class)->only(['index', 'show']);
+        Route::middleware(['role:admin|super_admin'])->group(function () {
+            Route::apiResource('conferences', ConferenceController::class)->except(['index', 'show']);
+            Route::patch('conferences/{conference}', [ConferenceController::class, 'updateStatus']);
+            Route::get('/conferences/{conference}/editors', [ConferenceController::class, 'getEditors']);
+            Route::post('/conferences/{conference}/editors', [ConferenceController::class, 'attachEditor']);
+            Route::delete('/conferences/{conference}/editors/{user}', [ConferenceController::class, 'detachEditor']);
         });
-        
-        
-        // Conference editors
-        Route::get('/conferences/{conferenceId}/editors', [ConferenceEditorController::class, 'index']);
-        
-        Route::middleware('permission:manage.conference_editors')->group(function () {
-            Route::post('/conferences/{conferenceId}/editors', [ConferenceEditorController::class, 'store']);
-            Route::delete('/conferences/{conferenceId}/editors/{userId}', [ConferenceEditorController::class, 'destroy']);
-        });
-        
+        /*
+        //TODO: IMPLEMENT THESE ROUTES IN FUTURE!!!
         // Page menus
         Route::get('/conferences/{conferenceId}/menus', [PageMenuController::class, 'index']);
         Route::get('/conferences/{conferenceId}/menus/{id}', [PageMenuController::class, 'show']);
@@ -106,6 +82,6 @@ Route::prefix('v1')->group(function () {
             Route::post('/media', [MediaController::class, 'store']);
             Route::delete('/media/{id}', [MediaController::class, 'destroy']);
         });
-*/
+    */
     });
 });

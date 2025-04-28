@@ -5,8 +5,12 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Conference\ConferenceStoreRequest;
 use App\Http\Requests\Conference\ConferenceUpdateRequest;
+use App\Http\Requests\Conference\ConferenceEditorStoreRequest;
+
 use App\Http\Resources\Conference\ConferenceResource;
 use App\Http\Resources\Conference\ConferenceCollection;
+use App\Http\Resources\User\UserResource;
+
 use App\Models\Conference;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -20,6 +24,7 @@ class ConferenceController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Conference::query();
+
 
         if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
@@ -59,11 +64,8 @@ class ConferenceController extends Controller
 
         $perPage = min(max(intval($request->per_page ?? 10), 1), 100);
         $conferences = $query->paginate($perPage)->withQueryString();
-
-        return $this->successResponse(
-            new ConferenceCollection($conferences),
-            'Conferences retrieved successfully'
-        );
+        $conferences->load('university', 'editors');
+        return $this->paginatedResponse($conferences, ConferenceResource::collection($conferences));
     }
 
     public function store(ConferenceStoreRequest $request): JsonResponse
@@ -71,27 +73,14 @@ class ConferenceController extends Controller
         $validated = $request->validated();
         $validated['created_by'] = $request->user()->id;
 
-        DB::beginTransaction();
-        try {
-            $conference = Conference::create($validated);
+        $conference = Conference::create($validated);
 
-            $conference->conferenceEditors()->create([
-                'user_id' => $request->user()->id,
-                'assigned_by' => $request->user()->id,
-                'assigned_at' => now(),
-            ]);
+        return $this->successResponse(
+            new ConferenceResource($conference->load('university', 'editors')),
+            'Conference created successfully',
+            201
+        );
 
-            DB::commit();
-
-            return $this->successResponse(
-                new ConferenceResource($conference->load('university', 'editors')),
-                'Conference created successfully',
-                201
-            );
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return $this->errorResponse('Failed to create conference: ' . $e->getMessage(), 500);
-        }
     }
 
     public function show(Conference $conference): JsonResponse
@@ -145,4 +134,38 @@ class ConferenceController extends Controller
             $message
         );
     }
+    
+    public function getEditors(Conference $conference): JsonResponse
+    {
+        $editors = $conference->editors()->with('university')->get();
+    
+        return $this->successResponse(
+            UserResource::collection($editors),
+            'Conference editors retrieved successfully'
+        );
+    }
+    
+    public function attachEditor(ConferenceEditorStoreRequest $request, Conference $conference): JsonResponse
+    {
+    
+        $conference->editors()->attach($request->user_id, [
+            'assigned_by' => $request->user()->id,
+            'assigned_at' => now()
+        ]);
+    
+        return $this->successResponse(
+            new ConferenceEditorResource($editor->load('user', 'assignedByUser')),
+            'Editor added successfully',
+            201
+        );
+    }
+    
+    public function detachEditor(Conference $conference, User $user): JsonResponse
+    {
+        $conference->editors()->detach($user->id);
+    
+        return $this->successResponse(null, 'Editor removed successfully');
+    }
+
+
 }

@@ -1,350 +1,288 @@
-// stores/conferenceManagement.ts
 import { defineStore } from 'pinia';
 import apiService from '@/services/apiService';
-import type { Conference, ConferenceResponse, PaginatedResponse, ApiResponse } from '@/types/conference';
-import { ref, computed } from 'vue';
-import { useRouter } from 'vue-router';
-import { useToast } from 'primevue/usetoast';
+import type { 
+  Conference, 
+  ConferenceFilters, 
+  CreateConferencePayload, 
+  UpdateConferencePayload, 
+  ConferenceStatusPayload,
+  ConferenceResponse, 
+  SingleConferenceResponse,
+  ConferenceEditorsResponse,
+  AttachEditorPayload
+} from '@/types/conference';
+import type { PaginationMeta } from '@/types/university';
+import type { User } from '@/types/user';
+import type { AxiosError } from 'axios';
+import type { ApiErrorResponse } from '@/types/user';
 
-export const useConferenceStore = defineStore('conferenceManagement', () => {
-  // State
-  const conferences = ref<Conference[]>([]);
-  const latestConference = ref<Conference | null>(null);
-  const currentConference = ref<Conference | null>(null);
-  const selectedConferences = ref<Conference[]>([]);
-  const conferenceDialog = ref(false);
-  const deleteConferenceDialog = ref(false);
-  const deleteConferencesDialog = ref(false);
-  const loading = ref(false);
-  const submitted = ref(false);
-  const totalRecords = ref(0);
-  const currentPage = ref(1);
-  const perPage = ref(10);
+interface ConferenceState {
+  conferences: Conference[];
+  currentConference: Conference | null;
+  conferenceEditors: User[];
+  loading: boolean;
+  error: string | null;
+  meta: PaginationMeta | null;
+}
 
-  // Toast for messages
-  const toast = useToast();
-  const router = useRouter();
+export const useConferenceStore = defineStore('conference', {
+  state: (): ConferenceState => ({
+    conferences: [],
+    currentConference: null,
+    conferenceEditors: [],
+    loading: false,
+    error: null,
+    meta: null,
+  }),
 
-  // Actions
-  async function fetchConferences(page = 1, search = '') {
-    loading.value = true;
-    try {
-      const params = { 
-        page,
-        per_page: perPage.value,
-        search: search || undefined
-      };
-      
-      const response = await apiService.get<PaginatedResponse<Conference>>('/conferences', { params });
-      conferences.value = response.data.data;
-      totalRecords.value = response.data.total;
-      currentPage.value = response.data.current_page;
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching conferences:', error);
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to load conferences',
-        life: 3000
-      });
-      return null;
-    } finally {
-      loading.value = false;
+  getters: {
+    getConferences: (state) => state.conferences,
+    getCurrentConference: (state) => state.currentConference,
+    getConferenceEditors: (state) => state.conferenceEditors,
+    isLoading: (state) => state.loading,
+    getError: (state) => state.error,
+    getPaginationMeta: (state) => state.meta,
+    
+    getPublishedConferences: (state) => state.conferences.filter(c => c.is_published),
+    
+    getLatestConferences: (state) => state.conferences.filter(c => c.is_latest),
+    
+    getConferencesByUniversity: (state) => (universityId: number) => {
+      return state.conferences.filter(c => c.university?.id === universityId);
+    },
+    
+    getUpcomingConferences: (state) => {
+      const today = new Date().toISOString().split('T')[0];
+      return state.conferences.filter(c => c.start_date > today);
     }
-  }
+  },
 
-  async function fetchLatestConference() {
-    try {
-      const response = await apiService.get<ConferenceResponse>('/conferences', { 
-        params: { 
-          is_latest: true
-        } 
-      });
+  actions: {
+    /**
+     * Fetch conferences with filters
+     */
+    async fetchConferences(filters: ConferenceFilters = {}) {
+      this.loading = true;
+      this.error = null;
       
-      if (Array.isArray(response.data.data) && response.data.data.length > 0) {
-        latestConference.value = response.data.data[0];
-      } else {
-        latestConference.value = null;
-      }
-      return latestConference.value;
-    } catch (error) {
-      console.error('Error fetching latest conference:', error);
-      latestConference.value = null;
-      return null;
-    }
-  }
-
-  async function saveConference(conference: Conference) {
-    submitted.value = true;
-    try {
-      let response;
-      
-      if (conference.id) {
-        // Update existing conference
-        response = await apiService.put<ConferenceResponse>(`/conferences/${conference.id}`, conference);
+      try {
+        const response = await apiService.get<ConferenceResponse>('/v1/conferences', { 
+          params: filters 
+        });
         
-        const index = conferences.value.findIndex(c => c.id === conference.id);
+        this.conferences = response.data.data;
+        this.meta = response.data.meta;
+        
+        return response.data;
+      } catch (error) {
+        const axiosError = error as AxiosError<ApiErrorResponse>;
+        this.error = axiosError.response?.data.message || 'Failed to fetch conferences';
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    /**
+     * Fetch a single conference by ID
+     */
+    async fetchConference(id: number) {
+      this.loading = true;
+      this.error = null;
+      
+      try {
+        const response = await apiService.get<SingleConferenceResponse>(`/v1/conferences/${id}`);
+        this.currentConference = response.data.data;
+        return response.data;
+      } catch (error) {
+        const axiosError = error as AxiosError<ApiErrorResponse>;
+        this.error = axiosError.response?.data.message || `Failed to fetch conference with ID: ${id}`;
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    /**
+     * Create a new conference
+     */
+    async createConference(conferenceData: CreateConferencePayload) {
+      this.loading = true;
+      this.error = null;
+      
+      try {
+        const response = await apiService.post<SingleConferenceResponse>('/v1/conferences', conferenceData);
+        return response.data;
+      } catch (error) {
+        const axiosError = error as AxiosError<ApiErrorResponse>;
+        this.error = axiosError.response?.data.message || 'Failed to create conference';
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    /**
+     * Update an existing conference
+     */
+    async updateConference(id: number, conferenceData: UpdateConferencePayload) {
+      this.loading = true;
+      this.error = null;
+      
+      try {
+        const response = await apiService.put<SingleConferenceResponse>(`/v1/conferences/${id}`, conferenceData);
+        
+        if (this.currentConference && this.currentConference.id === id) {
+          this.currentConference = response.data.data;
+        }
+        
+        // Update conference in the list if it exists
+        const index = this.conferences.findIndex(c => c.id === id);
         if (index !== -1) {
-          conferences.value[index] = response.data.data as Conference;
+          this.conferences[index] = response.data.data;
         }
         
-        toast.add({
-          severity: 'success',
-          summary: 'Successful',
-          detail: 'Conference Updated',
-          life: 3000
-        });
-      } else {
-        // Create new conference
-        response = await apiService.post<ConferenceResponse>('/conferences', conference);
+        return response.data;
+      } catch (error) {
+        const axiosError = error as AxiosError<ApiErrorResponse>;
+        this.error = axiosError.response?.data.message || `Failed to update conference with ID: ${id}`;
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    /**
+     * Update conference status (published or latest)
+     */
+    async updateConferenceStatus(id: number, statusData: ConferenceStatusPayload) {
+      this.loading = true;
+      this.error = null;
+      
+      try {
+        const response = await apiService.patch<SingleConferenceResponse>(`/v1/conferences/${id}/status`, statusData);
         
-        if (Array.isArray(response.data.data)) {
-          if (response.data.data.length > 0) {
-            conferences.value.unshift(response.data.data[0]);
-          }
-        } else {
-          conferences.value.unshift(response.data.data as Conference);
+        if (this.currentConference && this.currentConference.id === id) {
+          this.currentConference = response.data.data;
         }
         
-        toast.add({
-          severity: 'success',
-          summary: 'Successful',
-          detail: 'Conference Created',
-          life: 3000
-        });
-      }
-      
-      // If this is set as the latest conference, update the reference
-      if (conference.is_latest) {
-        fetchLatestConference();
-      }
-      
-      conferenceDialog.value = false;
-      currentConference.value = null;
-      
-      return response.data.data;
-    } catch (error: any) {
-      console.error('Error saving conference:', error);
-      
-      let errorMessage = 'Failed to save conference';
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      }
-      
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: errorMessage,
-        life: 3000
-      });
-      
-      return null;
-    } finally {
-      submitted.value = false;
-    }
-  }
-
-  async function setLatestConference(conference: Conference) {
-    try {
-      const response = await apiService.put<ConferenceResponse>(`/conferences/${conference.id}/set-latest`);
-      
-      // Update the conference in the list
-      const index = conferences.value.findIndex(c => c.id === conference.id);
-      if (index !== -1) {
-        conferences.value[index] = response.data.data as Conference;
-      }
-      
-      // Update the latest conference reference
-      latestConference.value = response.data.data as Conference;
-      
-      // Set all other conferences as not latest
-      conferences.value = conferences.value.map(c => {
-        if (c.id !== conference.id) {
-          return { ...c, is_latest: false };
+        // Update conference in the list if it exists
+        const index = this.conferences.findIndex(c => c.id === id);
+        if (index !== -1) {
+          this.conferences[index] = response.data.data;
         }
-        return c;
-      });
-      
-      toast.add({
-        severity: 'success',
-        summary: 'Successful',
-        detail: 'Conference set as latest',
-        life: 3000
-      });
-      
-      return response.data.data;
-    } catch (error) {
-      console.error('Error setting latest conference:', error);
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to set conference as latest',
-        life: 3000
-      });
-      return null;
-    }
-  }
-
-  async function deleteConference(id: number) {
-    try {
-      await apiService.delete(`/conferences/${id}`);
-      
-      // Remove from list
-      conferences.value = conferences.value.filter(c => c.id !== id);
-      
-      // If this was the latest conference, fetch the new latest
-      if (latestConference.value?.id === id) {
-        fetchLatestConference();
+        
+        return response.data;
+      } catch (error) {
+        const axiosError = error as AxiosError<ApiErrorResponse>;
+        this.error = axiosError.response?.data.message || `Failed to update conference status with ID: ${id}`;
+        throw error;
+      } finally {
+        this.loading = false;
       }
-      
-      deleteConferenceDialog.value = false;
-      currentConference.value = null;
-      
-      toast.add({
-        severity: 'success',
-        summary: 'Successful',
-        detail: 'Conference Deleted',
-        life: 3000
-      });
-      
-      return true;
-    } catch (error) {
-      console.error('Error deleting conference:', error);
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to delete conference',
-        life: 3000
-      });
-      return false;
-    }
-  }
+    },
 
-  async function deleteSelectedConferences() {
-    try {
-      // Using Promise.all to delete multiple conferences in parallel
-      await Promise.all(
-        selectedConferences.value.map(conference => 
-          apiService.delete(`/conferences/${conference.id}`)
-        )
-      );
+    /**
+     * Delete a conference
+     */
+    async deleteConference(id: number) {
+      this.loading = true;
+      this.error = null;
       
-      // Check if any of the deleted conferences was the latest
-      const deletedLatest = selectedConferences.value.some(c => c.id === latestConference.value?.id);
-      
-      // Remove deleted conferences from the list
-      const deletedIds = selectedConferences.value.map(c => c.id);
-      conferences.value = conferences.value.filter(c => !deletedIds.includes(c.id));
-      
-      // If a latest conference was deleted, fetch the new latest
-      if (deletedLatest) {
-        fetchLatestConference();
+      try {
+        const response = await apiService.delete(`/v1/conferences/${id}`);
+        
+        // Remove conference from the list if it exists
+        this.conferences = this.conferences.filter(c => c.id !== id);
+        
+        // Clear currentConference if it's the deleted one
+        if (this.currentConference && this.currentConference.id === id) {
+          this.currentConference = null;
+        }
+        
+        return response.data;
+      } catch (error) {
+        const axiosError = error as AxiosError<ApiErrorResponse>;
+        this.error = axiosError.response?.data.message || `Failed to delete conference with ID: ${id}`;
+        throw error;
+      } finally {
+        this.loading = false;
       }
+    },
+
+    /**
+     * Fetch editors for a conference
+     */
+    async fetchConferenceEditors(conferenceId: number) {
+      this.loading = true;
+      this.error = null;
       
-      deleteConferencesDialog.value = false;
-      selectedConferences.value = [];
+      try {
+        const response = await apiService.get<ConferenceEditorsResponse>(`/v1/conferences/${conferenceId}/editors`);
+        this.conferenceEditors = response.data.data;
+        return response.data;
+      } catch (error) {
+        const axiosError = error as AxiosError<ApiErrorResponse>;
+        this.error = axiosError.response?.data.message || `Failed to fetch editors for conference with ID: ${conferenceId}`;
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    /**
+     * Attach an editor to a conference
+     */
+    async attachEditor(conferenceId: number, editorData: AttachEditorPayload) {
+      this.loading = true;
+      this.error = null;
       
-      toast.add({
-        severity: 'success',
-        summary: 'Successful',
-        detail: 'Conferences Deleted',
-        life: 3000
-      });
+      try {
+        const response = await apiService.post(`/v1/conferences/${conferenceId}/editors`, editorData);
+        await this.fetchConferenceEditors(conferenceId); // Refresh editors list
+        return response.data;
+      } catch (error) {
+        const axiosError = error as AxiosError<ApiErrorResponse>;
+        this.error = axiosError.response?.data.message || `Failed to attach editor to conference with ID: ${conferenceId}`;
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    /**
+     * Detach an editor from a conference
+     */
+    async detachEditor(conferenceId: number, userId: number) {
+      this.loading = true;
+      this.error = null;
       
-      return true;
-    } catch (error) {
-      console.error('Error deleting conferences:', error);
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to delete conferences',
-        life: 3000
-      });
-      return false;
+      try {
+        const response = await apiService.delete(`/v1/conferences/${conferenceId}/editors/${userId}`);
+        
+        // Remove editor from the list if it exists
+        this.conferenceEditors = this.conferenceEditors.filter(e => e.id !== userId);
+        
+        return response.data;
+      } catch (error) {
+        const axiosError = error as AxiosError<ApiErrorResponse>;
+        this.error = axiosError.response?.data.message || `Failed to detach editor from conference with ID: ${conferenceId}`;
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    /**
+     * Reset store state
+     */
+    resetState() {
+      this.conferences = [];
+      this.currentConference = null;
+      this.conferenceEditors = [];
+      this.loading = false;
+      this.error = null;
+      this.meta = null;
     }
   }
-
-  // UI Actions
-  function openNewConference() {
-    currentConference.value = {
-      id: 0,
-      university_id: 0,
-      created_by: null,
-      name: '',
-      title: '',
-      slug: '',
-      description: '',
-      location: '',
-      venue_details: '',
-      start_date: new Date().toISOString().split('T')[0],
-      end_date: new Date().toISOString().split('T')[0],
-      primary_color: '#3B82F6',
-      secondary_color: '#93C5FD',
-      is_latest: false,
-      is_published: false,
-      created_at: '',
-      updated_at: ''
-    };
-    submitted.value = false;
-    conferenceDialog.value = true;
-  }
-
-  function editConference(conference: Conference) {
-    currentConference.value = { ...conference };
-    conferenceDialog.value = true;
-  }
-
-  function confirmDeleteConference(conference: Conference) {
-    currentConference.value = conference;
-    deleteConferenceDialog.value = true;
-  }
-
-  function confirmDeleteSelected() {
-    deleteConferencesDialog.value = true;
-  }
-
-  // Reset store state
-  function resetState() {
-    conferences.value = [];
-    latestConference.value = null;
-    currentConference.value = null;
-    selectedConferences.value = [];
-    conferenceDialog.value = false;
-    deleteConferenceDialog.value = false;
-    deleteConferencesDialog.value = false;
-    loading.value = false;
-    submitted.value = false;
-  }
-
-  return {
-    // State
-    conferences,
-    latestConference,
-    currentConference,
-    selectedConferences,
-    conferenceDialog,
-    deleteConferenceDialog,
-    deleteConferencesDialog,
-    loading,
-    submitted,
-    totalRecords,
-    currentPage,
-    perPage,
-    
-    // Actions
-    fetchConferences,
-    fetchLatestConference,
-    saveConference,
-    setLatestConference,
-    deleteConference,
-    deleteSelectedConferences,
-    
-    // UI Actions
-    openNewConference,
-    editConference,
-    confirmDeleteConference,
-    confirmDeleteSelected,
-    resetState
-  };
 });

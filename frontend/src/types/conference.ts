@@ -1,81 +1,136 @@
-// types/index.ts
-import { type User } from "./user";
-  
-  // University related types
-  export interface University {
-    id: number;
-    full_name: string;
-    country: string;
-    city: string;
-    created_at: string;
-    updated_at: string;
-  }
-  
-  export interface UniversityResponse {
-    data: University | University[];
-    message: string;
-  }
-  
-  // Conference related types
-  export interface Conference {
-    id: number;
-    university_id: number;
-    created_by: number | null;
-    name: string;
-    title: string;
-    slug: string;
-    description: string | null;
-    location: string;
-    venue_details: string | null;
-    start_date: string;
-    end_date: string;
-    primary_color: string;
-    secondary_color: string;
-    is_latest: boolean;
-    is_published: boolean;
-    created_at: string;
-    updated_at: string;
-    university?: University;
-    editors?: User[];
-  }
-  
-  export interface ConferenceResponse {
-    data: Conference | Conference[];
-    message: string;
-  }
-  
-  export interface PaginatedResponse<T> {
-    data: T[];
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
-    links: {
-      first: string;
-      last: string;
-      prev: string | null;
-      next: string | null;
-    };
-  }
-  
-  // Conference Editor related types
-  export interface ConferenceEditor {
-    id: number;
-    conference_id: number;
-    user_id: number;
-    assigned_by: number;
-    assigned_at: string;
-    user?: User;
-    assignedByUser?: User;
-  }
-  
-  export interface ConferenceEditorResponse {
-    data: ConferenceEditor | ConferenceEditor[];
-    message: string;
-  }
-  
-  // Generic response type
-  export interface ApiResponse<T> {
-    data: T;
-    message: string;
-  }
+// src/types/conference.ts
+import type { University } from './university';
+import type { User } from './user';
+import type { PaginationMeta, PaginationLinks } from './university';
+
+/**
+ * Conference entity
+ */
+export interface Conference {
+  id: number;
+  name: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  location: string;
+  venue_details: string | null;
+  start_date: string;
+  end_date: string;
+  primary_color: string;
+  secondary_color: string;
+  is_latest: boolean;
+  is_published: boolean;
+  university?: University;
+  editors?: ConferenceEditor[];
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Conference filter options
+ */
+export interface ConferenceFilters {
+  search?: string;
+  university_id?: number;
+  is_published?: boolean;
+  is_latest?: boolean;
+  start_date_after?: string;
+  end_date_before?: string;
+  sort_field?: 'name' | 'title' | 'start_date' | 'end_date' | 'created_at' | 'updated_at';
+  sort_order?: 'asc' | 'desc';
+  page?: number;
+  per_page?: number;
+}
+
+/**
+ * Conference editor entity
+ */
+export interface ConferenceEditor {
+  id: number;
+  conference_id: number;
+  user: User;
+  assigned_by: User;
+  assigned_at: string;
+}
+
+/**
+ * Conference creation payload
+ */
+export interface CreateConferencePayload {
+  university_id: number;
+  name: string;
+  title: string;
+  slug: string;
+  description?: string;
+  location: string;
+  venue_details?: string;
+  start_date: string;
+  end_date: string;
+  primary_color: string;
+  secondary_color: string;
+  is_latest?: boolean;
+  is_published?: boolean;
+}
+
+/**
+ * Conference update payload
+ */
+export interface UpdateConferencePayload {
+  university_id?: number;
+  name?: string;
+  title?: string;
+  slug?: string;
+  description?: string;
+  location?: string;
+  venue_details?: string;
+  start_date?: string;
+  end_date?: string;
+  primary_color?: string;
+  secondary_color?: string;
+  is_latest?: boolean;
+  is_published?: boolean;
+}
+
+/**
+ * Conference status update payload
+ */
+export interface ConferenceStatusPayload {
+  published?: boolean;
+  latest?: boolean;
+}
+
+/**
+ * Conference response structure
+ */
+export interface ConferenceResponse {
+  success: boolean;
+  message: string;
+  data: Conference[];
+  meta: PaginationMeta;
+  links: PaginationLinks;
+}
+
+/**
+ * Single conference response structure
+ */
+export interface SingleConferenceResponse {
+  success: boolean;
+  message: string;
+  data: Conference;
+}
+
+/**
+ * Conference editors response structure
+ */
+export interface ConferenceEditorsResponse {
+  success: boolean;
+  message: string;
+  data: User[];
+}
+
+/**
+ * Conference editor attachment payload
+ */
+export interface AttachEditorPayload {
+  user_id: number;
+}
