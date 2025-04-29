@@ -3,13 +3,18 @@ import apiService from '@/services/apiService';
 import { tokenService } from '@/services/tokenService';
 import type { User } from '@/types/user';
 
+
+type RefreshSubscriber = (token: string) => void;
+
 interface AuthState {
   user: User | null;
   roles: string[];
   permissions: string[];
-  token:  boolean,
+  token: boolean;
   loading: boolean;
   error: string | null;
+  _refreshTokenPromise: Promise<any> | null;
+  refreshSubscribers: RefreshSubscriber[];
 }
 
 export const useAuthStore = defineStore('auth', {
@@ -19,7 +24,9 @@ export const useAuthStore = defineStore('auth', {
     token: tokenService.hasTokens(),
     permissions: [],
     loading: false,
-    error: null
+    error: null,
+    _refreshTokenPromise: null,
+    refreshSubscribers: []
   }),
 
   getters: {
@@ -39,12 +46,34 @@ export const useAuthStore = defineStore('auth', {
 
     hasPermission: (state) => {
       return (permissionName: string): boolean => state.permissions.includes(permissionName);
-    },
+    },  
 
-    isAuthenticated: (state) => state.token,
   },
 
   actions: {
+    getAccessToken: () => tokenService.getAccessToken(),
+
+    async isAuthenticated() {
+      if (this.loading && this._refreshTokenPromise) {
+        try {
+          await this._refreshTokenPromise;
+          return this.token;
+        } catch (error) {
+          return false;
+        }
+      }
+      
+      if (!this.token && tokenService.getRefreshToken()) {
+        try {
+          await this.refreshToken();
+          return this.token;
+        } catch (error) {
+          return false;
+        }
+      }
+      
+      return this.token;
+    },
 
     /**
      * Register a new user
@@ -64,7 +93,7 @@ export const useAuthStore = defineStore('auth', {
         const { user, roles, permissions, access_token, refresh_token } = response.data.data;
 
         tokenService.setTokens(access_token, refresh_token);
-
+        this.token = true;
         this.updateAuthState(user, roles, permissions);
 
         return response;
@@ -89,7 +118,7 @@ export const useAuthStore = defineStore('auth', {
         const { user, roles, permissions, access_token, refresh_token } = response.data.data;
 
         tokenService.setTokens(access_token, refresh_token);
-
+        this.token = true;
         this.updateAuthState(user, roles, permissions);
 
         return response;
@@ -109,7 +138,7 @@ export const useAuthStore = defineStore('auth', {
       this.error = null;
 
       try {
-        if (this.isAuthenticated) {
+        if (await this.isAuthenticated()) {
           await apiService.auth.logout();
         }
         
@@ -133,7 +162,7 @@ export const useAuthStore = defineStore('auth', {
       this.user = null;
       this.roles = [];
       this.permissions = [];
-
+      this.token = false;
       tokenService.removeTokens();
     },
 
@@ -144,6 +173,7 @@ export const useAuthStore = defineStore('auth', {
       this.user = user;
       this.roles = roles;
       this.permissions = permissions;
+      this.token = true;
     },
 
     /**
@@ -173,33 +203,70 @@ export const useAuthStore = defineStore('auth', {
         } finally {
           this.loading = false;
         }
-      }else{
-        this.resetState();
+      } else {
+        this.refreshToken();
       }
     },
 
     /**
-     * Refresh authentication tokens
+     * Add a subscriber to the refresh token queue
      */
-    async refreshToken() {
-      try {
-        if (!tokenService.getRefreshToken()) {
-          this.resetState();
-          throw new Error('No refresh token found');
-        }
-
-        const response = await apiService.auth.refresh();
-        const { access_token, refresh_token } = response.data;
-
-        tokenService.setTokens(access_token, refresh_token);
-
-        return response;
-      } catch (error) {
-        this.resetState();
-        throw error;
-      }
+    addRefreshSubscriber(callback: RefreshSubscriber) {
+      this.refreshSubscribers.push(callback);
     },
 
+    /**
+     * Execute all callbacks in the refresh token queue with the new token
+     */
+    onRefreshed(token: string) {
+      this.refreshSubscribers.forEach(callback => callback(token));
+      this.refreshSubscribers = [];
+    },
+
+    /**
+     * Check if a token refresh is in progress
+     */
+    isRefreshingToken() {
+      return this.loading && this._refreshTokenPromise !== null;
+    },
+
+    /**
+     * Refresh authentication tokens - enhanced with promise caching to prevent multiple calls
+     */
+    async refreshToken() {
+      if (this._refreshTokenPromise) {
+        return this._refreshTokenPromise;
+      }
+
+      this.loading = true;
+
+      this._refreshTokenPromise = new Promise(async (resolve, reject) => {
+        try {
+          if (!tokenService.getRefreshToken()) {
+            this.resetState();
+            throw new Error('No refresh token found');
+          }
+
+          const response = await apiService.auth.refresh();
+          const { access_token, refresh_token } = response.data.data;
+
+          tokenService.setTokens(access_token, refresh_token);
+          this.token = true;
+          this.onRefreshed(access_token);
+          
+          resolve(response);
+        } catch (error) {
+          this.resetState();
+          this.refreshSubscribers = [];
+          reject(error);
+        } finally {
+          this.loading = false;
+          this._refreshTokenPromise = null;
+        }
+      });
+
+      return this._refreshTokenPromise;
+    },
 
     /**
      * Change user password

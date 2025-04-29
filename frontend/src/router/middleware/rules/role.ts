@@ -6,10 +6,12 @@ import { useAuthStore } from '@/stores/authStore';
  * @param requiredRole - The role required to access the route
  */
 export default (requiredRole: string) => {
-  return (to: RouteLocationNormalized, from: RouteLocationNormalized, next: NavigationGuardNext) => {
+  return async (to: RouteLocationNormalized, from: RouteLocationNormalized, next: NavigationGuardNext) => {
     const authStore = useAuthStore();
     
-    if (!authStore.isAuthenticated) {
+    const isAuthenticated = await authStore.isAuthenticated();
+    
+    if (!isAuthenticated) {
       return next({ name: 'login' });
     }
     

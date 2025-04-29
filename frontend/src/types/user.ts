@@ -37,6 +37,7 @@ export interface User {
   export interface LoginResponse {
     data: AuthResponseData;
     message: string;
+    success: boolean;
   }
   
   /**
@@ -45,6 +46,7 @@ export interface User {
   export interface RegisterResponse {
     data: AuthResponseData;
     message: string;
+    success: boolean;
   }
   
   /**
@@ -56,6 +58,7 @@ export interface User {
       roles: string[];
       permissions: string[];
     };
+    success: boolean;
     message: string;
   }
   
@@ -63,27 +66,13 @@ export interface User {
    * Token refresh response structure
    */
   export interface RefreshTokenResponse {
-    access_token: string;
-    refresh_token: string;
-    token_type: string;
-  }
-  
-  /**
-   * Access check response structure
-   */
-  export interface AccessCheckResponse {
-    allowed: boolean;
-    message: string;
-  }
-  
-  /**
-   * Password change response structure
-   */
-  export interface PasswordChangeResponse {
+    data: Token;
     success: boolean;
     message: string;
+
+
   }
-  
+    
   /**
    * Error response structure
    */

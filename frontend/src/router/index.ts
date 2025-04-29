@@ -43,16 +43,5 @@ const router = createRouter({
   routes
 });
 
-router.beforeEach(async (to, from, next) => {
-  const authStore = useAuthStore();
-  if (!authStore.user && localStorage.getItem('isLoggedIn') === 'true') {
-    try {
-      await authStore.fetchCurrentUser();
-    } catch (error) {
-      localStorage.removeItem('isLoggedIn');
-    }
-  }
-  next();
-});
 
 export default router;

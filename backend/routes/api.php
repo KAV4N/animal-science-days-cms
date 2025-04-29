@@ -51,6 +51,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/conferences/{conference}/editors', [ConferenceController::class, 'getEditors']);
             Route::post('/conferences/{conference}/editors', [ConferenceController::class, 'attachEditor']);
             Route::delete('/conferences/{conference}/editors/{user}', [ConferenceController::class, 'detachEditor']);
+            Route::get('/conferences/latest', [ConferenceController::class, 'latest']);
         });
         /*
         //TODO: IMPLEMENT THESE ROUTES IN FUTURE!!!

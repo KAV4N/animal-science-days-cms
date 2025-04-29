@@ -30,7 +30,7 @@ class AuthController extends Controller
 
         $user->tokens()->delete();
 
-        $accessToken = $user->createToken('access_token', ['*'], Carbon::now()->addMinutes(60));
+        $accessToken = $user->createToken('access_token', ['*'], Carbon::now()->addMinutes(1));
         $refreshToken = $user->createToken('refresh_token', ['refresh-token'], Carbon::now()->addDays(30));
 
         return $this->successResponse([
@@ -90,7 +90,7 @@ class AuthController extends Controller
 
         $user = $token->tokenable;
 
-        $newAccessToken = $user->createToken('access_token', ['*'], Carbon::now()->addMinutes(60));
+        $newAccessToken = $user->createToken('access_token', ['*'], Carbon::now()->addMinutes(1));
         $newRefreshToken = $user->createToken('refresh_token', ['refresh-token'], Carbon::now()->addDays(30));
 
         $token->delete();

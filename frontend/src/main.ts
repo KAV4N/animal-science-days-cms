@@ -17,16 +17,27 @@ import router from './router'
 import './plugins/axios';
 
 
-const app = createApp(App)
 
-app.use(ToastService);
-app.use(ConfirmationService);
 
-app.use(createPinia())
-app.use(router)
-app.use(PrimeVue, primevueConfig);
+startApp();
 
-const authStore = useAuthStore();
-authStore.fetchCurrentUser();
 
-app.mount('#app')
+async function startApp () {
+    const app = createApp(App)
+
+    app.use(ToastService);
+    app.use(ConfirmationService);
+
+    app.use(createPinia())
+    app.use(router)
+    app.use(PrimeVue, primevueConfig);
+    
+    try {
+        const authStore = useAuthStore();
+        await authStore.refreshToken();
+    } catch {
+
+    }
+
+    app.mount('#app');
+}

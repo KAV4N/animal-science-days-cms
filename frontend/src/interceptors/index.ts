@@ -1,8 +1,6 @@
-import { AxiosError, type AxiosInstance, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
-
+import { AxiosError, type AxiosInstance, type AxiosResponse } from 'axios';
 import { responseErrorInterceptor } from './responseInterceptor';
 import { requestInterceptor } from './requestInterceptor';
-
 
 export const setupInterceptors = (api: AxiosInstance) => {
   // Request interceptor

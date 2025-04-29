@@ -167,5 +167,21 @@ class ConferenceController extends Controller
         return $this->successResponse(null, 'Editor removed successfully');
     }
 
+    public function latest(Request $request): JsonResponse
+    {
+        $conference = Conference::where('is_latest', true)->first();
+    
+        if (!$conference) {
+            return $this->errorResponse('No latest conference found', 404);
+        }
+    
+        $conference->load('university', 'editors');
+    
+        return $this->successResponse(
+            new ConferenceResource($conference),
+            'Latest conference retrieved successfully'
+        );
+    }
+
 
 }
