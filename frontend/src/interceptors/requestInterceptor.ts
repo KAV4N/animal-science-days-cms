@@ -1,8 +1,10 @@
+// src/interceptors/requestInterceptor.ts
 import { type InternalAxiosRequestConfig } from 'axios';
-import { tokenService } from '@/services/tokenService';
+import { useAuthStore } from '@/stores/authStore';
 
 export const requestInterceptor = (config: InternalAxiosRequestConfig) => {
-  const accessToken = tokenService.getAccessToken();
+  const authStore = useAuthStore();
+  const accessToken = authStore.getToken;
   
   if (accessToken) {
     config.headers['Authorization'] = `Bearer ${accessToken}`;

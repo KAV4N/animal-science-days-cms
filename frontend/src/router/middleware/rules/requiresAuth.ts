@@ -8,7 +8,7 @@ import { useAuthStore } from '@/stores/authStore';
 export default async (to: RouteLocationNormalized, from: RouteLocationNormalized, next: NavigationGuardNext) => {
   const authStore = useAuthStore();
   
-  const isAuthenticated = await authStore.isAuthenticated();
+  const isAuthenticated = await authStore.isAuthenticated;
   
   if (!isAuthenticated) {
     next({ name: 'login' });

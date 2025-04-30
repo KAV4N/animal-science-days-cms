@@ -9,7 +9,6 @@ trait ApiResponse
             'success' => true,
             'message' => $message,
             'data' => $data,
-
         ], $status);
     }
 
@@ -33,7 +32,6 @@ trait ApiResponse
             ],
         ], $status);
     }
-
 
     protected function errorResponse($message, $status = 400, $errors = null)
     {

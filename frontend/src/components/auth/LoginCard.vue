@@ -5,6 +5,7 @@ import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import { useAuthStore } from '@/stores/authStore';
 import { useRouter } from 'vue-router';
+import type { LoginCredentials } from '@/types/user';
 
 export default defineComponent({
   name: 'LoginCard',
@@ -36,7 +37,11 @@ export default defineComponent({
       const router = useRouter();
 
       try {
-        await authStore.login(this.email, this.password);
+
+        await authStore.login({
+        email: this.email,
+        password: this.password
+      });
         this.$emit('login');
         this.closeDialog();
 

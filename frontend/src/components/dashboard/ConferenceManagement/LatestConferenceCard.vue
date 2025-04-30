@@ -150,18 +150,7 @@ export default defineComponent({
     const toast = useToast();
     return { store,authStore, toast };
   },
-  async mounted() {
-    try {
-      await this.store.fetchLatestConference();
-    } catch (error) {
-      this.toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to load latest conference',
-        life: 3000
-      });
-    }
-  },
+
   methods: {
     formatDate(value) {
       if (value) {

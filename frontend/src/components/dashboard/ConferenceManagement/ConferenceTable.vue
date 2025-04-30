@@ -5,7 +5,7 @@
       <DataTable
         ref="dt"
         v-model:selection="selectedConferences"
-        :value="store.conferences"
+        :value="conferenceStore.conferences"
         dataKey="id"
         :paginator="true"
         :rows="10"
@@ -16,7 +16,7 @@
         responsiveLayout="stack"
         breakpoint="960px"
         class="p-datatable-sm rounded fixed-columns-table"
-        :loading="store.loading"
+        :loading="conferenceStore.loading"
         scrollable
         scrollHeight="flex"
       >
@@ -45,7 +45,7 @@
         <Column field="name" header="Name" sortable style="min-width: 16rem"></Column>
         <Column field="university" header="University" sortable style="min-width: 12rem">
           <template #body="slotProps">
-            {{ slotProps.data.university.full_name}}
+            {{ slotProps.data.university.full_name }}
           </template>
         </Column>
         <Column field="start_date" header="Start Date" sortable style="min-width: 10rem">
@@ -74,12 +74,10 @@
             <div class="flex justify-center gap-2">
               <Button icon="pi pi-pencil" outlined rounded class="p-button-sm" @click="onEditPagesClick(slotProps.data)" />
 
-              <div v-if="authStore.hasAdminAccess">
+              <div v-if="authStore.hasAdminAccess" class="flex justify-center gap-2">
                 <Button icon="pi pi-cog" outlined rounded class="p-button-sm" @click="editConference(slotProps.data)" />
                 <Button icon="pi pi-trash" outlined rounded severity="danger" class="p-button-sm" @click="confirmDeleteConference(slotProps.data)" />
               </div>
-
-             
             </div>
           </template>
         </Column>
@@ -88,48 +86,36 @@
   </Card>
 </template>
 
-<script>
+<script lang="ts">
+import { defineComponent } from 'vue';
 import { FilterMatchMode } from '@primevue/core/api';
 import { useConferenceStore } from '@/stores/conferenceStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useToast } from 'primevue/usetoast';
+import type { Conference } from '@/types/conference';
 
-export default {
+export default defineComponent({
   name: 'ConferenceTable',
-  props: {
-    toast: {
-      type: Object,
-      required: true
-    }
-  },
   data() {
     return {
-      store: null,
-      authStore: null,
-      selectedConferences: [],
+      conferenceStore: useConferenceStore(),
+      authStore: useAuthStore(),
+      toast: useToast(),
+      selectedConferences: [] as Conference[],
       searchQuery: '',
       lastSearchQuery: '',
       searchPerformed: false,
       filters: {
         'global': { value: null, matchMode: FilterMatchMode.CONTAINS }
       },
-      originalConferences: []
+      originalConferences: [] as Conference[]
     };
   },
-  created() {
-    this.store = useConferenceStore();
-    this.authStore = useAuthStore();
-  },
-
   mounted() {
-    this.fetchConferences();
+    this.originalConferences = [...this.conferenceStore.conferences];
   },
   methods: {
-    fetchConferences() {
-      this.store.fetchConferences();
-      this.originalConferences = [...this.store.conferences];
-    },
-    
-    performSearch() {
+    performSearch(): void {
       if (!this.searchQuery.trim()) {
         this.toast.add({
           severity: 'info',
@@ -140,43 +126,43 @@ export default {
         return;
       }
       
-      this.store.loading = true;
+      this.conferenceStore.loading = true;
       this.lastSearchQuery = this.searchQuery;
       this.searchPerformed = true;
 
       if (this.originalConferences.length === 0) {
-        this.originalConferences = [...this.store.conferences];
+        this.originalConferences = [...this.conferenceStore.conferences];
       }
 
       const query = this.searchQuery.toLowerCase();
-      this.store.conferences = this.originalConferences.filter(conference => {
+      this.conferenceStore.conferences = this.originalConferences.filter(conference => {
         return (
           (conference.name && conference.name.toLowerCase().includes(query)) ||
-          (conference.university?.name && conference.university.name.toLowerCase().includes(query)) ||
+          (conference.university?.full_name && conference.university.full_name.toLowerCase().includes(query)) ||
           (conference.start_date && new Date(conference.start_date).toLocaleDateString().includes(query)) ||
           (conference.end_date && new Date(conference.end_date).toLocaleDateString().includes(query))
         );
       });
       
-      this.store.loading = false;
+      this.conferenceStore.loading = false;
       
       this.toast.add({
         severity: 'info',
         summary: 'Search Results',
-        detail: `Found ${this.store.conferences.length} matching conferences`,
+        detail: `Found ${this.conferenceStore.conferences.length} matching conferences`,
         life: 3000
       });
     },
     
-    clearSearch() {
+    clearSearch(): void {
       this.searchQuery = '';
       this.lastSearchQuery = '';
       this.searchPerformed = false;
       
       if (this.originalConferences.length > 0) {
-        this.store.conferences = [...this.originalConferences];
+        this.conferenceStore.conferences = [...this.originalConferences];
       } else {
-        this.fetchConferences();
+        this.refreshConferences();
       }
       
       this.filters['global'].value = null;
@@ -189,7 +175,7 @@ export default {
       });
     },
     
-    formatDate(value) {
+    formatDate(value: string): string {
       if (value) {
         return new Date(value).toLocaleDateString('en-US', {
           year: 'numeric',
@@ -200,11 +186,11 @@ export default {
       return '';
     },
     
-    getStatusSeverity(isPublished) {
+    getStatusSeverity(isPublished: boolean): string {
       return isPublished ? 'success' : 'warning';
     },
     
-    onEditPagesClick(conference) {
+    onEditPagesClick(conference: Conference): void {
       this.toast.add({
         severity: 'info',
         summary: 'Info',
@@ -213,24 +199,24 @@ export default {
       });
     },
     
-    editConference(conference) {
-      this.store.currentConference = conference;
+    editConference(conference: Conference): void {
+      this.conferenceStore.currentConference = conference;
       
       this.$router.push({
         name: 'conference-edit',
-        params: { id: conference.id }
+        params: { id: conference.id.toString() }
       });
     },
     
-    confirmDeleteConference(conference) {
+    confirmDeleteConference(conference: Conference): void {
       if (confirm(`Are you sure you want to delete "${conference.name}"?`)) {
         this.deleteConference(conference.id);
       }
     },
     
-    async deleteConference(id) {
+    async deleteConference(id: number): Promise<void> {
       try {
-        await this.store.deleteConference(id);
+        await this.conferenceStore.deleteConference(id);
 
         this.originalConferences = this.originalConferences.filter(c => c.id !== id);
         
@@ -244,23 +230,56 @@ export default {
         this.toast.add({
           severity: 'error',
           summary: 'Error',
-          detail: error || 'Failed to delete conference',
+          detail: error instanceof Error ? error.message : 'Failed to delete conference',
           life: 3000
         });
       }
     },
     
-    deleteSelectedConferences() {
-      // Implement logic to delete selected conferences
-      this.toast.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: 'Selected conferences deleted successfully',
-        life: 3000
-      });
+    refreshConferences(): void {
+      this.conferenceStore.fetchConferences();
+      this.originalConferences = [...this.conferenceStore.conferences];
+    },
+    
+    async deleteSelectedConferences(): Promise<void> {
+      if (this.selectedConferences.length === 0) {
+        this.toast.add({
+          severity: 'info',
+          summary: 'Info',
+          detail: 'No conferences selected',
+          life: 3000
+        });
+        return;
+      }
+      
+      try {
+        for (const conference of this.selectedConferences) {
+          await this.conferenceStore.deleteConference(conference.id);
+        }
+        
+        this.originalConferences = this.originalConferences.filter(
+          c => !this.selectedConferences.some(sc => sc.id === c.id)
+        );
+        
+        this.selectedConferences = [];
+        
+        this.toast.add({
+          severity: 'success',
+          summary: 'Success',
+          detail: 'Selected conferences deleted successfully',
+          life: 3000
+        });
+      } catch (error) {
+        this.toast.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: error instanceof Error ? error.message : 'Failed to delete selected conferences',
+          life: 3000
+        });
+      }
     }
   }
-};
+});
 </script>
 
 <style scoped>

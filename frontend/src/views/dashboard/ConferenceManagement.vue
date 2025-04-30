@@ -26,9 +26,9 @@
       @confirm="deleteSelectedConferences"
     />
   -->
-    <LatestConferenceCard />
     <Toast />
-    <ConferenceTable :toast="toast" />
+    <LatestConferenceCard />
+    <ConferenceTable/>
   </div>
 </template>
 
@@ -47,10 +47,49 @@ export default defineComponent({
     LatestConferenceCard,
     Toast
   },
-  setup() {
-    const store = useConferenceStore();
-    const toast = useToast();
-    return { store, toast };
+  data() {
+    return {
+      conferenceStore: useConferenceStore(),
+      toast: useToast()
+    };
+  },
+  mounted() {
+    this.loadData();
+  },
+  methods: {
+    loadData() {
+      this.loadConference();
+      this.loadLatestConference();
+    },
+    async loadConference(){
+      try {
+        await this.conferenceStore.fetchConferences();
+      } catch (error) {
+        this.toast.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to load conferences',
+          life: 3000
+        });
+      }
+    },
+
+    async loadLatestConference(){
+      try {
+        await this.conferenceStore.fetchLatestConference();
+      } catch (error) {
+        this.toast.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to load latest conference',
+          life: 3000
+        });
+      }
+    }
+    
+
   }
 });
 </script>
+
+

@@ -34,7 +34,10 @@ export default defineComponent({
       try {
         // Call the password change API
         //TODO: ADD RETYPE AGAIN PASSWORD
-        await authStore.changePassword(this.newPassword, this.newPassword);
+        await authStore.changePassword({  
+          new_password: this.newPassword,
+          new_password_confirmation: this.confirmPassword,
+        });
         this.success = 'Password changed successfully!';
 
         // Redirect to dashboard after 2 seconds

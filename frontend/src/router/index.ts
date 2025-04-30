@@ -43,5 +43,17 @@ const router = createRouter({
   routes
 });
 
+router.beforeEach(async (to, from, next) => {
+  const authStore = useAuthStore();
+  
+  if (!authStore.isAuthenticated && !authStore.isLoading) {
+    try {
+      await authStore.checkAuth();
+    } catch (error) {
+      console.error('Authentication check failed:', error);
+    }
+  } 
+  next();
+});
 
 export default router;

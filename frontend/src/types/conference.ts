@@ -80,7 +80,7 @@ export interface UpdateConferencePayload {
   name?: string;
   title?: string;
   slug?: string;
-  description?: string;
+  description?: string | null;
   location?: string;
   venue_details?: string;
   start_date?: string;

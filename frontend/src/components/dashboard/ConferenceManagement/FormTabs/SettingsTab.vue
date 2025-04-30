@@ -2,6 +2,28 @@
 <template>
   <div class="p-3 md:p-5">
     <div class="mb-6">
+      <h3 class="text-xl font-semibold mb-3 ">Latest Conference</h3>
+      <Divider />
+      <div class="mt-4 p-4  rounded-lg border ">
+        <div class="flex items-center">
+          <div class="mr-4">
+            <ToggleSwitch id="isLatest" v-model="isLatest" />
+          </div>
+          <div>
+            <label for="isLatest" class="block font-bold mb-1">
+              {{ isLatest ? 'Latest Conference' : 'Not Latest' }}
+            </label>
+            <span class="text-sm ">
+              {{ isLatest 
+                 ? 'Conference will be featured as the latest event.' 
+                 : 'Conference will not be highlighted as the latest event.' }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="mb-6">
       <h3 class="text-xl font-semibold mb-3 ">Publication Status</h3>
       <Divider />
       <div class="mt-4 p-4  rounded-lg border ">
@@ -92,7 +114,7 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-import { useConferenceStore } from '@/stores/conferenceManagement';
+import { useConferenceStore } from '@/stores/confereceStore';
 
 export default defineComponent({
   name: 'SettingsTab',
@@ -112,6 +134,14 @@ export default defineComponent({
       },
       set(value: boolean) {
         this.store.setPublishedStatus(value);
+      }
+    },
+    isLatest: {
+      get() {
+        return this.conference.isLatest || false;
+      },
+      set(value: boolean) {
+        this.store.setLatestStatus(value);
       }
     }
   },

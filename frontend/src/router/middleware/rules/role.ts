@@ -9,7 +9,7 @@ export default (requiredRole: string) => {
   return async (to: RouteLocationNormalized, from: RouteLocationNormalized, next: NavigationGuardNext) => {
     const authStore = useAuthStore();
     
-    const isAuthenticated = await authStore.isAuthenticated();
+    const isAuthenticated = await authStore.isAuthenticated;
     
     if (!isAuthenticated) {
       return next({ name: 'login' });

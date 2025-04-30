@@ -1,8 +1,8 @@
-// src/services/api-service.ts
+// src/services/apiService.ts
 import { api } from '@/plugins/axios';
-import { tokenService } from '@/services/tokenService';
-import type { LoginResponse, RegisterResponse, UserResponse, RefreshTokenResponse } from '@/types/user';
-import axios, { type AxiosRequestConfig, type AxiosResponse } from 'axios';
+import type { LoginResponse, RegisterResponse, UserResponse, RefreshTokenResponse, ChangePasswordResponse } from '@/types/user';
+import type { AxiosRequestConfig, AxiosResponse } from 'axios';
+
 /**
  * Authentication related API calls
  */
@@ -28,18 +28,18 @@ const authService = {
 
   /**
    * Logout the current user
+   * No need to send refresh token in the payload since it's in the cookie
    */
   logout() {
-    const refreshToken = tokenService.getRefreshToken();
-    return api.post('/v1/auth/logout', { refresh_token: refreshToken });
+    return api.post('/v1/auth/logout');
   },
 
   /**
    * Refresh authentication tokens
+   * Refresh token is now sent automatically via HTTP-only cookie
    */
   refresh() {
-    const refreshToken = tokenService.getRefreshToken();
-    return api.post<RefreshTokenResponse>('/v1/auth/refresh', { refresh_token: refreshToken });
+    return api.post<RefreshTokenResponse>('/v1/auth/refresh');
   },
 
   /**
@@ -53,15 +53,12 @@ const authService = {
    * Change user password
    */
   changePassword(new_password: string, new_password_confirmation: string) {
-    //TODO: not defined on
-    return api.post('/v1/auth/change-password', {
+    return api.post<ChangePasswordResponse>('/v1/auth/change-password', {
       new_password,
       new_password_confirmation
     });
   }
 };
-
-
 
 /**
  * General API methods
@@ -72,7 +69,6 @@ const apiService = {
   /**
    * Generic GET request
    */
-
   get<T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
     return api.get<T>(url, config);
   },
@@ -92,7 +88,6 @@ const apiService = {
   delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
     return api.delete<T>(url, config);
   }
-
 };
 
 export default apiService;
