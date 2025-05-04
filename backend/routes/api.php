@@ -39,13 +39,12 @@ Route::prefix('v1')->group(function () {
         */
         Route::apiResource('universities', UniversityController::class)->only(['index', 'show']);
 
-        Route::middleware(['role:super_admin'])->group(function () {
+        Route::middleware('role:super_admin')->group(function () {
             Route::apiResource('universities', UniversityController::class)->except(['index', 'show']);
         });
-
-
-        Route::apiResource('conferences', ConferenceController::class)->only(['index', 'show']);
-        Route::middleware(['role:admin|super_admin'])->group(function () {
+  
+       
+        Route::middleware('role:admin|super_admin')->group(function () {
             Route::apiResource('conferences', ConferenceController::class)->except(['index', 'show']);
             Route::patch('conferences/{conference}', [ConferenceController::class, 'updateStatus']);
             Route::get('/conferences/{conference}/editors', [ConferenceController::class, 'getEditors']);
@@ -53,6 +52,7 @@ Route::prefix('v1')->group(function () {
             Route::delete('/conferences/{conference}/editors/{user}', [ConferenceController::class, 'detachEditor']);
             Route::get('/conferences/latest', [ConferenceController::class, 'latest']);
         });
+        Route::apiResource('conferences', ConferenceController::class)->only(['index', 'show']);
         /*
         //TODO: IMPLEMENT THESE ROUTES IN FUTURE!!!
         // Page menus

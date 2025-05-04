@@ -57,7 +57,7 @@
                 <div>
                   <div class="text-sm font-semibold">University:</div>
                   <div class="truncate max-w-full" :title="store.getLatestConference?.university?.name">
-                    {{ store.getLatestConference?.university?.name }}
+                    {{ store.getLatestConference?.university?.full_name }}
                   </div>
                 </div>
               </div>
@@ -106,7 +106,9 @@
 
           <div class="flex flex-col gap-2 mt-4">
             <Button label="Edit Pages" icon="pi pi-pencil" class="p-button-sm" @click="onEditPagesClick" />
-            <div v-if="authStore.hasAdminAccess">
+            
+            <div v-if="authStore.hasAdminAccess" class="flex flex-col gap-2">
+              <Divider />
               <Button label="Manage" icon="pi pi-cog" class="p-button-sm" @click="editConference" />
               <Button label="Remove" icon="pi pi-trash" severity="danger" class="p-button-sm" @click="confirmDeleteConference"  />
             </div>
@@ -134,6 +136,7 @@ import Tag from 'primevue/tag';
 import Chip from 'primevue/chip';
 import Button from 'primevue/button';
 import { useAuthStore } from '@/stores/authStore';
+import { Divider } from 'primevue';
 
 export default defineComponent({
   name: 'LatestConferenceCard',

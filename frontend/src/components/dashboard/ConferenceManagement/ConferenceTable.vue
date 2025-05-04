@@ -1,120 +1,181 @@
 <!-- components/dashboard/ConferenceManagement/ConferenceTable.vue -->
 <template>
-  <Card class="card rounded-md">
-    <template #content>
-      <DataTable
-        ref="dt"
-        v-model:selection="selectedConferences"
-        :value="conferenceStore.conferences"
-        dataKey="id"
-        :paginator="true"
-        :rows="10"
-        :filters="filters"
-        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-        :rowsPerPageOptions="[5, 10, 25]"
-        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} conferences"
-        responsiveLayout="stack"
-        breakpoint="960px"
-        class="p-datatable-sm rounded fixed-columns-table"
-        :loading="conferenceStore.loading"
-        scrollable
-        scrollHeight="flex"
-      >
-        <template #header>
-          <div class="flex flex-column md:flex-row md:justify-between md:items-center gap-2">
-            <h4 class="m-0">Manage Conferences</h4>
-            <div class="flex gap-2">
-              <IconField class="w-full md:w-auto">
-                <InputIcon>
-                  <i class="pi pi-search" />
-                </InputIcon>
-                <InputText v-model="searchQuery" placeholder="Search..." class="w-full" />
-              </IconField>
-              <Button icon="pi pi-search" @click="performSearch" label="Search" />
-              <Button icon="pi pi-times" @click="clearSearch" label="Clear" class="p-button-secondary" />
-            </div>
-          </div>
-          <div v-if="searchPerformed" class="mt-2 text-sm text-blue-500">
-            Results for "{{ lastSearchQuery }}"
-          </div>
-        </template>
-
-        <!-- Fixed left column -->
-        <Column selectionMode="multiple" style="width: 3rem" frozen alignFrozen="left" class="checkbox-column" :exportable="false"></Column>
-        
-        <Column field="name" header="Name" sortable style="min-width: 16rem"></Column>
-        <Column field="university" header="University" sortable style="min-width: 12rem">
-          <template #body="slotProps">
-            {{ slotProps.data.university.full_name }}
-          </template>
-        </Column>
-        <Column field="start_date" header="Start Date" sortable style="min-width: 10rem">
-          <template #body="slotProps">
-            {{ formatDate(slotProps.data.start_date) }}
-          </template>
-        </Column>
-        <Column field="end_date" header="End Date" sortable style="min-width: 10rem">
-          <template #body="slotProps">
-            {{ formatDate(slotProps.data.end_date) }}
-          </template>
-        </Column>
-        
-        <Column field="is_published" header="Status" sortable style="min-width: 10rem">
-          <template #body="slotProps">
-            <Tag :value="slotProps.data.is_published ? 'Published' : 'Draft'" :severity="getStatusSeverity(slotProps.data.is_published)" />
-          </template>
-        </Column>
-        
-        <!-- Fixed right column -->
-        <Column :exportable="false" style="min-width: 8rem" frozen alignFrozen="right" class="action-buttons-column">
+  <div>
+    <!-- Add the toolbar component -->
+    <ConferenceToolbar 
+    v-if="authStore.hasAdminAccess"
+      :selectedConferences="selectedConferences"
+      @new-conference="openCreateConferenceDialog" 
+      @confirm-delete-selected="confirmDeleteSelected"
+    />
+    
+    <Card class="card rounded-md">
+      <template #content>
+        <DataTable
+          ref="dt"
+          v-model:selection="selectedConferences"
+          :value="displayedConferences"
+          dataKey="id"
+          :paginator="true"
+          :rows="10"
+          :filters="filters"
+          paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+          :rowsPerPageOptions="[5, 10, 25]"
+          currentPageReportTemplate="Showing {first} to {last} of {totalRecords} conferences"
+          responsiveLayout="stack"
+          breakpoint="960px"
+          class="p-datatable-sm rounded fixed-columns-table"
+          :loading="conferenceStore.loading"
+          scrollable
+          scrollHeight="flex"
+        >
           <template #header>
-            <div class="text-center">Actions</div>
-          </template>
-          <template #body="slotProps">
-            <div class="flex justify-center gap-2">
-              <Button icon="pi pi-pencil" outlined rounded class="p-button-sm" @click="onEditPagesClick(slotProps.data)" />
-
-              <div v-if="authStore.hasAdminAccess" class="flex justify-center gap-2">
-                <Button icon="pi pi-cog" outlined rounded class="p-button-sm" @click="editConference(slotProps.data)" />
-                <Button icon="pi pi-trash" outlined rounded severity="danger" class="p-button-sm" @click="confirmDeleteConference(slotProps.data)" />
+            <div class="flex flex-column md:flex-row md:justify-between md:items-center gap-2">
+              <h4 class="m-0">Manage Conferences</h4>
+              <div class="flex gap-2">
+                <IconField class="w-full md:w-auto">
+                  <InputIcon>
+                    <i class="pi pi-search" />
+                  </InputIcon>
+                  <InputText v-model="searchQuery" placeholder="Search..." class="w-full" />
+                </IconField>
+                <Button icon="pi pi-search" @click="performSearch" label="Search" />
+                <Button icon="pi pi-times" @click="clearSearch" label="Clear" class="p-button-secondary" />
               </div>
             </div>
+            <div v-if="searchPerformed" class="mt-2 text-sm text-blue-500">
+              Results for "{{ lastSearchQuery }}"
+            </div>
           </template>
-        </Column>
-      </DataTable>
-    </template>
-  </Card>
+
+          <!-- Fixed left column -->
+          <Column v-if="authStore.hasAdminAccess"  selectionMode="multiple" style="width: 3rem" frozen alignFrozen="left" class="checkbox-column" :exportable="false"></Column>
+          
+          <Column field="name" header="Name" sortable style="min-width: 16rem"></Column>
+          <Column field="university" header="University" sortable style="min-width: 12rem">
+            <template #body="slotProps">
+              {{ slotProps.data.university?.full_name }}
+            </template>
+          </Column>
+          <Column field="start_date" header="Start Date" sortable style="min-width: 10rem">
+            <template #body="slotProps">
+              {{ formatDate(slotProps.data.start_date) }}
+            </template>
+          </Column>
+          <Column field="end_date" header="End Date" sortable style="min-width: 10rem">
+            <template #body="slotProps">
+              {{ formatDate(slotProps.data.end_date) }}
+            </template>
+          </Column>
+          
+          <Column field="is_published" header="Status" sortable style="min-width: 10rem">
+            <template #body="slotProps">
+              <Tag :value="slotProps.data.is_published ? 'Published' : 'Draft'" :severity="getStatusSeverity(slotProps.data.is_published)" />
+            </template>
+          </Column>
+          
+          <!-- Fixed right column -->
+          <Column :exportable="false" style="min-width: 8rem" frozen alignFrozen="right" class="action-buttons-column">
+            <template #header>
+              <div class="text-center">Actions</div>
+            </template>
+            <template #body="slotProps">
+              <div class="flex justify-center gap-2">
+                <Button icon="pi pi-pencil" outlined rounded class="p-button-sm" @click="onEditPagesClick(slotProps.data)" />
+                
+                <div v-if="authStore.hasAdminAccess" class="flex justify-center gap-2">
+                  <Divider layout="vertical" />
+                  <Button icon="pi pi-cog" outlined rounded class="p-button-sm" @click="editConference(slotProps.data)" />
+                  <Button icon="pi pi-trash" outlined rounded severity="danger" class="p-button-sm" @click="confirmDeleteConference(slotProps.data)" />
+                </div>
+              </div>
+            </template>
+          </Column>
+
+          <template #empty>
+            <div class="p-4 text-center">
+              <p>No conferences found. {{ searchPerformed ? 'Try a different search term.' : 'Create a new conference to get started.' }}</p>
+            </div>
+          </template>
+        </DataTable>
+      </template>
+    </Card>
+  </div>
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue';
+import { defineComponent, ref, watch } from 'vue';
 import { FilterMatchMode } from '@primevue/core/api';
 import { useConferenceStore } from '@/stores/conferenceStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useToast } from 'primevue/usetoast';
 import type { Conference } from '@/types/conference';
+import ConferenceToolbar from './ConferenceToolbar.vue';
 
 export default defineComponent({
   name: 'ConferenceTable',
+  components: {
+    ConferenceToolbar
+  },
+  emits: ['edit-conference'],
+  setup() {
+    const conferenceStore = useConferenceStore();
+    const filteredConferences = ref<Conference[] | null>(null);
+    const searchQuery = ref('');
+    const lastSearchQuery = ref('');
+    const searchPerformed = ref(false);
+    
+    // Watch for changes in the conferenceStore.conferences
+    watch(() => conferenceStore.conferences, (newValue) => {
+      if (searchPerformed.value) {
+        // Re-apply the search filter when the conferences are updated
+        const query = lastSearchQuery.value.toLowerCase();
+        filteredConferences.value = conferenceStore.conferences.filter(conference => {
+          return (
+            (conference.name && conference.name.toLowerCase().includes(query)) ||
+            (conference.university?.full_name && conference.university.full_name.toLowerCase().includes(query)) ||
+            (conference.start_date && new Date(conference.start_date).toLocaleDateString().includes(query)) ||
+            (conference.end_date && new Date(conference.end_date).toLocaleDateString().includes(query))
+          );
+        });
+      }
+    }, { deep: true });
+    
+    return {
+      filteredConferences,
+      searchQuery,
+      lastSearchQuery,
+      searchPerformed
+    };
+  },
   data() {
     return {
       conferenceStore: useConferenceStore(),
       authStore: useAuthStore(),
       toast: useToast(),
       selectedConferences: [] as Conference[],
-      searchQuery: '',
-      lastSearchQuery: '',
-      searchPerformed: false,
       filters: {
         'global': { value: null, matchMode: FilterMatchMode.CONTAINS }
       },
-      originalConferences: [] as Conference[]
     };
   },
+  computed: {
+    displayedConferences(): Conference[] {
+      return this.filteredConferences !== null 
+        ? this.filteredConferences 
+        : this.conferenceStore.conferences;
+    }
+  },
   mounted() {
-    this.originalConferences = [...this.conferenceStore.conferences];
+    this.refreshConferences();
   },
   methods: {
+    editConference(conference: Conference): void {
+      this.$emit('edit-conference', conference);
+    },
+    openCreateConferenceDialog(): void {
+      this.$emit('edit-conference');
+    },
     performSearch(): void {
       if (!this.searchQuery.trim()) {
         this.toast.add({
@@ -130,12 +191,8 @@ export default defineComponent({
       this.lastSearchQuery = this.searchQuery;
       this.searchPerformed = true;
 
-      if (this.originalConferences.length === 0) {
-        this.originalConferences = [...this.conferenceStore.conferences];
-      }
-
       const query = this.searchQuery.toLowerCase();
-      this.conferenceStore.conferences = this.originalConferences.filter(conference => {
+      this.filteredConferences = this.conferenceStore.conferences.filter(conference => {
         return (
           (conference.name && conference.name.toLowerCase().includes(query)) ||
           (conference.university?.full_name && conference.university.full_name.toLowerCase().includes(query)) ||
@@ -149,7 +206,7 @@ export default defineComponent({
       this.toast.add({
         severity: 'info',
         summary: 'Search Results',
-        detail: `Found ${this.conferenceStore.conferences.length} matching conferences`,
+        detail: `Found ${this.filteredConferences.length} matching conferences`,
         life: 3000
       });
     },
@@ -158,13 +215,7 @@ export default defineComponent({
       this.searchQuery = '';
       this.lastSearchQuery = '';
       this.searchPerformed = false;
-      
-      if (this.originalConferences.length > 0) {
-        this.conferenceStore.conferences = [...this.originalConferences];
-      } else {
-        this.refreshConferences();
-      }
-      
+      this.filteredConferences = null;
       this.filters['global'].value = null;
       
       this.toast.add({
@@ -199,15 +250,6 @@ export default defineComponent({
       });
     },
     
-    editConference(conference: Conference): void {
-      this.conferenceStore.currentConference = conference;
-      
-      this.$router.push({
-        name: 'conference-edit',
-        params: { id: conference.id.toString() }
-      });
-    },
-    
     confirmDeleteConference(conference: Conference): void {
       if (confirm(`Are you sure you want to delete "${conference.name}"?`)) {
         this.deleteConference(conference.id);
@@ -217,8 +259,10 @@ export default defineComponent({
     async deleteConference(id: number): Promise<void> {
       try {
         await this.conferenceStore.deleteConference(id);
-
-        this.originalConferences = this.originalConferences.filter(c => c.id !== id);
+        
+        if (this.searchPerformed) {
+          this.performSearch();
+        }
         
         this.toast.add({
           severity: 'success',
@@ -238,7 +282,25 @@ export default defineComponent({
     
     refreshConferences(): void {
       this.conferenceStore.fetchConferences();
-      this.originalConferences = [...this.conferenceStore.conferences];
+      if (this.searchPerformed) {
+        this.performSearch();
+      }
+    },
+    
+    confirmDeleteSelected(): void {
+      if (this.selectedConferences.length === 0) {
+        this.toast.add({
+          severity: 'info',
+          summary: 'Info',
+          detail: 'No conferences selected',
+          life: 3000
+        });
+        return;
+      }
+      
+      if (confirm(`Are you sure you want to delete ${this.selectedConferences.length} selected conferences?`)) {
+        this.deleteSelectedConferences();
+      }
     },
     
     async deleteSelectedConferences(): Promise<void> {
@@ -257,11 +319,10 @@ export default defineComponent({
           await this.conferenceStore.deleteConference(conference.id);
         }
         
-        this.originalConferences = this.originalConferences.filter(
-          c => !this.selectedConferences.some(sc => sc.id === c.id)
-        );
-        
         this.selectedConferences = [];
+        
+        // Refresh the list after deletion
+        this.refreshConferences();
         
         this.toast.add({
           severity: 'success',
