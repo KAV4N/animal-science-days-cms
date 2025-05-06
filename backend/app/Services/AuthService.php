@@ -3,85 +3,29 @@
 namespace App\Services;
 
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Cookie;
-use Laravel\Sanctum\PersonalAccessToken;
-use Illuminate\Support\Facades\Log;
-use Carbon\Carbon;
+use Illuminate\Support\Str;
 
 class AuthService
 {
     /**
-     * Create a refresh token cookie
-     * 
-     * @param string $tokenValue The plaintext token value
-     * @return \Symfony\Component\HttpFoundation\Cookie
-     */
-    public function createRefreshTokenCookie(string $tokenValue)
-    {
-        $secure = config('app.env') !== 'local';
-        $sameSite = $secure ? 'None' : 'Lax';
-        
-        return Cookie::make(
-            'refresh_token',
-            $tokenValue,
-            config('sanctum.refresh_token_expiration', 30) * 24 * 60, // Convert days to minutes
-            '/',
-            null, // Domain (null = current domain)
-            $secure,
-            true, // HTTP only
-            false, // Raw
-            $sameSite
-        );
-    }
-
-    /**
-     * Create standardized tokens for a user
-     * 
-     * @param User $user
-     * @return array with access token and refresh token
-     */
-    public function createUserTokens(User $user): array
-    {
-        $accessTokenExpiration = config('sanctum.access_token_expiration', 60);
-        $refreshTokenExpiration = config('sanctum.refresh_token_expiration', 30);
-        
-        $accessToken = $user->createToken(
-            'access_token',
-            ['*'],
-            now()->addMinutes($accessTokenExpiration)
-        );
-        
-        $refreshToken = $user->createToken(
-            'refresh_token',
-            ['refresh-token'],
-            now()->addDays($refreshTokenExpiration)
-        );
-        
-        return [
-            'access_token' => $accessToken,
-            'refresh_token' => $refreshToken
-        ];
-    }
-
-    /**
-     * Attempt to authenticate a user
-     * 
+     * Attempt to login a user
+     *
      * @param string $email
      * @param string $password
-     * @return array|false Returns user data with tokens if successful, false otherwise
+     * @return array|false
      */
     public function attemptLogin(string $email, string $password)
     {
-        $user = User::where('email', $email)->first();
-
-        if (!$user || !Hash::check($password, $user->password)) {
+        if (!Auth::attempt(['email' => $email, 'password' => $password])) {
             return false;
         }
 
-        $user->tokens()->delete();
-        $tokens = $this->createUserTokens($user);
-        
+        $user = User::where('email', $email)->first();
+        $tokens = $this->createTokens($user);
+
         return [
             'user' => $user,
             'tokens' => $tokens
@@ -90,23 +34,26 @@ class AuthService
 
     /**
      * Register a new user
-     * 
-     * @param array $userData
-     * @return array User data with tokens
+     *
+     * @param array $data
+     * @return array
      */
-    public function registerUser(array $userData)
+    public function registerUser(array $data)
     {
         $user = User::create([
-            'name' => $userData['name'],
-            'email' => $userData['email'],
-            'password' => Hash::make($userData['password']),
-            'university_id' => 1 
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'password' => Hash::make($data['password']),
+            'first_login' => false, // New users set their own password
         ]);
-        
-        $user->assignRole('editor');
 
-        $tokens = $this->createUserTokens($user);
-        
+        // Assign default role if needed
+        if (isset($data['role'])) {
+            $user->assignRole($data['role']);
+        }
+
+        $tokens = $this->createTokens($user);
+
         return [
             'user' => $user,
             'tokens' => $tokens
@@ -114,27 +61,65 @@ class AuthService
     }
 
     /**
-     * Logout a user by revoking their tokens
-     * 
+     * Create access and refresh tokens for a user
+     *
      * @param User $user
-     * @return bool
+     * @return array
      */
-    public function logout(User $user)
+    private function createTokens(User $user)
     {
-        try {
-            $user->currentAccessToken()->delete();
-            return true;
-        } catch (\Exception $e) {
-            Log::error('Logout failed: ' . $e->getMessage());
-            return false;
-        }
+        // Delete old tokens
+        $user->tokens()->delete();
+
+        // Create access token that expires in 1 hour
+        $accessToken = $user->createToken('access_token', ['*'], now()->addHour());
+
+        // Create refresh token that expires in 7 days
+        $refreshToken = $user->createToken('refresh_token', ['*'], now()->addDays(7));
+
+        return [
+            'access_token' => $accessToken,
+            'refresh_token' => $refreshToken
+        ];
     }
 
     /**
-     * Refresh tokens using a refresh token
-     * 
+     * Create a refresh token cookie
+     *
+     * @param string $token
+     * @return \Symfony\Component\HttpFoundation\Cookie
+     */
+    public function createRefreshTokenCookie(string $token)
+    {
+        return Cookie::make(
+            'refresh_token',
+            $token,
+            60 * 24 * 7, // 7 days in minutes
+            '/',
+            null,
+            config('app.env') === 'production',
+            true,
+            false,
+            'lax'
+        );
+    }
+
+    /**
+     * Logout a user and revoke tokens
+     *
+     * @param User $user
+     * @return void
+     */
+    public function logout(User $user)
+    {
+        $user->tokens()->delete();
+    }
+
+    /**
+     * Refresh the access token using a refresh token
+     *
      * @param string|null $refreshToken
-     * @return array|false Returns user data with tokens if successful, false otherwise
+     * @return array|false
      */
     public function refreshToken(?string $refreshToken)
     {
@@ -142,54 +127,62 @@ class AuthService
             return false;
         }
 
-        try {
-        
-            [$tokenId, $tokenPart] = explode('|', $refreshToken, 2);
-            $token = PersonalAccessToken::find($tokenId);
-            if (!$token || 
-                $token->name !== 'refresh_token' || 
-                !$token->can('refresh-token') ||
-                !hash_equals($token->token, hash('sha256', $tokenPart))) {
-                
-                return false;
-            }
+        // Extract the token ID and hash from the plain text token
+        $tokenId = explode('|', $refreshToken)[0] ?? null;
 
-            $user = $token->tokenable;
-            $token->delete();
-
-            $tokens = $this->createUserTokens($user);
-            
-            return [
-                'user' => $user,
-                'tokens' => $tokens
-            ];
-        } catch (\Exception $e) {
-            Log::error('Token refresh failed: ' . $e->getMessage());
+        if (!$tokenId) {
             return false;
         }
+
+        // Find the token by ID
+        $tokenModel = \Laravel\Sanctum\PersonalAccessToken::find($tokenId);
+
+        if (!$tokenModel || $tokenModel->name !== 'refresh_token') {
+            return false;
+        }
+
+        $user = $tokenModel->tokenable;
+
+        // Verify token has not expired
+        if ($tokenModel->created_at->addDays(7)->isPast()) {
+            $tokenModel->delete();
+            return false;
+        }
+
+        // Delete the old refresh token and create new tokens
+        $tokenModel->delete();
+        $tokens = $this->createTokens($user);
+
+        return [
+            'user' => $user,
+            'tokens' => $tokens
+        ];
     }
 
     /**
-     * Change user's password
-     * 
+     * Change user password
+     *
      * @param User $user
-     * @param string $currentPassword
+     * @param string|null $currentPassword
      * @param string $newPassword
-     * @return array|false Returns tokens if successful, false otherwise
+     * @return array|false
      */
-    public function changePassword(User $user, string $currentPassword, string $newPassword)
+    public function changePassword(User $user, ?string $currentPassword, string $newPassword)
     {
-        if (!Hash::check($currentPassword, $user->password)) {
+        // For first login, we don't need to verify current password
+        if (!$user->first_login && !Hash::check($currentPassword, $user->password)) {
             return false;
         }
 
-        $user->update([
-            'password' => Hash::make($newPassword)
-        ]);
-        $user->tokens()->delete();
-        $tokens = $this->createUserTokens($user);
+        $user->password = Hash::make($newPassword);
+        $user->first_login = false;
+        $user->save();
+
+        // Create new tokens
+        $tokens = $this->createTokens($user);
 
         return [
+            'user' => $user,
             'tokens' => $tokens
         ];
     }

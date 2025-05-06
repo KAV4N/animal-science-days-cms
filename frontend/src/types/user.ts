@@ -1,8 +1,8 @@
-// src/types/user.ts
 export interface User {
   id: number;
   name: string;
   email: string;
+  first_login: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -22,6 +22,7 @@ export interface RegisterCredentials {
 export interface ChangePasswordCredentials {
   new_password: string;
   new_password_confirmation: string;
+  current_password?: string;
 }
 
 // API Response Types
@@ -33,6 +34,7 @@ export interface LoginResponse {
     roles: string[];
     permissions: string[];
     access_token: string;
+    first_login: boolean;
   };
 }
 
@@ -44,6 +46,7 @@ export interface RegisterResponse {
     roles: string[];
     permissions: string[];
     access_token: string;
+    first_login: boolean;
   };
 }
 
@@ -61,6 +64,7 @@ export interface RefreshTokenResponse {
     roles: string[];
     permissions: string[];
     access_token: string;
+    first_login: boolean;
   };
 }
 

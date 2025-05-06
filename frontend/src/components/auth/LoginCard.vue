@@ -37,15 +37,19 @@ export default defineComponent({
       const router = useRouter();
 
       try {
-
         await authStore.login({
-        email: this.email,
-        password: this.password
-      });
+          email: this.email,
+          password: this.password
+        });
+
         this.$emit('login');
         this.closeDialog();
 
-        router.push({ name: 'change-password' });
+        if (authStore.user?.first_login) {
+          router.push({ name: 'change-password' });
+        } else {
+          router.push({ name: 'dashboard' });
+        }
       } catch (error: any) {
         this.error = error.response?.data?.message || 'Login failed';
       }

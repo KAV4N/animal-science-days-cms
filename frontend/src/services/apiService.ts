@@ -51,13 +51,23 @@ const authService = {
 
   /**
    * Change user password
+   * @param new_password The new password
+   * @param new_password_confirmation Confirmation of the new password
+   * @param current_password Optional current password
    */
-  changePassword(new_password: string, new_password_confirmation: string) {
-    return api.post<ChangePasswordResponse>('/v1/auth/change-password', {
+  changePassword(new_password: string, new_password_confirmation: string, current_password?: string) {
+    const payload: any = {
       new_password,
       new_password_confirmation
-    });
+    };
+
+    if (current_password) {
+      payload.current_password = current_password;
+    }
+
+    return api.post<ChangePasswordResponse>('/v1/auth/change-password', payload);
   }
+
 };
 
 /**
@@ -65,18 +75,18 @@ const authService = {
  */
 const apiService = {
   auth: authService,
-  
+
   /**
    * Generic GET request
    */
   get<T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
     return api.get<T>(url, config);
   },
-  
+
   post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
     return api.post<T>(url, data, config);
   },
-  
+
   put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
     return api.put<T>(url, data, config);
   },
@@ -84,7 +94,7 @@ const apiService = {
   patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
     return api.patch<T>(url, data, config);
   },
-  
+
   delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
     return api.delete<T>(url, config);
   }

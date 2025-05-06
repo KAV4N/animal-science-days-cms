@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import apiService from '@/services/apiService';
-import type { User, LoginCredentials, RegisterCredentials, ChangePasswordCredentials } from '@/types/user';
+import type { User, LoginCredentials, ChangePasswordCredentials } from '@/types/user';
 import router from '@/router';
 
 interface AuthState {
@@ -16,8 +16,8 @@ interface AuthState {
 export const useAuthStore = defineStore('auth', {
   state: (): AuthState => ({
     user: null,
-    accessToken: null,
-    isAuthenticated: false,
+    accessToken: localStorage.getItem('access_token'),
+    isAuthenticated: !!localStorage.getItem('access_token'),
     isLoading: false,
     roles: [],
     permissions: [],
@@ -28,14 +28,11 @@ export const useAuthStore = defineStore('auth', {
     isEditor: (state) => state.roles.includes('editor'),
     isAdmin: (state) => state.roles.includes('admin'),
     isSuperAdmin: (state) => state.roles.includes('super_admin'),
-
     hasEditorAccess: (state) => state.permissions.includes('access.editor'),
     hasAdminAccess: (state) => state.permissions.includes('access.admin'),
     hasSuperAdminAccess: (state) => state.permissions.includes('access.super_admin'),
-
     hasRole: (state) => (role: string) => state.roles.includes(role),
     hasPermission: (state) => (permission: string) => state.permissions.includes(permission),
-
     getToken: (state) => state.accessToken,
     getUser: (state) => state.user,
     getIsAuthenticated: (state) => state.isAuthenticated,
@@ -43,18 +40,75 @@ export const useAuthStore = defineStore('auth', {
     getRoles: (state) => state.roles,
     getPermissions: (state) => state.permissions,
     getError: (state) => state.error,
-    
-    
   },
 
   actions: {
-    setUserData(userData: { user: User; roles: string[]; permissions: string[]; access_token: string }) {
+    setUserData(userData: {
+      user: User;
+      roles: string[];
+      permissions: string[];
+      access_token: string;
+      first_login: boolean;
+    }) {
       this.user = userData.user;
       this.roles = userData.roles;
       this.permissions = userData.permissions;
       this.accessToken = userData.access_token;
       this.isAuthenticated = true;
       this.error = null;
+
+      // Save token to localStorage for persistence
+      localStorage.setItem('access_token', userData.access_token);
+    },
+
+    async login(credentials: LoginCredentials) {
+      this.isLoading = true;
+      this.error = null;
+
+      try {
+        const response = await apiService.auth.login(
+          credentials.email,
+          credentials.password
+        );
+        this.setUserData(response.data.data);
+
+        // Handle first login redirect in router guards
+        return response.data.data;
+      } catch (error: any) {
+        this.error = error.response?.data?.message || 'Login failed';
+        throw error;
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
+    async changePassword(credentials: ChangePasswordCredentials) {
+      this.isLoading = true;
+      this.error = null;
+
+      try {
+        const response = await apiService.auth.changePassword(
+          credentials.new_password,
+          credentials.new_password_confirmation,
+          credentials.current_password
+        );
+
+        // Update token
+        this.accessToken = response.data.data.access_token;
+        localStorage.setItem('access_token', response.data.data.access_token);
+
+        // Update first_login status
+        if (this.user) {
+          this.user.first_login = false;
+        }
+
+        return response.data;
+      } catch (error: any) {
+        this.error = error.response?.data?.message || 'Failed to change password';
+        throw error;
+      } finally {
+        this.isLoading = false;
+      }
     },
 
     clearUserData() {
@@ -64,49 +118,9 @@ export const useAuthStore = defineStore('auth', {
       this.roles = [];
       this.permissions = [];
       this.error = null;
-    },
 
-    setError(error: string) {
-      this.error = error;
-    },
-
-    async login(credentials: LoginCredentials) {
-      this.isLoading = true;
-      this.error = null;
-
-      try {
-        const response = await apiService.auth.login(credentials.email, credentials.password);
-        this.setUserData(response.data.data);
-        return true;
-      } catch (error: any) {
-        this.isAuthenticated = false;
-        this.error = error.response?.data?.message || 'Login failed';
-        return false;
-      } finally {
-        this.isLoading = false;
-      }
-    },
-
-    async register(credentials: RegisterCredentials) {
-      this.isLoading = true;
-      this.error = null;
-
-      try {
-        const response = await apiService.auth.register(
-          credentials.name,
-          credentials.email,
-          credentials.password,
-          credentials.password_confirmation
-        );
-        this.setUserData(response.data.data);
-        return true;
-      } catch (error: any) {
-        this.isAuthenticated = false;
-        this.error = error.response?.data?.message || 'Registration failed';
-        return false;
-      } finally {
-        this.isLoading = false;
-      }
+      // Remove token from localStorage
+      localStorage.removeItem('access_token');
     },
 
     async logout() {
@@ -116,10 +130,10 @@ export const useAuthStore = defineStore('auth', {
         await apiService.auth.logout();
         this.clearUserData();
         router.push({ name: 'login' });
-        return true;
       } catch (error: any) {
         this.error = error.response?.data?.message || 'Logout failed';
-        return false;
+        // Clear user data anyway to ensure they're logged out on frontend
+        this.clearUserData();
       } finally {
         this.isLoading = false;
       }
@@ -135,7 +149,6 @@ export const useAuthStore = defineStore('auth', {
       } catch (error: any) {
         this.clearUserData();
         this.error = error.response?.data?.message || 'Session expired';
-        router.push({ name: 'login' });
         return false;
       } finally {
         this.isLoading = false;
@@ -143,6 +156,10 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async fetchCurrentUser() {
+      if (!this.accessToken) {
+        return false;
+      }
+
       this.isLoading = true;
 
       try {
@@ -158,33 +175,17 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    async changePassword(credentials: ChangePasswordCredentials) {
-      this.isLoading = true;
-      this.error = null;
-
-      try {
-        const response = await apiService.auth.changePassword(
-          credentials.new_password,
-          credentials.new_password_confirmation
-        );
-        this.accessToken = response.data.data.access_token;
-        return true;
-      } catch (error: any) {
-        this.error = error.response?.data?.message || 'Failed to change password';
-        return false;
-      } finally {
-        this.isLoading = false;
-      }
-    },
-
     async checkAuth() {
-      if (this.user && this.accessToken) {
+      if (this.isAuthenticated && this.user) {
         return true;
       }
 
+      if (this.accessToken) {
+        return await this.fetchCurrentUser();
+      }
+
       try {
-        const success = await this.refreshToken();
-        return success;
+        return await this.refreshToken();
       } catch (error) {
         this.clearUserData();
         return false;

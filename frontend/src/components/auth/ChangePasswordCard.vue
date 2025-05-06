@@ -17,40 +17,64 @@ export default defineComponent({
     return {
       newPassword: '',
       confirmPassword: '',
+      currentPassword: '',
       error: null as string | null,
       success: null as string | null
     }
   },
+  setup() {
+    const authStore = useAuthStore();
+    const router = useRouter();
+
+    return {
+      authStore,
+      router,
+      isFirstLogin: authStore.user?.first_login || false
+    };
+  },
   methods: {
     async handlePasswordChange() {
+      this.error = null;
+      this.success = null;
+
       if (this.newPassword !== this.confirmPassword) {
         this.error = 'Passwords do not match';
         return;
       }
 
-      const authStore = useAuthStore();
-      const router = useRouter();
+      if (this.newPassword.length < 8) {
+        this.error = 'Password must be at least 8 characters long';
+        return;
+      }
 
       try {
-        // Call the password change API
-        //TODO: ADD RETYPE AGAIN PASSWORD
-        await authStore.changePassword({  
+        const payload: {
+          new_password: string;
+          new_password_confirmation: string;
+          current_password?: string;
+        } = {
           new_password: this.newPassword,
           new_password_confirmation: this.confirmPassword,
-        });
+        };
+
+        // Add current password if not first login
+        if (!this.isFirstLogin) {
+          payload.current_password = this.currentPassword;
+        }
+
+        await this.authStore.changePassword(payload);
         this.success = 'Password changed successfully!';
 
         // Redirect to dashboard after 2 seconds
         setTimeout(() => {
-          router.push({ name: 'dashboard' });
+          this.router.push({ name: 'dashboard' });
         }, 2000);
       } catch (error: any) {
         this.error = error.message || 'Password change failed';
       }
     }
   }
-});
-</script>
+});</script>
 
 <template>
   <Dialog
@@ -65,8 +89,24 @@ export default defineComponent({
         <img src="/school-logo.png" alt="School Logo" class="block mx-auto h-20 w-auto" />
         <h2 class="text-center text-primary-50 font-semibold">Change Password</h2>
 
+        <div v-if="isFirstLogin" class="text-center text-primary-50">
+          <p>Since this is your first login, you need to change your password.</p>
+        </div>
+
         <div v-if="error" class="text-red-400 text-sm">{{ error }}</div>
         <div v-if="success" class="text-green-400 text-sm">{{ success }}</div>
+
+        <!-- Only show current password field if not first login -->
+        <div v-if="!isFirstLogin" class="inline-flex flex-col gap-2">
+          <label for="currentPassword" class="text-primary-50 font-semibold">Current Password</label>
+          <InputText
+            id="currentPassword"
+            v-model="currentPassword"
+            class="!bg-white/20 !border-0 !p-4 !text-primary-50 w-80"
+            type="password"
+            placeholder="Enter current password"
+          ></InputText>
+        </div>
 
         <div class="inline-flex flex-col gap-2">
           <label for="newPassword" class="text-primary-50 font-semibold">New Password</label>
