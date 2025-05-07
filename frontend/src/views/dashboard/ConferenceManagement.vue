@@ -2,9 +2,16 @@
 <template>
   <div>
     <Toast />
-    <LatestConferenceCard v-if="authStore.hasAdminAccess"/>
+    <LatestConferenceCard 
+      v-if="authStore.hasAdminAccess" 
+      @edit-conference="openConferenceDialog" 
+    />
     <ConferenceTable @edit-conference="openConferenceDialog" />
-    <ConferenceDialog ref="conferenceDialog" @conference-updated="onConferenceUpdated" @conference-created="onConferenceCreated" />
+    <ConferenceDialog 
+      ref="conferenceDialog" 
+      @conference-updated="onConferenceUpdated" 
+      @conference-created="onConferenceCreated" 
+    />
   </div>
 </template>
 
@@ -22,6 +29,7 @@ import { useAuthStore } from '@/stores/authStore';
 export default defineComponent({
   name: 'ConferenceManagement',
   components: {
+    LatestConferenceCard,
     ConferenceTable,
     ConferenceDialog,
     Toast
@@ -38,9 +46,8 @@ export default defineComponent({
   },
   methods: {
     loadData() {
-      //TODO: load only asigned conferences
       this.loadConferences();
-      if (this.authStore.hasAdminAccess){
+      if (this.authStore.hasAdminAccess) {
         this.loadLatestConference();
       }
     },
@@ -79,6 +86,9 @@ export default defineComponent({
         life: 3000
       });
       this.loadConferences();
+      if (this.authStore.hasAdminAccess) {
+        this.loadLatestConference();
+      }
     },
     onConferenceCreated(conference: Conference) {
       this.toast.add({
@@ -88,6 +98,9 @@ export default defineComponent({
         life: 3000
       });
       this.loadConferences();
+      if (this.authStore.hasAdminAccess) {
+        this.loadLatestConference();
+      }
     }
   }
 });

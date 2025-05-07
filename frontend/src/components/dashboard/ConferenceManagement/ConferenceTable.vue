@@ -3,7 +3,7 @@
   <div>
     <!-- Add the toolbar component -->
     <ConferenceToolbar 
-    v-if="authStore.hasAdminAccess"
+      v-if="authStore.hasAdminAccess"
       :selectedConferences="selectedConferences"
       @new-conference="openCreateConferenceDialog" 
       @confirm-delete-selected="confirmDeleteSelected"
@@ -28,11 +28,16 @@
           :loading="conferenceStore.loading"
           scrollable
           scrollHeight="flex"
+          v-model:sortField="sortField"
+          v-model:sortOrder="sortOrder"
+          @sort="onSort"
         >
           <template #header>
             <div class="flex flex-column md:flex-row md:justify-between md:items-center gap-2">
               <h4 class="m-0">Manage Conferences</h4>
               <div class="flex gap-2">
+                <Dropdown v-model="sortBy" :options="sortOptions" optionLabel="label" optionValue="value" 
+                  placeholder="Sort by" class="w-full md:w-auto" @change="applySorting" />
                 <IconField class="w-full md:w-auto">
                   <InputIcon>
                     <i class="pi pi-search" />
@@ -40,7 +45,8 @@
                   <InputText v-model="searchQuery" placeholder="Search..." class="w-full" />
                 </IconField>
                 <Button icon="pi pi-search" @click="performSearch" label="Search" />
-                <Button icon="pi pi-times" @click="clearSearch" label="Clear" class="p-button-secondary" />
+                <Button v-if="searchPerformed || searchQuery.trim().length > 0" 
+                  icon="pi pi-times" @click="clearSearch" label="Clear" class="p-button-secondary" />
               </div>
             </div>
             <div v-if="searchPerformed" class="mt-2 text-sm text-blue-500">
@@ -49,7 +55,7 @@
           </template>
 
           <!-- Fixed left column -->
-          <Column v-if="authStore.hasAdminAccess"  selectionMode="multiple" style="width: 3rem" frozen alignFrozen="left" class="checkbox-column" :exportable="false"></Column>
+          <Column v-if="authStore.hasAdminAccess" selectionMode="multiple" style="width: 3rem" frozen alignFrozen="left" class="checkbox-column" :exportable="false"></Column>
           
           <Column field="name" header="Name" sortable style="min-width: 16rem"></Column>
           <Column field="university" header="University" sortable style="min-width: 12rem">
@@ -71,6 +77,18 @@
           <Column field="is_published" header="Status" sortable style="min-width: 10rem">
             <template #body="slotProps">
               <Tag :value="slotProps.data.is_published ? 'Published' : 'Draft'" :severity="getStatusSeverity(slotProps.data.is_published)" />
+            </template>
+          </Column>
+          
+          <Column field="created_at" header="Created" sortable style="min-width: 10rem">
+            <template #body="slotProps">
+              {{ formatDateTime(slotProps.data.created_at) }}
+            </template>
+          </Column>
+          
+          <Column field="updated_at" header="Last Updated" sortable style="min-width: 10rem">
+            <template #body="slotProps">
+              {{ formatDateTime(slotProps.data.updated_at) }}
             </template>
           </Column>
           
@@ -109,7 +127,7 @@ import { FilterMatchMode } from '@primevue/core/api';
 import { useConferenceStore } from '@/stores/conferenceStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useToast } from 'primevue/usetoast';
-import type { Conference } from '@/types/conference';
+import type { Conference, ConferenceFilters } from '@/types/conference';
 import ConferenceToolbar from './ConferenceToolbar.vue';
 
 export default defineComponent({
@@ -124,6 +142,9 @@ export default defineComponent({
     const searchQuery = ref('');
     const lastSearchQuery = ref('');
     const searchPerformed = ref(false);
+    const sortField = ref<string | null>(null);
+    const sortOrder = ref<number>(1); // 1 for ascending, -1 for descending
+    const sortBy = ref('');
     
     // Watch for changes in the conferenceStore.conferences
     watch(() => conferenceStore.conferences, (newValue) => {
@@ -145,7 +166,10 @@ export default defineComponent({
       filteredConferences,
       searchQuery,
       lastSearchQuery,
-      searchPerformed
+      searchPerformed,
+      sortField,
+      sortOrder,
+      sortBy
     };
   },
   data() {
@@ -157,6 +181,17 @@ export default defineComponent({
       filters: {
         'global': { value: null, matchMode: FilterMatchMode.CONTAINS }
       },
+      sortOptions: [
+        { label: 'Newest First', value: 'newest' },
+        { label: 'Oldest First', value: 'oldest' },
+        { label: 'Recently Updated', value: 'recently_updated' },
+        { label: 'Least Recently Updated', value: 'least_recently_updated' },
+        { label: 'Start Date (Upcoming)', value: 'start_date_asc' },
+        { label: 'Start Date (Recent)', value: 'start_date_desc' },
+        { label: 'Name A-Z', value: 'name_asc' },
+        { label: 'Name Z-A', value: 'name_desc' }
+      ],
+      currentFilters: {} as ConferenceFilters
     };
   },
   computed: {
@@ -173,9 +208,11 @@ export default defineComponent({
     editConference(conference: Conference): void {
       this.$emit('edit-conference', conference);
     },
+    
     openCreateConferenceDialog(): void {
       this.$emit('edit-conference');
     },
+    
     performSearch(): void {
       if (!this.searchQuery.trim()) {
         this.toast.add({
@@ -237,6 +274,19 @@ export default defineComponent({
       return '';
     },
     
+    formatDateTime(value: string): string {
+      if (value) {
+        return new Date(value).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+      return '';
+    },
+    
     getStatusSeverity(isPublished: boolean): string {
       return isPublished ? 'success' : 'warning';
     },
@@ -280,8 +330,118 @@ export default defineComponent({
       }
     },
     
+    applySorting() {
+      const filters: ConferenceFilters = { ...this.currentFilters };
+      
+      switch (this.sortBy) {
+        case 'newest':
+          filters.sort_field = 'created_at';
+          filters.sort_order = 'desc';
+          this.sortField = 'created_at';
+          this.sortOrder = -1;
+          break;
+        case 'oldest':
+          filters.sort_field = 'created_at';
+          filters.sort_order = 'asc';
+          this.sortField = 'created_at';
+          this.sortOrder = 1;
+          break;
+        case 'recently_updated':
+          filters.sort_field = 'updated_at';
+          filters.sort_order = 'desc';
+          this.sortField = 'updated_at';
+          this.sortOrder = -1;
+          break;
+        case 'least_recently_updated':
+          filters.sort_field = 'updated_at';
+          filters.sort_order = 'asc';
+          this.sortField = 'updated_at';
+          this.sortOrder = 1;
+          break;
+        case 'start_date_asc':
+          filters.sort_field = 'start_date';
+          filters.sort_order = 'asc';
+          this.sortField = 'start_date';
+          this.sortOrder = 1;
+          break;
+        case 'start_date_desc':
+          filters.sort_field = 'start_date';
+          filters.sort_order = 'desc';
+          this.sortField = 'start_date';
+          this.sortOrder = -1;
+          break;
+        case 'name_asc':
+          filters.sort_field = 'name';
+          filters.sort_order = 'asc';
+          this.sortField = 'name';
+          this.sortOrder = 1;
+          break;
+        case 'name_desc':
+          filters.sort_field = 'name';
+          filters.sort_order = 'desc';
+          this.sortField = 'name';
+          this.sortOrder = -1;
+          break;
+        default:
+          break;
+      }
+      
+      this.currentFilters = filters;
+      this.refreshConferenceWithFilters(filters);
+    },
+    
+    onSort(event: any) {
+      // Handle the sort event from DataTable
+      const sortField = event.sortField;
+      const sortOrder = event.sortOrder === 1 ? 'asc' : 'desc';
+      
+      // Update filters and refresh data
+      const filters: ConferenceFilters = {
+        ...this.currentFilters,
+        sort_field: sortField as 'name' | 'title' | 'start_date' | 'end_date' | 'created_at' | 'updated_at',
+        sort_order: sortOrder as 'asc' | 'desc'
+      };
+      
+      // Update dropdown selection to match the column sorting if applicable
+      if (sortField === 'created_at') {
+        this.sortBy = sortOrder === 'asc' ? 'oldest' : 'newest';
+      } else if (sortField === 'updated_at') {
+        this.sortBy = sortOrder === 'asc' ? 'least_recently_updated' : 'recently_updated';
+      } else if (sortField === 'start_date') {
+        this.sortBy = sortOrder === 'asc' ? 'start_date_asc' : 'start_date_desc';
+      } else if (sortField === 'name') {
+        this.sortBy = sortOrder === 'asc' ? 'name_asc' : 'name_desc';
+      } else {
+        this.sortBy = '';
+      }
+      
+      this.currentFilters = filters;
+      this.refreshConferenceWithFilters(filters);
+    },
+    
+    async refreshConferenceWithFilters(filters: ConferenceFilters): Promise<void> {
+      this.conferenceStore.loading = true;
+      
+      try {
+        await this.conferenceStore.fetchConferences(filters);
+        
+        if (this.searchPerformed) {
+          this.performSearch();
+        }
+      } catch (error) {
+        this.toast.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: error instanceof Error ? error.message : 'Failed to fetch conferences',
+          life: 3000
+        });
+      } finally {
+        this.conferenceStore.loading = false;
+      }
+    },
+    
     refreshConferences(): void {
-      this.conferenceStore.fetchConferences();
+      this.conferenceStore.fetchConferences(this.currentFilters);
       if (this.searchPerformed) {
         this.performSearch();
       }
