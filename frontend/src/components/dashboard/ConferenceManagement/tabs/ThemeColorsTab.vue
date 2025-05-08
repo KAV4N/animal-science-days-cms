@@ -1,50 +1,97 @@
 <template>
-  <div class="grid gap-4">
+  <div class="flex flex-col items-center p-4 gap-4">
     <!-- Colors -->
-    <div class="grid md:grid-cols-2 gap-4">
-      <div class="field">
-        <label for="primary_color" class="font-medium">Primary Color *</label>
-        <TransparentColorPicker
-          v-model="v$.formData.primary_color"
-
-        />
-        <small v-if="v$.formData.primary_color.$error" class="text-red-500">
+    <div class="flex flex-wrap justify-center gap-4 w-full max-w-2xl">
+      <!-- Primary Color -->
+      <div class="flex-1 min-w-[280px] space-y-1">
+        <label class="text-sm font-semibold text-gray-800">Primary Color *</label>
+        <div class="relative flex justify-center">
+          <TransparentColorPicker
+            v-model="v$.formData.primary_color.$model"
+            format="hex"
+            @blur="v$.formData.primary_color.$touch()"
+          >
+            <template #input="slotProps">
+              <div 
+                class="p-inputtext w-full max-w-[280px] px-3 py-2 border border-gray-300 rounded-md flex items-center gap-2 transition-all"
+                :class="{'ring-2 ring-red-500 border-red-500': v$.formData.primary_color.$error}"
+              >
+                <div 
+                  class="w-5 h-5 rounded-md shadow-sm border border-gray-200"
+                  :style="{ backgroundColor: v$.formData.primary_color.$model || '#f8fafc' }"
+                />
+                <input
+                  ref="slotProps.inputRef"
+                  type="text"
+                  :value="slotProps.value"
+                  class="flex-1 text-sm text-gray-800 bg-transparent border-none focus:ring-0 p-0"
+                  placeholder="#FFFFFF"
+                  v-bind="slotProps.inputProps"
+                />
+                <i class="pi pi-palette text-gray-400 hover:text-gray-600 transition-colors"/>
+              </div>
+            </template>
+          </TransparentColorPicker>
+        </div>
+        <small v-if="v$.formData.primary_color.$error" class="text-red-600 text-xs flex items-center gap-1 justify-center">
+          <i class="pi pi-info-circle"/>
           {{ v$.formData.primary_color.$errors[0]?.$message }}
         </small>
       </div>
 
-      <div class="field">
-        <label for="secondary_color" class="font-medium">Secondary Color *</label>
-        <ColorPicker
-          v-model="v$.formData.secondary_color.$model"
-          class="w-full"
-          :class="{ 'p-invalid': v$.formData.secondary_color.$error }"
-          format="hex"
-          @blur="v$.formData.secondary_color.$touch()"
-        />
-        <small v-if="v$.formData.secondary_color.$error" class="text-red-500">
+      <!-- Secondary Color -->
+      <div class="flex-1 min-w-[280px] space-y-1">
+        <label class="text-sm font-semibold text-gray-800">Secondary Color *</label>
+        <div class="relative flex justify-center">
+          <TransparentColorPicker
+            v-model="v$.formData.secondary_color.$model"
+            format="hex"
+            @blur="v$.formData.secondary_color.$touch()"
+          >
+            <template #input="slotProps">
+              <div 
+                class="p-inputtext w-full max-w-[280px] px-3 py-2 border border-gray-300 rounded-md flex items-center gap-2 transition-all"
+                :class="{'ring-2 ring-red-500 border-red-500': v$.formData.secondary_color.$error}"
+              >
+                <div 
+                  class="w-5 h-5 rounded-md shadow-sm border border-gray-200"
+                  :style="{ backgroundColor: v$.formData.secondary_color.$model || '#f8fafc' }"
+                />
+                <input
+                  ref="slotProps.inputRef"
+                  type="text"
+                  :value="slotProps.value"
+                  class="flex-1 text-sm text-gray-800 bg-transparent border-none focus:ring-0 p-0"
+                  placeholder="#FFFFFF"
+                  v-bind="slotProps.inputProps"
+                />
+                <i class="pi pi-palette text-gray-400 hover:text-gray-600 transition-colors"/>
+              </div>
+            </template>
+          </TransparentColorPicker>
+        </div>
+        <small v-if="v$.formData.secondary_color.$error" class="text-red-600 text-xs flex items-center gap-1 justify-center">
+          <i class="pi pi-info-circle"/>
           {{ v$.formData.secondary_color.$errors[0]?.$message }}
         </small>
       </div>
     </div>
 
     <!-- Color Preview -->
-    <div class="mt-4">
-      <h3 class="text-lg font-medium mb-2">Color Preview</h3>
-      <div class="flex items-center gap-4">
-        <div class="flex flex-col items-center">
-          <div 
-            class="w-16 h-16 rounded-full border border-gray-300" 
-            :style="{ backgroundColor: formData.primary_color }"
-          ></div>
-          <span class="mt-2 text-sm">Primary</span>
+    <div class="mt-2 w-full max-w-2xl p-4 border border-gray-200 rounded-xl bg-white">
+      <h3 class="text-sm font-semibold text-gray-800 mb-3">Color Preview</h3>
+      <div class="flex gap-3">
+        <div 
+          class="flex-1 h-14 rounded-lg flex items-center justify-center shadow-md transition-all"
+          :style="{ backgroundColor: v$.formData.primary_color.$model || '#f8fafc' }"
+        >
+          <span class="text-white font-semibold text-sm drop-shadow">Primary</span>
         </div>
-        <div class="flex flex-col items-center">
-          <div 
-            class="w-16 h-16 rounded-full border border-gray-300" 
-            :style="{ backgroundColor: formData.secondary_color }"
-          ></div>
-          <span class="mt-2 text-sm">Secondary</span>
+        <div 
+          class="flex-1 h-14 rounded-lg flex items-center justify-center shadow-md transition-all"
+          :style="{ backgroundColor: v$.formData.secondary_color.$model || '#f8fafc' }"
+        >
+          <span class="text-white font-semibold text-sm drop-shadow">Secondary</span>
         </div>
       </div>
     </div>
@@ -53,39 +100,20 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-import { required, helpers } from '@vuelidate/validators';
+import TransparentColorPicker from '../TransparentColorPicker.vue';
 
 export default defineComponent({
   name: 'ThemeColorsTab',
+  components: { TransparentColorPicker },
   props: {
-    formData: {
-      type: Object,
-      required: true
-    },
-    v$: {
-      type: Object,
-      required: true
-    }
-  },
-  validations() {
-    return {
-      formData: {
-        primary_color: {
-          required: helpers.withMessage('Primary color is required', required),
-          isValidColor: helpers.withMessage(
-            'Invalid color format',
-            (value: string) => /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(value)
-          ),
-        },
-        secondary_color: {
-          required: helpers.withMessage('Secondary color is required', required),
-          isValidColor: helpers.withMessage(
-            'Invalid color format',
-            (value: string) => /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(value)
-          ),
-        }
-      }
-    };
+    v$: { type: Object, required: true },
+    formData: { type: Object, required: true }
   }
 });
 </script>
+
+<style scoped>
+.text-shadow {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+</style>

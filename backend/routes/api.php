@@ -14,7 +14,6 @@ use App\Http\Controllers\Api\UniversityController;
 // Universities
 
 
-
 Route::prefix('v1')->group(function () {
     Route::prefix('auth')->group(function () {
         Route::post('/login', [AuthController::class, 'login']);
@@ -30,13 +29,10 @@ Route::prefix('v1')->group(function () {
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/users/me', [UserController::class, 'current']);
-        /*
-        //TODO: implement this in admin controller its just a example code
-        Route::middleware('role:admin|super_admin')->group(function () {
-            Route::apiResource('users', UserController::class);
+        Route::middleware('permission:access.admin')->group(function () {
+            Route::get('/users', [UserController::class, 'index']);
         });
-        //-----------------------------
-        */
+
         Route::apiResource('universities', UniversityController::class)->only(['index', 'show']);
 
         Route::middleware('role:super_admin')->group(function () {
@@ -44,7 +40,7 @@ Route::prefix('v1')->group(function () {
         });
   
        
-        Route::middleware('role:admin|super_admin')->group(function () {
+        Route::middleware('permission:access.admin')->group(function () {
             Route::apiResource('conferences', ConferenceController::class)->except(['index', 'show']);
             Route::patch('conferences/{conference}', [ConferenceController::class, 'updateStatus']);
             Route::get('/conferences/{conference}/editors', [ConferenceController::class, 'getEditors']);

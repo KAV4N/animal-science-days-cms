@@ -1,118 +1,143 @@
-<!-- components/dashboard/ConferenceFormTabs/EditorsTab.vue -->
 <template>
-  <div class="p-3 md:p-5">
-    <div class="mb-6">
-      <div class="flex flex-column md:flex-row md:justify-between md:items-center gap-3 mb-3">
-        <h3 class="text-xl font-semibold ">Conference Editors</h3>
-        <Button label="Add Editors" icon="pi pi-plus" severity="success" @click="store.openEditorSelector" class="w-full md:w-auto" />
+  <div class="editors-tab">
+    <h3 class="text-lg font-semibold mb-4">Manage Conference Editors</h3>
+    
+    <div class="mb-4">
+      <span class="p-float-label">
+        <MultiSelect
+          v-model="selectedEditors"
+          :options="availableUsers"
+          option-label="name"
+          placeholder="Select Editors"
+          class="w-full"
+          :loading="userStore.loading"
+          :filter="true"
+          :virtual-scroller-options="{ itemSize: 38 }"
+          @filter="onFilterUsers"
+        >
+          <template #option="slotProps">
+            <div class="flex align-items-center">
+              <Avatar
+                :image="slotProps.option.avatar"
+                shape="circle"
+                class="mr-2"
+                size="small"
+                :alt="slotProps.option.name"
+              />
+              <div>
+                <div>{{ slotProps.option.name }}</div>
+                <small>{{ slotProps.option.email }}</small>
+              </div>
+            </div>
+          </template>
+          <template #value="slotProps">
+            <div class="flex align-items-center">
+              <Avatar
+                v-if="slotProps.value.avatar"
+                :image="slotProps.value.avatar"
+                shape="circle"
+                class="mr-2"
+                size="small"
+                :alt="slotProps.value.name"
+              />
+              <div>{{ slotProps.value.name }}</div>
+            </div>
+          </template>
+        </MultiSelect>
+        <label for="editors">Conference Editors</label>
+      </span>
+    </div>
+
+    <div class="flex flex-col gap-2 mt-4">
+      <div v-if="selectedEditors.length === 0" class="text-gray-500 italic">
+        No editors have been assigned to this conference yet.
       </div>
-      <Divider />
-      <p class="mb-4">
-        Editors have permission to modify content for this conference. 
-        Admin and superadmin users automatically have edit access.
-      </p>
       
-      <DataTable 
-        :value="conference.editors" 
-        :paginator="true" 
-        :rows="5" 
-        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown" 
-        :rowsPerPageOptions="[5, 10, 25]" 
-        :globalFilterFields="['name', 'email', 'role']"
-        responsiveLayout="stack"
-        breakpoint="960px"
-        class="shadow-sm border border-gray-200 rounded-lg overflow-hidden"
+      <DataTable
+        v-else
+        :value="selectedEditors"
+        data-key="id"
+        class="border-1 border-gray-200 dark:border-gray-700 rounded-md"
+        responsive-layout="stack"
       >
-        <template #header>
-          <div class="flex justify-between">
-            <span class="p-input-icon-left w-full">
-              <i class="pi pi-search" />
-              <InputText v-model="editorsTableFilter" placeholder="Search editors..." class="w-full" />
-            </span>
-          </div>
-        </template>
-        <template #empty>
-          <div class="text-center p-4">
-            <i class="pi pi-users text-5xl mb-3 block"></i>
-            <p>No editors have been assigned to this conference.</p>
-            <Button label="Add Editors" icon="pi pi-plus" severity="secondary" 
-                    class="mt-3" outlined @click="store.openEditorSelector" />
-          </div>
-        </template>
-        <Column>
+        <Column field="name" header="Name">
           <template #body="slotProps">
-            <Avatar 
-              :label="getInitials(slotProps.data.name)" 
-              :style="{ backgroundColor: getAvatarColor(slotProps.data.id) }" 
-              shape="circle" 
-            />
+            <div class="flex items-center">
+              <Avatar
+                :image="slotProps.data.avatar"
+                shape="circle"
+                class="mr-2"
+                size="small"
+                :alt="slotProps.data.name"
+              />
+              <span>{{ slotProps.data.name }}</span>
+            </div>
           </template>
         </Column>
-        <Column field="name" header="Name" sortable>
+        <Column field="email" header="Email" />
+        <Column header-style="width: 6rem">
           <template #body="slotProps">
-            <span class="font-medium">{{ slotProps.data.name }}</span>
-          </template>
-        </Column>
-        <Column field="email" header="Email" sortable></Column>
-        <Column field="role" header="Role" sortable>
-          <template #body="slotProps">
-            <Tag :value="slotProps.data.role" severity="info" />
-          </template>
-        </Column>
-        <Column header="Actions">
-          <template #body="slotProps">
-            <Button 
-              icon="pi pi-trash" 
-              outlined 
-              rounded 
-              severity="danger" 
-              @click="store.removeEditor(slotProps.index)" 
-              v-tooltip.top="'Remove Editor'" 
+            <Button
+              icon="pi pi-trash"
+              text
+              rounded
+              severity="danger"
+              aria-label="Remove"
+              @click="removeEditor(slotProps.data)"
             />
           </template>
         </Column>
       </DataTable>
     </div>
   </div>
-  
-  <EditorSelectorDialog />
 </template>
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-import { useConferenceStore } from '@/stores/conferenceManagement';
-import EditorSelectorDialog from '@/components/dashboard/ConferenceManagement/EditorSelectorDialog.vue';
+import { useUserStore } from '@/stores/userStore';
+import type { User } from '@/types/user';
 
 export default defineComponent({
   name: 'EditorsTab',
-  components: {
-    EditorSelectorDialog
+  props: {
+    formData: {
+      type: Object,
+      required: true
+    }
   },
   data() {
+    const userStore = useUserStore();
     return {
-      store: useConferenceStore(),
-      editorsTableFilter: ''
+      searchQuery: '',
+      availableUsers: [] as User[],
+      userStore
     };
   },
   computed: {
-    conference() {
-      return this.store.currentConference || this.store.getEmptyConference();
+    selectedEditors: {
+      get(): User[] {
+        return (this.formData as any).editors || [];
+      },
+      set(value: User[]) {
+        (this.formData as any).editors = value;
+      }
     }
   },
+  created() {
+    this.fetchUsers();
+  },
   methods: {
-    getInitials(name: string): string {
-      return name.split(' ')
-        .map(part => part.charAt(0))
-        .join('')
-        .toUpperCase();
+    async fetchUsers() {
+      await this.userStore.fetchUsers();
+      this.availableUsers = this.userStore.users;
     },
-    getAvatarColor(id: string): string {
-      const colors = [
-        '#3B82F6', '#10B981', '#F59E0B', '#EF4444', 
-        '#8B5CF6', '#EC4899', '#06B6D4', '#F97316'
-      ];
-      const index = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
-      return colors[index];
+    async onFilterUsers(event: any) {
+      this.searchQuery = event.filter;
+      await this.userStore.searchUsers(this.searchQuery);
+      this.availableUsers = this.userStore.users;
+    },
+    removeEditor(editor: User) {
+      this.selectedEditors = this.selectedEditors.filter((e: User) => e.id !== editor.id);
     }
   }
 });

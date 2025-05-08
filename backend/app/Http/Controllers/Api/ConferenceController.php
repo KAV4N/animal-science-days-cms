@@ -25,7 +25,6 @@ class ConferenceController extends Controller
     {
         $query = Conference::query();
 
-
         if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -54,6 +53,7 @@ class ConferenceController extends Controller
             $query->where('end_date', '<=', $request->end_date_before);
         }
 
+
         $sortField = in_array($request->sort_field, ['name', 'title', 'start_date', 'end_date', 'created_at', 'updated_at']) 
             ? $request->sort_field 
             : 'created_at';
@@ -62,10 +62,21 @@ class ConferenceController extends Controller
             : 'desc';
         $query->orderBy($sortField, $sortOrder);
 
-        $perPage = min(max(intval($request->per_page ?? 10), 1), 100);
-        $conferences = $query->paginate($perPage)->withQueryString();
-        $conferences->load('university', 'editors');
-        return $this->paginatedResponse($conferences, ConferenceResource::collection($conferences));
+        if ($request->has('page') || $request->has('per_page')) {
+            $perPage = min(max(intval($request->per_page ?? 10), 1), 100);
+            $conferences = $query->paginate($perPage)->withQueryString();
+            $conferences->load('university', 'editors');
+            return $this->paginatedResponse($conferences, ConferenceResource::collection($conferences));
+        } else {
+            $count = $query->count();
+            
+            $conferences = $query->get();
+            $conferences->load('university', 'editors');
+            return $this->successResponse(
+                ConferenceResource::collection($conferences),
+                'Conferences retrieved successfully'
+            );
+        }
     }
 
     public function store(ConferenceStoreRequest $request): JsonResponse

@@ -6,7 +6,7 @@ import type {
   CreateConferencePayload, 
   UpdateConferencePayload, 
   ConferenceStatusPayload,
-  ConferenceResponse, 
+  ConferencePaginatedResponse, 
   SingleConferenceResponse,
   ConferenceEditorsResponse,
   AttachEditorPayload
@@ -65,7 +65,7 @@ export const useConferenceStore = defineStore('conference', {
       this.error = null;
       
       try {
-        const response = await apiService.get<ConferenceResponse>('/v1/conferences', { 
+        const response = await apiService.get<ConferencePaginatedResponse>('/v1/conferences', { 
           params: filters 
         });
         

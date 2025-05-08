@@ -1,3 +1,5 @@
+import type { PaginationMeta, PaginationLinks } from './university';
+
 // src/types/user.ts
 export interface User {
   id: number;
@@ -6,6 +8,19 @@ export interface User {
   created_at?: string;
   updated_at?: string;
 }
+
+
+export interface UserListResponse {
+  success: boolean;
+  message: string;
+  data: User[];
+}
+
+export interface UserPaginatedResponse extends UserListResponse {
+  meta: PaginationMeta;
+  links: PaginationLinks;
+}
+
 
 export interface LoginCredentials {
   email: string;

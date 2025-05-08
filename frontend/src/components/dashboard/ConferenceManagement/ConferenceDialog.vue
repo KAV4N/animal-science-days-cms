@@ -1,293 +1,141 @@
 <template>
   <Dialog
+    ref="dialogRef"
     v-model:visible="visible"
     modal
-    :header="dialogHeader"
-    :style="{ width: '50vw' }"
-    :breakpoints="{ '960px': '75vw', '641px': '90vw' }"
+    maximizable
     @hide="resetForm"
-    class="conference-dialog"
+    @show="maximizeDialog"
+    class="p-fluid"
+    :style="{ width: '90vw' }" 
   >
-  <template #header>
-      <div class="dialog-header">
-        <div class="header-title">{{ dialogHeader }}</div>
-        <Tabs v-model:value="activeTabIndex" class="header-tabs">
-          <TabList>
-            <Tab value="0">Basic Info</Tab>
-            <Tab value="1">Location & Dates</Tab>
-            <Tab value="2">Theme & Colors</Tab>
-            <Tab value="3">Settings</Tab>
-          </TabList>
-        </Tabs>
+    <template #header>
+      <div class="flex items-center">
+        <i class="pi pi-calendar mr-2"></i>
+        <span class="font-bold text-lg">{{ dialogHeader }}</span>
       </div>
     </template>
-    <div class="dialog-content">
-      <!-- Tab Panels in separate Tabs component that's linked to the same model -->
-      <Tabs v-model:value="activeTabIndex" class="tab-panels">
-        <TabPanels>
-          <!-- Basic Information Tab -->
-          <TabPanel value="0">
-            <div class="grid gap-4 pt-4">
-              <!-- Name and Title -->
-              <div class="grid md:grid-cols-2 gap-4">
-                <div class="field">
-                  <label for="name" class="font-medium">Conference Name *</label>
-                  <InputText
-                    id="name"
-                    v-model.trim="v$.formData.name.$model"
-                    class="w-full"
-                    :class="{ 'p-invalid': v$.formData.name.$error }"
-                    placeholder="e.g. International Conference on Science"
-                    @blur="v$.formData.name.$touch()"
-                  />
-                  <small v-if="v$.formData.name.$error" class="p-error">
-                    {{ v$.formData.name.$errors[0]?.$message }}
-                  </small>
-                </div>
-
-                <div class="field">
-                  <label for="title" class="font-medium">Conference Title *</label>
-                  <InputText
-                    id="title"
-                    v-model.trim="v$.formData.title.$model"
-                    class="w-full"
-                    :class="{ 'p-invalid': v$.formData.title.$error }"
-                    placeholder="e.g. Advancing Scientific Research"
-                    @blur="v$.formData.title.$touch()"
-                  />
-                  <small v-if="v$.formData.title.$error" class="p-error">
-                    {{ v$.formData.title.$errors[0]?.$message }}
-                  </small>
-                </div>
-              </div>
-
-              <!-- Slug and University -->
-              <div class="grid md:grid-cols-2 gap-4">
-                <div class="field">
-                  <label for="slug" class="font-medium">Slug *</label>
-                  <InputText
-                    id="slug"
-                    v-model.trim="v$.formData.slug.$model"
-                    class="w-full"
-                    :class="{ 'p-invalid': v$.formData.slug.$error }"
-                    placeholder="e.g. icsr-2024"
-                    @blur="v$.formData.slug.$touch()"
-                  />
-                  <small v-if="v$.formData.slug.$error" class="p-error">
-                    {{ v$.formData.slug.$errors[0]?.$message }}
-                  </small>
-                </div>
-
-                <div class="field">
-                  <label for="university" class="font-medium">University *</label>
-                  <Dropdown
-                    id="university"
-                    v-model="v$.formData.university_id.$model"
-                    :options="universities"
-                    option-label="full_name"
-                    option-value="id"
-                    class="w-full"
-                    :class="{ 'p-invalid': v$.formData.university_id.$error }"
-                    placeholder="Select University"
-                    @blur="v$.formData.university_id.$touch()"
-                  />
-                  <small v-if="v$.formData.university_id.$error" class="p-error">
-                    {{ v$.formData.university_id.$errors[0]?.$message }}
-                  </small>
-                </div>
-              </div>
-
-              <!-- Description -->
-              <div class="field">
-                <label for="description" class="font-medium">Description</label>
-                <Textarea
-                  id="description"
-                  v-model="formData.description"
-                  rows="3"
-                  class="w-full"
-                  placeholder="Enter conference description..."
-                />
-              </div>
-            </div>
-          </TabPanel>
-
-          <!-- Location & Dates Tab -->
-          <TabPanel value="1">
-            <div class="grid gap-4 pt-4">
-              <!-- Dates -->
-              <div class="grid md:grid-cols-2 gap-4">
-                <div class="field">
-                  <label for="start_date" class="font-medium">Start Date *</label>
-                  <Calendar
-                    id="start_date"
-                    v-model="v$.formData.start_date.$model"
-                    dateFormat="yy-mm-dd"
-                    class="w-full"
-                    :class="{ 'p-invalid': v$.formData.start_date.$error }"
-                    placeholder="Select Start Date"
-                    :manualInput="false"
-                    @blur="v$.formData.start_date.$touch()"
-                  />
-                  <small v-if="v$.formData.start_date.$error" class="p-error">
-                    {{ v$.formData.start_date.$errors[0]?.$message }}
-                  </small>
-                </div>
-
-                <div class="field">
-                  <label for="end_date" class="font-medium">End Date *</label>
-                  <DatePicker
-                    id="end_date"
-                    v-model="v$.formData.end_date.$model"
-                    dateFormat="yy-mm-dd"
-                    class="w-full"
-                    :class="{ 'p-invalid': v$.formData.end_date.$error }"
-                    placeholder="Select End Date"
-                    :minDate="formData.start_date ? new Date(formData.start_date) : null"
-                    :manualInput="false"
-                    @blur="v$.formData.end_date.$touch()"
-                  />
-                  <small v-if="v$.formData.end_date.$error" class="p-error">
-                    {{ v$.formData.end_date.$errors[0]?.$message }}
-                  </small>
-                </div>
-              </div>
-
-              <!-- Location and Venue -->
-              <div class="grid md:grid-cols-2 gap-4">
-                <div class="field">
-                  <label for="location" class="font-medium">Location *</label>
-                  <InputText
-                    id="location"
-                    v-model.trim="v$.formData.location.$model"
-                    class="w-full"
-                    :class="{ 'p-invalid': v$.formData.location.$error }"
-                    placeholder="e.g. New York, USA"
-                    @blur="v$.formData.location.$touch()"
-                  />
-                  <small v-if="v$.formData.location.$error" class="p-error">
-                    {{ v$.formData.location.$errors[0]?.$message }}
-                  </small>
-                </div>
-
-                <div class="field">
-                  <label for="venue_details" class="font-medium">Venue Details</label>
-                  <InputText
-                    id="venue_details"
-                    v-model="formData.venue_details"
-                    class="w-full"
-                    placeholder="e.g. Conference Hall A, Building 5"
-                  />
-                </div>
-              </div>
-            </div>
-          </TabPanel>
-
-          <!-- Theme & Colors Tab -->
-          <TabPanel value="2">
-            <div class="grid gap-4 pt-4">
-              <!-- Colors -->
-              <div class="grid md:grid-cols-2 gap-4">
-                <div class="field">
-                  <label for="primary_color" class="font-medium">Primary Color *</label>
-                  <TransparentColorPicker
-                    v-model="v$.formData.primary_color.$model"
-                    class="w-full"
-                    :class="{ 'p-invalid': v$.formData.primary_color.$error }"
-                    format="hex"
-                    @blur="v$.formData.primary_color.$touch()"
-                  />
-                  <small v-if="v$.formData.primary_color.$error" class="p-error">
-                    {{ v$.formData.primary_color.$errors[0]?.$message }}
-                  </small>
-                </div>
-
-                <div class="field">
-                  <label for="secondary_color" class="font-medium">Secondary Color *</label>
-                  <TransparentColorPicker
-                    v-model="v$.formData.secondary_color.$model"
-                    class="w-full"
-                    :class="{ 'p-invalid': v$.formData.secondary_color.$error }"
-                    format="hex"
-                    @blur="v$.formData.secondary_color.$touch()"
-                  />
-                  <small v-if="v$.formData.secondary_color.$error" class="p-error">
-                    {{ v$.formData.secondary_color.$errors[0]?.$message }}
-                  </small>
-                </div>
-              </div>
-            </div>
-          </TabPanel>
-
-          <!-- Settings Tab -->
-          <TabPanel value="3">
-            <div class="grid gap-4 pt-4">
-              <!-- Status Toggles -->
-              <div class="grid md:grid-cols-2 gap-4">
-                <div class="field-checkbox">
-                  <Checkbox
-                    id="is_published"
-                    v-model="formData.is_published"
-                    :binary="true"
-                  />
-                  <label for="is_published">Published</label>
-                </div>
-
-                <div class="field-checkbox">
-                  <Checkbox
-                    id="is_latest"
-                    v-model="formData.is_latest"
-                    :binary="true"
-                  />
-                  <label for="is_latest">Mark as Latest Conference</label>
-                </div>
-              </div>
-            </div>
-          </TabPanel>
-        </TabPanels>
-      </Tabs>
-    </div>
-  
+    
+    <Tabs v-model:value="activeTabIndex" scrollable>
+      <TabList class="sticky top-0 z-10 bg-white dark:bg-gray-900">
+        <Tab value="0">
+          <i class="pi pi-info-circle mr-2"></i>
+          Basic Information
+        </Tab>
+        <Tab value="1">
+          <i class="pi pi-map-marker mr-2"></i>
+          Location & Dates
+        </Tab>
+        <Tab value="2">
+          <i class="pi pi-palette mr-2"></i>
+          Theme & Colors
+        </Tab>
+        <Tab value="3">
+          <i class="pi pi-cog mr-2"></i>
+          Settings
+        </Tab>
+      </TabList>
+      <TabPanels>
+        <TabPanel value="0">
+          <div class="p-4">
+            <BasicInfoTab 
+              :v$="v$" 
+              :formData="formData" 
+              :universities="universities" 
+            />
+          </div>
+        </TabPanel>
+        <TabPanel value="1">
+          <div class="p-4">
+            <LocationDatesTab 
+              :v$="v$" 
+              :formData="formData" 
+            />
+          </div>
+        </TabPanel>
+        <TabPanel value="2">
+          <div class="p-4">
+            <ThemeColorsTab 
+              :v$="v$" 
+              :formData="formData" 
+            />
+          </div>
+        </TabPanel>
+        <TabPanel value="3">
+          <div class="p-4">
+            <SettingsTab 
+              :formData="formData" 
+              :currentConferenceId="currentConferenceId"
+              @conference-deleted="handleConferenceDeleted"
+            />
+          </div>
+        </TabPanel>
+      </TabPanels>
+    </Tabs>
 
     <template #footer>
-      <div class="flex justify-end gap-2">
-        <Button
-          type="button"
-          label="Cancel"
-          icon="pi pi-times"
-          class="p-button-text"
-          @click="hideConferenceDialog"
-        />
-        <Button
-          type="button"
-          :label="isEditing ? 'Apply' : 'Create'"
-          icon="pi pi-check"
-          :loading="loading"
-          @click="handleSubmit"
-        />
+      <div class="flex flex-col w-full">
+        <Divider class="w-full m-0" />
+        <div class="flex flex-nowrap justify-end gap-2 my-4 w-full">
+          <Button
+            type="button"
+            :label="isEditing ? 'Apply' : 'Create'"
+            icon="pi pi-check"
+            :loading="loading"
+            @click="handleSubmit"
+          />
+          <Button
+            type="button"
+            label="Cancel"
+            icon="pi pi-times"
+            text
+            @click="hideConferenceDialog"
+          />
+        </div>
       </div>
     </template>
   </Dialog>
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue';
+import { defineComponent, ref } from 'vue';
 import { useConferenceStore } from '@/stores/conferenceStore';
 import { useUniversityStore } from '@/stores/universityStore';
 import { useToast } from 'primevue/usetoast';
 import useVuelidate from '@vuelidate/core';
 import { required, minLength, helpers } from '@vuelidate/validators';
 import type { Conference, CreateConferencePayload, UpdateConferencePayload } from '@/types/conference';
+import type { User } from '@/types/user';
 import type { University } from '@/types/university';
-import TransparentColorPicker from './TransparentColorPicker.vue'; 
+import BasicInfoTab from './tabs/BasicInfoTab.vue';
+import LocationDatesTab from './tabs/LocationDatesTab.vue';
+import ThemeColorsTab from './tabs/ThemeColorsTab.vue';
+import SettingsTab from './tabs/SettingsTab.vue';
 
 export default defineComponent({
   name: 'ConferenceDialog',
   components: {
-    TransparentColorPicker  
+    BasicInfoTab,
+    LocationDatesTab,
+    ThemeColorsTab,
+    SettingsTab
   },
-  emits: ['conference-updated', 'conference-created'],
+  emits: ['conference-updated', 'conference-created', 'conference-deleted'],
   setup() {
-    return { v$: useVuelidate() };
+    const dialogRef = ref();
+    const v$ = useVuelidate();
+    
+    const maximizeDialog = () => {
+      if (dialogRef.value && !dialogRef.value.maximized) {
+        dialogRef.value.maximize();
+      }
+    };
+
+    return { 
+      dialogRef,
+      v$,
+      maximizeDialog 
+    };
   },
   data() {
     return {
@@ -310,8 +158,9 @@ export default defineComponent({
         venue_details: '' as string | undefined,
         start_date: null as Date | string | null,
         end_date: null as Date | string | null,
-        primary_color: '#3B82F6', // Default blue color
-        secondary_color: '#10B981', // Default green color
+        editors: [] as User[],
+        primary_color: '#3B82F6',
+        secondary_color: '#10B981',
         is_latest: false,
         is_published: false,
       }
@@ -408,7 +257,6 @@ export default defineComponent({
       this.currentConferenceId = conference?.id || null;
       
       if (conference) {
-        // Ensure dates are properly formatted as Date objects
         const startDate = conference.start_date ? new Date(conference.start_date) : null;
         const endDate = conference.end_date ? new Date(conference.end_date) : null;
         
@@ -422,6 +270,7 @@ export default defineComponent({
           venue_details: conference.venue_details || '',
           start_date: startDate,
           end_date: endDate,
+          editors: conference.editors,
           primary_color: conference.primary_color || '#3B82F6',
           secondary_color: conference.secondary_color || '#10B981',
           is_latest: conference.is_latest || false,
@@ -446,6 +295,7 @@ export default defineComponent({
         venue_details: '',
         start_date: null,
         end_date: null,
+        editors: [],
         primary_color: '#3B82F6',
         secondary_color: '#10B981',
         is_latest: false,
@@ -458,7 +308,6 @@ export default defineComponent({
     },
     
     async handleSubmit() {
-      console.log(this.formData.primary_color)
       const isFormValid = await this.v$.$validate();
       
       if (!isFormValid) {
@@ -475,12 +324,10 @@ export default defineComponent({
       this.loading = true;
 
       try {
-        // Format dates properly for API
         const formattedData = this.formatDataForApi();
         
         if (this.isEditing && this.currentConferenceId) {
           const payload: UpdateConferencePayload = formattedData;
-
           const response = await this.conferenceStore.updateConference(this.currentConferenceId, payload);
           this.$emit('conference-updated', response.data);
           
@@ -492,7 +339,6 @@ export default defineComponent({
           });
         } else {
           const payload: CreateConferencePayload = formattedData as CreateConferencePayload;
-
           const response = await this.conferenceStore.createConference(payload);
           this.$emit('conference-created', response.data);
           
@@ -519,11 +365,10 @@ export default defineComponent({
     },
     
     formatDataForApi() {
-      // Format dates for API - convert Date objects to ISO strings
       const formatDate = (date: Date | string | null): string => {
         if (!date) return '';
         if (date instanceof Date) {
-          return date.toISOString().split('T')[0]; // YYYY-MM-DD
+          return date.toISOString().split('T')[0];
         }
         return date;
       };
@@ -571,33 +416,13 @@ export default defineComponent({
     hasColorErrors() {
       return this.v$.formData.primary_color.$error || 
              this.v$.formData.secondary_color.$error;
+    },
+    
+    handleConferenceDeleted() {
+      this.visible = false;
+      this.resetForm();
+      this.$emit('conference-deleted');
     }
   },
 });
 </script>
-
-<style scoped>
-.conference-dialog :deep(.p-dialog-content) {
-  overflow-y: auto;
-  max-height: 80vh;
-}
-
-.sticky-tab-container {
-  position: sticky;
-  top: 0;
-  background-color: white;
-  z-index: 10;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-/* Add spacing between tabs and content */
-.tab-panels :deep(.p-tabview-panels) {
-  padding-top: 0.5rem;
-}
-
-/* Hide the duplicate tab headers from the second Tabs component */
-.tab-panels :deep(.p-tabview-nav) {
-  display: none;
-}
-</style>

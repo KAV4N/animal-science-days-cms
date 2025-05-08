@@ -102,12 +102,18 @@ export interface ConferenceStatusPayload {
 /**
  * Conference response structure
  */
-export interface ConferenceResponse {
+export interface ConferencePaginatedResponse {
   success: boolean;
   message: string;
   data: Conference[];
   meta: PaginationMeta;
   links: PaginationLinks;
+}
+
+export interface ConferenceListResponse {
+  success: boolean;
+  message: string;
+  data: Conference[];
 }
 
 /**

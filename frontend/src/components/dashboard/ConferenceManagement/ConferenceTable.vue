@@ -1,4 +1,3 @@
-<!-- components/dashboard/ConferenceManagement/ConferenceTable.vue -->
 <template>
   <div>
     <!-- Add the toolbar component -->
@@ -35,18 +34,19 @@
           <template #header>
             <div class="flex flex-column md:flex-row md:justify-between md:items-center gap-2">
               <h4 class="m-0">Manage Conferences</h4>
-              <div class="flex gap-2">
+              <div class="flex flex-wrap gap-2">
                 <Dropdown v-model="sortBy" :options="sortOptions" optionLabel="label" optionValue="value" 
                   placeholder="Sort by" class="w-full md:w-auto" @change="applySorting" />
-                <IconField class="w-full md:w-auto">
-                  <InputIcon>
+                <InputGroup class="w-full md:w-auto">
+                  <InputGroupAddon>
                     <i class="pi pi-search" />
-                  </InputIcon>
-                  <InputText v-model="searchQuery" placeholder="Search..." class="w-full" />
-                </IconField>
-                <Button icon="pi pi-search" @click="performSearch" label="Search" />
-                <Button v-if="searchPerformed || searchQuery.trim().length > 0" 
-                  icon="pi pi-times" @click="clearSearch" label="Clear" class="p-button-secondary" />
+                  </InputGroupAddon>
+                  <InputText v-model="searchQuery" placeholder="Search..." class="w-full" @keyup.enter="performSearch" />
+                  <InputGroupAddon v-if="searchQuery.trim().length > 0">
+                    <Button icon="pi pi-times" @click="clearSearch" class="p-button-text p-button-plain" />
+                  </InputGroupAddon>
+                </InputGroup>
+                <Button icon="pi pi-search" @click="performSearch" label="Search" class="w-full md:w-auto" />
               </div>
             </div>
             <div v-if="searchPerformed" class="mt-2 text-sm text-blue-500">
@@ -55,7 +55,7 @@
           </template>
 
           <!-- Fixed left column -->
-          <Column v-if="authStore.hasAdminAccess" selectionMode="multiple" style="width: 3rem" frozen alignFrozen="left" class="checkbox-column" :exportable="false"></Column>
+          <Column v-if="authStore.hasAdminAccess" selectionMode="multiple" style="width: 3rem" frozen alignFrozen="left" class="checkbox-column border-e shadow" :exportable="false"></Column>
           
           <Column field="name" header="Name" sortable style="min-width: 16rem"></Column>
           <Column field="university" header="University" sortable style="min-width: 12rem">
@@ -93,7 +93,8 @@
           </Column>
           
           <!-- Fixed right column -->
-          <Column :exportable="false" style="min-width: 8rem" frozen alignFrozen="right" class="action-buttons-column">
+
+          <Column :exportable="false" style="min-width: 8rem" frozen alignFrozen="right" class="action-buttons-column border-s shadow">
             <template #header>
               <div class="text-center">Actions</div>
             </template>
@@ -129,11 +130,31 @@ import { useAuthStore } from '@/stores/authStore';
 import { useToast } from 'primevue/usetoast';
 import type { Conference, ConferenceFilters } from '@/types/conference';
 import ConferenceToolbar from './ConferenceToolbar.vue';
+import Card from 'primevue/card';
+import DataTable from 'primevue/datatable';
+import Column from 'primevue/column';
+import Button from 'primevue/button';
+import Dropdown from 'primevue/dropdown';
+import InputGroup from 'primevue/inputgroup';
+import InputGroupAddon from 'primevue/inputgroupaddon';
+import InputText from 'primevue/inputtext';
+import Tag from 'primevue/tag';
+import Divider from 'primevue/divider';
 
 export default defineComponent({
   name: 'ConferenceTable',
   components: {
-    ConferenceToolbar
+    ConferenceToolbar,
+    Card,
+    DataTable,
+    Column,
+    Button,
+    Dropdown,
+    InputGroup,
+    InputGroupAddon,
+    InputText,
+    Tag,
+    Divider
   },
   emits: ['edit-conference'],
   setup() {
@@ -518,25 +539,11 @@ export default defineComponent({
   box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
 }
 
+
 @media screen and (max-width: 960px) {
   :deep(.p-datatable-wrapper) {
     overflow-x: auto;
   }
 
-  :deep(.p-datatable-tbody) tr td:first-child {
-    position: sticky !important;
-    border-right-width: 1px !important;
-    left: 0 !important;
-    z-index: 1 !important;
-    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1) !important;
-  }
-
-  :deep(.p-datatable-tbody) tr td:last-child {
-    position: sticky !important;
-    border-left-width: 1px !important;
-    right: 0 !important;
-    z-index: 1 !important;
-    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1) !important;
-  }
 }
 </style>
