@@ -3,9 +3,8 @@ import { defineComponent } from 'vue';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
+import { mapStores } from 'pinia';
 import { useAuthStore } from '@/stores/authStore';
-import { useRouter } from 'vue-router';
-import type { LoginCredentials } from '@/types/user';
 
 export default defineComponent({
   name: 'LoginCard',
@@ -28,16 +27,16 @@ export default defineComponent({
       error: null as string | null
     }
   },
+  computed: {
+    ...mapStores(useAuthStore)
+  },
   methods: {
     closeDialog() {
       this.$emit('update:visible', false);
     },
     async handleLogin() {
-      const authStore = useAuthStore();
-      const router = useRouter();
-
       try {
-        await authStore.login({
+        await this.authStore.login({
           email: this.email,
           password: this.password
         });
@@ -45,10 +44,10 @@ export default defineComponent({
         this.$emit('login');
         this.closeDialog();
 
-        if (authStore.user?.first_login) {
-          router.push({ name: 'change-password' });
+        if (this.authStore.user?.first_login) {
+          this.$router.push({ name: 'change-password' });
         } else {
-          router.push({ name: 'dashboard' });
+          this.$router.push({ name: 'dashboard' });
         }
       } catch (error: any) {
         this.error = error.response?.data?.message || 'Login failed';

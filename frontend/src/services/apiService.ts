@@ -1,4 +1,3 @@
-// src/services/apiService.ts
 import { api } from '@/plugins/axios';
 import type { LoginResponse, RegisterResponse, UserResponse, RefreshTokenResponse, ChangePasswordResponse } from '@/types/user';
 import type { AxiosRequestConfig, AxiosResponse } from 'axios';
@@ -11,14 +10,14 @@ const authService = {
    * Login with email and password
    */
   login(email: string, password: string) {
-    return api.post<LoginResponse>('/v1/auth/login', { email, password });
+    return api.post<LoginResponse>('/api/v1/auth/login', { email, password });
   },
 
   /**
    * Register a new user
    */
   register(name: string, email: string, password: string, password_confirmation: string) {
-    return api.post<RegisterResponse>('/v1/auth/register', {
+    return api.post<RegisterResponse>('/api/v1/auth/register', {
       name,
       email,
       password,
@@ -31,7 +30,7 @@ const authService = {
    * No need to send refresh token in the payload since it's in the cookie
    */
   logout() {
-    return api.post('/v1/auth/logout');
+    return api.post('/api/v1/auth/logout');
   },
 
   /**
@@ -39,14 +38,11 @@ const authService = {
    * Refresh token is now sent automatically via HTTP-only cookie
    */
   refresh() {
-    return api.post<RefreshTokenResponse>('/v1/auth/refresh');
+    return api.post<RefreshTokenResponse>('/api/v1/auth/refresh');
   },
 
-  /**
-   * Get current authenticated user
-   */
   getCurrentUser() {
-    return api.get<UserResponse>('/v1/users/me');
+    return api.get<UserResponse>('/api/v1/users/me');
   },
 
   /**
@@ -64,8 +60,7 @@ const authService = {
     if (current_password) {
       payload.current_password = current_password;
     }
-
-    return api.post<ChangePasswordResponse>('/v1/auth/change-password', payload);
+    return api.post<ChangePasswordResponse>('/api/v1/auth/change-password', payload);
   }
 
 };

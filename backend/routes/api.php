@@ -10,22 +10,18 @@ use App\Http\Controllers\Api\ConferenceController;
 use App\Http\Controllers\Api\ConferenceEditorController;
 use App\Http\Controllers\Api\UniversityController;
 
-//ONLY FOR TESTING
-// Universities
-
-
-
 Route::prefix('v1')->group(function () {
     Route::prefix('auth')->group(function () {
         Route::post('/login', [AuthController::class, 'login']);
         Route::post('/register', [AuthController::class, 'register']);
         Route::post('/refresh', [AuthController::class, 'refresh']);
 
-
-        Route::post('/logout', [AuthController::class, 'logout']);
-        Route::post('/change-password', [AuthController::class, 'changePassword']);
-        Route::get('/user', [AuthController::class, 'getUser']);
-
+        // Protected routes
+        Route::middleware('auth:sanctum')->group(function () {
+            Route::post('/logout', [AuthController::class, 'logout']);
+            Route::post('/change-password', [AuthController::class, 'changePassword']);
+            Route::get('/user', [AuthController::class, 'getUser']);
+        });
     });
 
     Route::middleware('auth:sanctum')->group(function () {
