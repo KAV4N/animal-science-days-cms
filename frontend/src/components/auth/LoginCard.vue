@@ -35,6 +35,8 @@ export default defineComponent({
       this.$emit('update:visible', false);
     },
     async handleLogin() {
+      this.error = null;
+
       try {
         await this.authStore.login({
           email: this.email,
@@ -45,12 +47,15 @@ export default defineComponent({
         this.closeDialog();
 
         if (this.authStore.user?.first_login) {
+          console.log("First login detected, redirecting to change-password");
           this.$router.push({ name: 'change-password' });
         } else {
+          console.log("Regular login, redirecting to dashboard");
           this.$router.push({ name: 'dashboard' });
         }
       } catch (error: any) {
-        this.error = error.response?.data?.message || 'Login failed';
+        console.error("Login error:", error);
+        this.error = error.message || 'Login failed';
       }
     }
   }

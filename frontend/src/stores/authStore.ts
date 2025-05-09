@@ -57,8 +57,20 @@ export const useAuthStore = defineStore('auth', {
       this.isAuthenticated = true;
       this.error = null;
 
+      // Make sure first_login is set correctly on the user object
+      if (this.user) {
+        this.user.first_login = userData.first_login;
+      }
+
       // Save token to localStorage for persistence
       localStorage.setItem('access_token', userData.access_token);
+
+      console.log('User data set in store:', {
+        user: this.user,
+        roles: this.roles,
+        permissions: this.permissions,
+        isFirstLogin: this.user?.first_login
+      });
     },
 
     async login(credentials: LoginCredentials) {
@@ -66,15 +78,19 @@ export const useAuthStore = defineStore('auth', {
       this.error = null;
 
       try {
+        console.log('Login attempt with:', credentials.email);
         const response = await apiService.auth.login(
           credentials.email,
           credentials.password
         );
-        this.setUserData(response.data.data);
 
-        // Handle first login redirect in router guards
-        return response.data.data;
+        console.log('Login response:', response.data);
+
+        this.setUserData(response.data);
+
+        return response.data;
       } catch (error: any) {
+        console.error('Login error:', error);
         this.error = error.response?.data?.message || 'Login failed';
         throw error;
       } finally {
@@ -87,15 +103,19 @@ export const useAuthStore = defineStore('auth', {
       this.error = null;
 
       try {
+        console.log('Changing password with payload:', credentials);
+
         const response = await apiService.auth.changePassword(
           credentials.new_password,
           credentials.new_password_confirmation,
           credentials.current_password
         );
 
+        console.log('Change password response:', response.data);
+
         // Update token
-        this.accessToken = response.data.data.access_token;
-        localStorage.setItem('access_token', response.data.data.access_token);
+        this.accessToken = response.data.access_token;
+        localStorage.setItem('access_token', response.data.access_token);
 
         // Update first_login status
         if (this.user) {
@@ -104,6 +124,7 @@ export const useAuthStore = defineStore('auth', {
 
         return response.data;
       } catch (error: any) {
+        console.error('Change password error:', error);
         this.error = error.response?.data?.message || 'Failed to change password';
         throw error;
       } finally {
@@ -121,6 +142,7 @@ export const useAuthStore = defineStore('auth', {
 
       // Remove token from localStorage
       localStorage.removeItem('access_token');
+      console.log('User data cleared from store');
     },
 
     async logout() {
@@ -131,6 +153,7 @@ export const useAuthStore = defineStore('auth', {
         this.clearUserData();
         router.push({ name: 'login' });
       } catch (error: any) {
+        console.error('Logout error:', error);
         this.error = error.response?.data?.message || 'Logout failed';
         // Clear user data anyway to ensure they're logged out on frontend
         this.clearUserData();
@@ -144,9 +167,10 @@ export const useAuthStore = defineStore('auth', {
 
       try {
         const response = await apiService.auth.refresh();
-        this.setUserData(response.data.data);
+        this.setUserData(response.data);
         return true;
       } catch (error: any) {
+        console.error('Refresh token error:', error);
         this.clearUserData();
         this.error = error.response?.data?.message || 'Session expired';
         return false;
@@ -164,10 +188,11 @@ export const useAuthStore = defineStore('auth', {
 
       try {
         const response = await apiService.auth.getCurrentUser();
-        this.user = response.data.data;
+        this.user = response.data;
         this.isAuthenticated = true;
         return true;
       } catch (error: any) {
+        console.error('Fetch current user error:', error);
         this.error = error.response?.data?.message || 'Failed to fetch user data';
         return false;
       } finally {
@@ -187,6 +212,7 @@ export const useAuthStore = defineStore('auth', {
       try {
         return await this.refreshToken();
       } catch (error) {
+        console.error('Check auth error:', error);
         this.clearUserData();
         return false;
       }

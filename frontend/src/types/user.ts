@@ -3,6 +3,9 @@ export interface User {
   name: string;
   email: string;
   first_login: boolean;
+  university_id?: number; // Added this field based on the API response
+  roles?: string[]; // Added this field based on the API response
+  permissions?: string[]; // Added this field based on the API response
   created_at?: string;
   updated_at?: string;
 }
@@ -25,55 +28,45 @@ export interface ChangePasswordCredentials {
   current_password?: string;
 }
 
-// API Response Types
+// Updated API Response Types to match the actual API response structure
 export interface LoginResponse {
-  success: boolean;
-  message: string;
-  data: {
-    user: User;
-    roles: string[];
-    permissions: string[];
-    access_token: string;
-    first_login: boolean;
-  };
+  user: User;
+  roles: string[];
+  permissions: string[];
+  access_token: string;
+  first_login: boolean;
 }
 
 export interface RegisterResponse {
-  success: boolean;
-  message: string;
-  data: {
-    user: User;
-    roles: string[];
-    permissions: string[];
-    access_token: string;
-    first_login: boolean;
-  };
+  user: User;
+  roles: string[];
+  permissions: string[];
+  access_token: string;
+  first_login: boolean;
 }
 
 export interface UserResponse {
-  success: boolean;
-  message: string;
-  data: User;
+  id: number;
+  name: string;
+  email: string;
+  first_login: boolean;
+  university_id?: number;
+  roles?: string[];
+  permissions?: string[];
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface RefreshTokenResponse {
-  success: boolean;
-  message: string;
-  data: {
-    user: User;
-    roles: string[];
-    permissions: string[];
-    access_token: string;
-    first_login: boolean;
-  };
+  user: User;
+  roles: string[];
+  permissions: string[];
+  access_token: string;
+  first_login: boolean;
 }
 
 export interface ChangePasswordResponse {
-  success: boolean;
-  message: string;
-  data: {
-    access_token: string;
-  };
+  access_token: string;
 }
 
 export interface ApiErrorResponse {

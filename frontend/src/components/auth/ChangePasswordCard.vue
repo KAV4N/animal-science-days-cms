@@ -5,6 +5,7 @@ import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import { useAuthStore } from '@/stores/authStore';
 import { useRouter } from 'vue-router';
+import type { ChangePasswordCredentials } from '@/types/user';
 
 export default defineComponent({
   name: 'ChangePasswordCard',
@@ -48,11 +49,7 @@ export default defineComponent({
       }
 
       try {
-        const payload: {
-          new_password: string;
-          new_password_confirmation: string;
-          current_password?: string;
-        } = {
+        const payload: ChangePasswordCredentials = {
           new_password: this.newPassword,
           new_password_confirmation: this.confirmPassword,
         };
@@ -62,6 +59,8 @@ export default defineComponent({
           payload.current_password = this.currentPassword;
         }
 
+        console.log('Sending change password payload:', payload);
+
         await this.authStore.changePassword(payload);
         this.success = 'Password changed successfully!';
 
@@ -70,6 +69,7 @@ export default defineComponent({
           this.router.push({ name: 'dashboard' });
         }, 2000);
       } catch (error: any) {
+        console.error('Password change error:', error);
         this.error = error.message || 'Password change failed';
       }
     }
