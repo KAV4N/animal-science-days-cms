@@ -3,9 +3,9 @@ export interface User {
   name: string;
   email: string;
   first_login: boolean;
-  university_id?: number; // Added this field based on the API response
-  roles?: string[]; // Added this field based on the API response
-  permissions?: string[]; // Added this field based on the API response
+  university_id?: number;
+  roles?: string[];
+  permissions?: string[];
   created_at?: string;
   updated_at?: string;
 }
@@ -28,8 +28,13 @@ export interface ChangePasswordCredentials {
   current_password?: string;
 }
 
-// Updated API Response Types to match the actual API response structure
-export interface LoginResponse {
+export interface ApiSuccessResponse<T> {
+  success: boolean;
+  message: string;
+  payload: T;
+}
+
+export interface LoginResponsePayload {
   user: User;
   roles: string[];
   permissions: string[];
@@ -37,7 +42,9 @@ export interface LoginResponse {
   first_login: boolean;
 }
 
-export interface RegisterResponse {
+export type LoginResponse = ApiSuccessResponse<LoginResponsePayload>;
+
+export interface RegisterResponsePayload {
   user: User;
   roles: string[];
   permissions: string[];
@@ -45,19 +52,25 @@ export interface RegisterResponse {
   first_login: boolean;
 }
 
-export interface UserResponse {
-  id: number;
-  name: string;
-  email: string;
-  first_login: boolean;
-  university_id?: number;
-  roles?: string[];
-  permissions?: string[];
-  created_at?: string;
-  updated_at?: string;
+export type RegisterResponse = ApiSuccessResponse<RegisterResponsePayload>;
+
+export interface UserResponsePayload {
+  user: {
+    id: number;
+    name: string;
+    email: string;
+    first_login: boolean;
+    university_id?: number;
+    created_at?: string;
+    updated_at?: string;
+  };
+  roles: string[];
+  permissions: string[];
 }
 
-export interface RefreshTokenResponse {
+export type UserResponse = ApiSuccessResponse<UserResponsePayload>;
+
+export interface RefreshTokenResponsePayload {
   user: User;
   roles: string[];
   permissions: string[];
@@ -65,9 +78,14 @@ export interface RefreshTokenResponse {
   first_login: boolean;
 }
 
-export interface ChangePasswordResponse {
+export type RefreshTokenResponse = ApiSuccessResponse<RefreshTokenResponsePayload>;
+
+export interface ChangePasswordResponsePayload {
   access_token: string;
+  first_login: boolean;
 }
+
+export type ChangePasswordResponse = ApiSuccessResponse<ChangePasswordResponsePayload>;
 
 export interface ApiErrorResponse {
   success: boolean;

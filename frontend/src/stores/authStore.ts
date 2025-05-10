@@ -1,6 +1,15 @@
 import { defineStore } from 'pinia';
 import apiService from '@/services/apiService';
-import type { User, LoginCredentials, ChangePasswordCredentials } from '@/types/user';
+import type {
+  User,
+  LoginCredentials,
+  ChangePasswordCredentials,
+  LoginResponsePayload,
+  ChangePasswordResponsePayload,
+  RefreshTokenResponsePayload,
+  UserResponsePayload,
+  ApiErrorResponse
+} from '@/types/user';
 import router from '@/router';
 
 interface AuthState {
@@ -86,12 +95,16 @@ export const useAuthStore = defineStore('auth', {
 
         console.log('Login response:', response.data);
 
-        this.setUserData(response.data);
+        // Extract payload from the new response structure
+        const payload = response.data.payload;
 
-        return response.data;
+        this.setUserData(payload);
+
+        return payload;
       } catch (error: any) {
         console.error('Login error:', error);
-        this.error = error.response?.data?.message || 'Login failed';
+        const errorData = error.response?.data as ApiErrorResponse | undefined;
+        this.error = errorData?.message || 'Login failed';
         throw error;
       } finally {
         this.isLoading = false;
@@ -113,19 +126,23 @@ export const useAuthStore = defineStore('auth', {
 
         console.log('Change password response:', response.data);
 
+        // Extract payload from the new response structure
+        const payload = response.data.payload;
+
         // Update token
-        this.accessToken = response.data.access_token;
-        localStorage.setItem('access_token', response.data.access_token);
+        this.accessToken = payload.access_token;
+        localStorage.setItem('access_token', payload.access_token);
 
         // Update first_login status
         if (this.user) {
-          this.user.first_login = false;
+          this.user.first_login = payload.first_login;
         }
 
-        return response.data;
+        return payload;
       } catch (error: any) {
         console.error('Change password error:', error);
-        this.error = error.response?.data?.message || 'Failed to change password';
+        const errorData = error.response?.data as ApiErrorResponse | undefined;
+        this.error = errorData?.message || 'Failed to change password';
         throw error;
       } finally {
         this.isLoading = false;
@@ -154,7 +171,8 @@ export const useAuthStore = defineStore('auth', {
         router.push({ name: 'login' });
       } catch (error: any) {
         console.error('Logout error:', error);
-        this.error = error.response?.data?.message || 'Logout failed';
+        const errorData = error.response?.data as ApiErrorResponse | undefined;
+        this.error = errorData?.message || 'Logout failed';
         // Clear user data anyway to ensure they're logged out on frontend
         this.clearUserData();
       } finally {
@@ -167,12 +185,14 @@ export const useAuthStore = defineStore('auth', {
 
       try {
         const response = await apiService.auth.refresh();
-        this.setUserData(response.data);
+        const payload = response.data.payload;
+        this.setUserData(payload);
         return true;
       } catch (error: any) {
         console.error('Refresh token error:', error);
         this.clearUserData();
-        this.error = error.response?.data?.message || 'Session expired';
+        const errorData = error.response?.data as ApiErrorResponse | undefined;
+        this.error = errorData?.message || 'Session expired';
         return false;
       } finally {
         this.isLoading = false;
@@ -188,12 +208,18 @@ export const useAuthStore = defineStore('auth', {
 
       try {
         const response = await apiService.auth.getCurrentUser();
-        this.user = response.data;
+        const payload = response.data.payload;
+
+        this.user = payload.user;
+        this.roles = payload.roles;
+        this.permissions = payload.permissions;
         this.isAuthenticated = true;
+
         return true;
       } catch (error: any) {
         console.error('Fetch current user error:', error);
-        this.error = error.response?.data?.message || 'Failed to fetch user data';
+        const errorData = error.response?.data as ApiErrorResponse | undefined;
+        this.error = errorData?.message || 'Failed to fetch user data';
         return false;
       } finally {
         this.isLoading = false;

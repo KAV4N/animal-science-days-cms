@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\ChangePasswordRequest;
 use App\Http\Resources\User\UserResource;
 use App\Services\AuthService;
+use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class AuthController extends Controller
 {
+    use ApiResponse;
     protected $authService;
 
     public function __construct(AuthService $authService)
@@ -35,13 +37,13 @@ class AuthController extends Controller
             $tokens['refresh_token']->plainTextToken
         );
 
-        return response()->json([
+        return $this->successResponse([
             'user' => new UserResource($user),
             'roles' => $user->roles->pluck('name'),
             'permissions' => $user->getAllPermissions()->pluck('name'),
             'access_token' => $tokens['access_token']->plainTextToken,
             'first_login' => false,
-        ], 201)->withCookie($refreshTokenCookie);
+        ], 'Registration successful', 201)->withCookie($refreshTokenCookie);
     }
 
     /**
@@ -55,7 +57,7 @@ class AuthController extends Controller
         $result = $this->authService->attemptLogin($request->email, $request->password);
 
         if (!$result) {
-            return response()->json(['message' => 'Invalid credentials'], 401);
+            return $this->errorResponse('Invalid credentials', 401);
         }
 
         $user = $result['user'];
@@ -65,13 +67,13 @@ class AuthController extends Controller
             $tokens['refresh_token']->plainTextToken
         );
 
-        return response()->json([
+        return $this->successResponse([
             'user' => new UserResource($user),
             'roles' => $user->roles->pluck('name'),
             'permissions' => $user->getAllPermissions()->pluck('name'),
             'access_token' => $tokens['access_token']->plainTextToken,
             'first_login' => $user->first_login,
-        ])->withCookie($refreshTokenCookie);
+        ], 'Login successful')->withCookie($refreshTokenCookie);
     }
 
     /**
@@ -89,7 +91,7 @@ class AuthController extends Controller
         );
 
         if (!$result) {
-            return response()->json(['message' => 'Current password is incorrect'], 401);
+            return $this->errorResponse('Current password is incorrect', 401);
         }
 
         $tokens = $result['tokens'];
@@ -99,10 +101,10 @@ class AuthController extends Controller
             $tokens['refresh_token']->plainTextToken
         );
 
-        return response()->json([
+        return $this->successResponse([
             'access_token' => $tokens['access_token']->plainTextToken,
             'first_login' => $user->first_login,
-        ], 200)->withCookie($refreshTokenCookie);
+        ], 'Password changed successfully')->withCookie($refreshTokenCookie);
     }
 
     /**
@@ -115,10 +117,10 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
-        return response()->json([
+        return $this->successResponse([
             'user' => new UserResource($user),
             'roles' => $user->roles->pluck('name'),
             'permissions' => $user->getAllPermissions()->pluck('name'),
-        ]);
+        ], 'User data retrieved successfully');
     }
 }
