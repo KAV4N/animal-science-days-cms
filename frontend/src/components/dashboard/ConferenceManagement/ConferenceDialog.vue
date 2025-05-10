@@ -31,6 +31,10 @@
           Theme & Colors
         </Tab>
         <Tab value="3">
+          <i class="pi pi-users mr-2"></i>
+          Editors
+        </Tab>
+        <Tab value="4">
           <i class="pi pi-cog mr-2"></i>
           Settings
         </Tab>
@@ -61,7 +65,17 @@
             />
           </div>
         </TabPanel>
+
+
         <TabPanel value="3">
+          <div class="p-4">
+            <EditorsTab 
+              :conferenceId="currentConferenceId"
+            />
+          </div>
+        </TabPanel>
+
+        <TabPanel value="4">
           <div class="p-4">
             <SettingsTab 
               :formData="formData" 
@@ -111,6 +125,7 @@ import BasicInfoTab from './tabs/BasicInfoTab.vue';
 import LocationDatesTab from './tabs/LocationDatesTab.vue';
 import ThemeColorsTab from './tabs/ThemeColorsTab.vue';
 import SettingsTab from './tabs/SettingsTab.vue';
+import EditorsTab from './tabs/EditorsTab.vue';
 
 export default defineComponent({
   name: 'ConferenceDialog',
@@ -118,7 +133,8 @@ export default defineComponent({
     BasicInfoTab,
     LocationDatesTab,
     ThemeColorsTab,
-    SettingsTab
+    SettingsTab,
+    EditorsTab
   },
   emits: ['conference-updated', 'conference-created', 'conference-deleted'],
   setup() {

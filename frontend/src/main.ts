@@ -11,15 +11,29 @@ import ToastService from 'primevue/toastservice';
 import App from './App.vue'
 import router from './router'
 
+import { useAuthStore } from '@/stores/authStore';
+
+
 import './plugins/axios';
 
-const app = createApp(App)
-const pinia = createPinia()
 
-app.use(pinia)
-app.use(ToastService);
-app.use(ConfirmationService);
-app.use(PrimeVue, primevueConfig);
-app.use(router)
 
-app.mount('#app');
+startApp();
+
+async function startApp () {
+    const pinia = createPinia()
+    const app = createApp(App)
+    app.use(pinia)
+    try {
+        const authStore = useAuthStore();
+        const auth = await authStore.checkAuth();
+        console.log(auth);
+    } catch (error) {
+        console.error('Authentication check failed:', error);
+    }
+    app.use(ToastService);
+    app.use(ConfirmationService);
+    app.use(PrimeVue, primevueConfig);
+    app.use(router)
+    app.mount('#app');
+}

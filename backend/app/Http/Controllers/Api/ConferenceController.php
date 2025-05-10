@@ -5,11 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Conference\ConferenceStoreRequest;
 use App\Http\Requests\Conference\ConferenceUpdateRequest;
-use App\Http\Requests\Conference\ConferenceEditorStoreRequest;
 
 use App\Http\Resources\Conference\ConferenceResource;
 use App\Http\Resources\Conference\ConferenceCollection;
-use App\Http\Resources\User\UserResource;
 
 use App\Models\Conference;
 use App\Traits\ApiResponse;
@@ -145,38 +143,6 @@ class ConferenceController extends Controller
             $message
         );
     }
-    
-    public function getEditors(Conference $conference): JsonResponse
-    {
-        $editors = $conference->editors()->with('university')->get();
-    
-        return $this->successResponse(
-            UserResource::collection($editors),
-            'Conference editors retrieved successfully'
-        );
-    }
-    
-    public function attachEditor(ConferenceEditorStoreRequest $request, Conference $conference): JsonResponse
-    {
-    
-        $conference->editors()->attach($request->user_id, [
-            'assigned_by' => $request->user()->id,
-            'assigned_at' => now()
-        ]);
-    
-        return $this->successResponse(
-            new ConferenceEditorResource($editor->load('user', 'assignedByUser')),
-            'Editor added successfully',
-            201
-        );
-    }
-    
-    public function detachEditor(Conference $conference, User $user): JsonResponse
-    {
-        $conference->editors()->detach($user->id);
-    
-        return $this->successResponse(null, 'Editor removed successfully');
-    }
 
     public function latest(Request $request): JsonResponse
     {
@@ -193,6 +159,4 @@ class ConferenceController extends Controller
             'Latest conference retrieved successfully'
         );
     }
-
-
 }

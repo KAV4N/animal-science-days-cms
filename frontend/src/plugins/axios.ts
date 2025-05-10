@@ -3,7 +3,7 @@ import { setupInterceptors } from '@/interceptors';
 
 // Ensure withCredentials is true to send/receive cookies
 const API_CONFIG = {
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: import.meta.env.VITE_API_URL || "htpp://localhost/api",
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json',

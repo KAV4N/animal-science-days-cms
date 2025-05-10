@@ -1,18 +1,13 @@
-import { type RouteLocationNormalized, type NavigationGuardNext } from 'vue-router';
-import { useAuthStore } from '@/stores/authStore';
+import type { MiddlewareContext } from '@/router/middleware/middleware-pipeline';
 
 /**
  * Middleware for routes that can be accessed by non-authenticated users
  * but will redirect authenticated users to dashboard
  */
-export default async (to: RouteLocationNormalized, from: RouteLocationNormalized, next: NavigationGuardNext) => {
-  const authStore = useAuthStore();
-
-  const isAuthenticated = await authStore.isAuthenticated;
-  
-  if (isAuthenticated) {
+export default function guest({ next, authStore }: MiddlewareContext): void {
+  if (authStore?.isAuthenticated) {
     next({ name: 'dashboard' });
   } else {
     next();
   }
-};
+}

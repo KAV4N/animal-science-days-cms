@@ -1,10 +1,12 @@
-import type { PaginationMeta, PaginationLinks } from './university';
+import type { PaginationMeta, PaginationLinks, University } from './university';
 
 // src/types/user.ts
 export interface User {
   id: number;
   name: string;
   email: string;
+  university_id: integer;
+  university: University;
   created_at?: string;
   updated_at?: string;
 }

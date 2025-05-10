@@ -1,25 +1,21 @@
-import { type RouteLocationNormalized, type NavigationGuardNext } from 'vue-router';
-import { useAuthStore } from '@/stores/authStore';
+import type { MiddlewareContext } from '@/router/middleware/middleware-pipeline';
 
 /**
  * Middleware factory that checks both role and permission
- * @param role - The required role
- * @param permission - The required permission
+ * @param requiredRole - The required role
+ * @param requiredPermission - The required permission
  */
-export default (role: string, permission: string) => {
-  return async (to: RouteLocationNormalized, from: RouteLocationNormalized, next: NavigationGuardNext) => {
-    const authStore = useAuthStore();
-
-    const isAuthenticated = await authStore.isAuthenticated;
-    
-    if (!isAuthenticated) {
-      return next({ name: 'login' });
+export default function roleAndPermission(requiredRole: string, requiredPermission: string) {
+  return function({ next, authStore }: MiddlewareContext): void {
+    if (!authStore?.isAuthenticated) {
+      next({ name: 'login' });
+      return;
     }
     
-    if (authStore.hasRole(role) && authStore.hasPermission(permission)) {
+    if (authStore.hasRole(requiredRole) && authStore.hasPermission(requiredPermission)) {
       next();
     } else {
       next({ name: 'dashboard' });
     }
   };
-};
+}

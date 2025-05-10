@@ -2,6 +2,7 @@
 namespace App\Http\Resources\User;
 
 use Illuminate\Http\Resources\Json\JsonResource;
+use App\Http\Resources\University\UniversityResource;
 
 class UserResource extends JsonResource
 {
@@ -12,6 +13,7 @@ class UserResource extends JsonResource
             'name' => $this->name,
             'email' => $this->email,
             'university_id' => $this->university_id,
+            'university' => new UniversityResource($this->whenLoaded('university')),
             'roles' => $this->getRoleNames(),
             'permissions' => $this->getAllPermissions()->pluck('name'),
         ];

@@ -42,10 +42,10 @@ Route::prefix('v1')->group(function () {
        
         Route::middleware('permission:access.admin')->group(function () {
             Route::apiResource('conferences', ConferenceController::class)->except(['index', 'show']);
-            Route::patch('conferences/{conference}', [ConferenceController::class, 'updateStatus']);
-            Route::get('/conferences/{conference}/editors', [ConferenceController::class, 'getEditors']);
-            Route::post('/conferences/{conference}/editors', [ConferenceController::class, 'attachEditor']);
-            Route::delete('/conferences/{conference}/editors/{user}', [ConferenceController::class, 'detachEditor']);
+            Route::get('/conferences/{conference}/editors', [ConferenceEditorController::class, 'index']);
+            Route::get('/conferences/{conference}/editors/unattached', [ConferenceEditorController::class, 'unattached']);
+            Route::post('/conferences/{conference}/editors', [ConferenceEditorController::class, 'store']);
+            Route::delete('/conferences/{conference}/editors/{editor}', [ConferenceEditorController::class, 'destroy']);
             Route::get('/conferences/latest', [ConferenceController::class, 'latest']);
         });
         Route::apiResource('conferences', ConferenceController::class)->only(['index', 'show']);
