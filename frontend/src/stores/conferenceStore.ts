@@ -19,7 +19,6 @@ import type { ApiErrorResponse } from '@/types/user';
 interface ConferenceState {
   conferences: Conference[];
   latestConference: Conference | null; 
-  conferenceEditors: User[];
   loading: boolean;
   error: string | null;
   meta: PaginationMeta | null;
@@ -29,7 +28,6 @@ export const useConferenceStore = defineStore('conference', {
   state: (): ConferenceState => ({
     conferences: [],
     latestConference: null, 
-    conferenceEditors: [],
     loading: false,
     error: null,
     meta: null,
@@ -37,7 +35,6 @@ export const useConferenceStore = defineStore('conference', {
 
   getters: {
     getConferences: (state) => state.conferences,
-    getConferenceEditors: (state) => state.conferenceEditors,
     isLoading: (state) => state.loading,
     getError: (state) => state.error,
     getPaginationMeta: (state) => state.meta,
@@ -256,76 +253,9 @@ export const useConferenceStore = defineStore('conference', {
       }
     },
 
-    /**
-     * Fetch editors for a conference
-     */
-    async fetchConferenceEditors(conferenceId: number) {
-      this.loading = true;
-      this.error = null;
-      
-      try {
-        const response = await apiService.get<ConferenceEditorsResponse>(`/v1/conferences/${conferenceId}/editors`);
-        this.conferenceEditors = response.data.data;
-        return response.data;
-      } catch (error) {
-        const axiosError = error as AxiosError<ApiErrorResponse>;
-        this.error = axiosError.response?.data.message || `Failed to fetch editors for conference with ID: ${conferenceId}`;
-        throw error;
-      } finally {
-        this.loading = false;
-      }
-    },
-
-    /**
-     * Attach an editor to a conference
-     */
-    async attachEditor(conferenceId: number, editorData: AttachEditorPayload) {
-      this.loading = true;
-      this.error = null;
-      
-      try {
-        const response = await apiService.post(`/v1/conferences/${conferenceId}/editors`, editorData);
-        await this.fetchConferenceEditors(conferenceId); // Refresh editors list
-        return response.data;
-      } catch (error) {
-        const axiosError = error as AxiosError<ApiErrorResponse>;
-        this.error = axiosError.response?.data.message || `Failed to attach editor to conference with ID: ${conferenceId}`;
-        throw error;
-      } finally {
-        this.loading = false;
-      }
-    },
-
-    /**
-     * Detach an editor from a conference
-     */
-    async detachEditor(conferenceId: number, userId: number) {
-      this.loading = true;
-      this.error = null;
-      
-      try {
-        const response = await apiService.delete(`/v1/conferences/${conferenceId}/editors/${userId}`);
-        
-        // Remove editor from the list if it exists
-        this.conferenceEditors = this.conferenceEditors.filter(e => e.id !== userId);
-        
-        return response.data;
-      } catch (error) {
-        const axiosError = error as AxiosError<ApiErrorResponse>;
-        this.error = axiosError.response?.data.message || `Failed to detach editor from conference with ID: ${conferenceId}`;
-        throw error;
-      } finally {
-        this.loading = false;
-      }
-    },
-
-    /**
-     * Reset store state
-     */
     resetState() {
       this.conferences = [];
       this.latestConference = null;
-      this.conferenceEditors = [];
       this.loading = false;
       this.error = null;
       this.meta = null;

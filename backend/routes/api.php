@@ -13,7 +13,7 @@ use App\Http\Controllers\Api\UniversityController;
 //ONLY FOR TESTING
 // Universities
 
-
+//Route::get('/conferences/latest', [ConferenceController::class, 'latest']);
 Route::prefix('v1')->group(function () {
     Route::prefix('auth')->group(function () {
         Route::post('/login', [AuthController::class, 'login']);

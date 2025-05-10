@@ -41,12 +41,11 @@
                   <InputGroupAddon>
                     <i class="pi pi-search" />
                   </InputGroupAddon>
-                  <InputText v-model="searchQuery" placeholder="Search..." class="w-full" @keyup.enter="performSearch" />
+                  <InputText v-model="searchQuery" placeholder="Search..." class="w-full" @input="debouncedSearch" />
                   <InputGroupAddon v-if="searchQuery.trim().length > 0">
                     <Button icon="pi pi-times" @click="clearSearch" class="p-button-text p-button-plain" />
                   </InputGroupAddon>
                 </InputGroup>
-                <Button icon="pi pi-search" @click="performSearch" label="Search" class="w-full md:w-auto" />
               </div>
             </div>
             <div v-if="searchPerformed" class="mt-2 text-sm text-blue-500">
@@ -93,7 +92,6 @@
           </Column>
           
           <!-- Fixed right column -->
-
           <Column :exportable="false" style="min-width: 8rem" frozen alignFrozen="right" class="action-buttons-column border-s shadow">
             <template #header>
               <div class="text-center">Actions</div>
@@ -123,7 +121,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, watch } from 'vue';
+import { defineComponent, ref, watch, onMounted } from 'vue';
 import { FilterMatchMode } from '@primevue/core/api';
 import { useConferenceStore } from '@/stores/conferenceStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -140,6 +138,7 @@ import InputGroupAddon from 'primevue/inputgroupaddon';
 import InputText from 'primevue/inputtext';
 import Tag from 'primevue/tag';
 import Divider from 'primevue/divider';
+import debounce from 'lodash/debounce';
 
 export default defineComponent({
   name: 'ConferenceTable',
@@ -159,6 +158,10 @@ export default defineComponent({
   emits: ['edit-conference'],
   setup() {
     const conferenceStore = useConferenceStore();
+    const authStore = useAuthStore();
+    const toast = useToast();
+    
+    // Reactive state
     const filteredConferences = ref<Conference[] | null>(null);
     const searchQuery = ref('');
     const lastSearchQuery = ref('');
@@ -166,53 +169,236 @@ export default defineComponent({
     const sortField = ref<string | null>(null);
     const sortOrder = ref<number>(1); // 1 for ascending, -1 for descending
     const sortBy = ref('');
+    const selectedConferences = ref<Conference[]>([]);
+    const dt = ref();
     
+    const filters = ref({
+      'global': { value: null, matchMode: FilterMatchMode.CONTAINS }
+    });
+
+    const sortOptions = [
+      { label: 'Newest First', value: 'newest' },
+      { label: 'Oldest First', value: 'oldest' },
+      { label: 'Recently Updated', value: 'recently_updated' },
+      { label: 'Least Recently Updated', value: 'least_recently_updated' },
+      { label: 'Start Date (Upcoming)', value: 'start_date_asc' },
+      { label: 'Start Date (Recent)', value: 'start_date_desc' },
+      { label: 'Name A-Z', value: 'name_asc' },
+      { label: 'Name Z-A', value: 'name_desc' }
+    ];
+
+    const currentFilters = ref<ConferenceFilters>({});
+    
+    // Create a debounced search function
+    const debouncedSearch = debounce(() => {
+      performSearch();
+    }, 300);
+
     // Watch for changes in the conferenceStore.conferences
     watch(() => conferenceStore.conferences, (newValue) => {
       if (searchPerformed.value) {
         // Re-apply the search filter when the conferences are updated
-        const query = lastSearchQuery.value.toLowerCase();
-        filteredConferences.value = conferenceStore.conferences.filter(conference => {
-          return (
-            (conference.name && conference.name.toLowerCase().includes(query)) ||
-            (conference.university?.full_name && conference.university.full_name.toLowerCase().includes(query)) ||
-            (conference.start_date && new Date(conference.start_date).toLocaleDateString().includes(query)) ||
-            (conference.end_date && new Date(conference.end_date).toLocaleDateString().includes(query))
-          );
-        });
+        filterConferences();
       }
     }, { deep: true });
+
+    // Methods
+    const filterConferences = () => {
+      const query = lastSearchQuery.value.toLowerCase();
+      filteredConferences.value = conferenceStore.conferences.filter(conference => {
+        return (
+          (conference.name && conference.name.toLowerCase().includes(query)) ||
+          (conference.university?.full_name && conference.university.full_name.toLowerCase().includes(query)) ||
+          (conference.start_date && new Date(conference.start_date).toLocaleDateString().includes(query)) ||
+          (conference.end_date && new Date(conference.end_date).toLocaleDateString().includes(query))
+        );
+      });
+    };
     
+    const performSearch = () => {
+      if (!searchQuery.value.trim()) {
+        if (searchPerformed.value) {
+          clearSearch();
+        }
+        return;
+      }
+      
+      conferenceStore.loading = true;
+      lastSearchQuery.value = searchQuery.value;
+      searchPerformed.value = true;
+
+      filterConferences();
+      
+      conferenceStore.loading = false;
+      
+      toast.add({
+        severity: 'info',
+        summary: 'Search Results',
+        detail: `Found ${filteredConferences.value?.length} matching conferences`,
+        life: 3000
+      });
+    };
+    
+    const clearSearch = () => {
+      searchQuery.value = '';
+      lastSearchQuery.value = '';
+      searchPerformed.value = false;
+      filteredConferences.value = null;
+      filters.value['global'].value = null;
+      
+      toast.add({
+        severity: 'info',
+        summary: 'Search Cleared',
+        detail: 'Showing all conferences',
+        life: 3000
+      });
+    };
+    
+    const applySorting = () => {
+      const filters: ConferenceFilters = { ...currentFilters.value };
+      
+      switch (sortBy.value) {
+        case 'newest':
+          filters.sort_field = 'created_at';
+          filters.sort_order = 'desc';
+          sortField.value = 'created_at';
+          sortOrder.value = -1;
+          break;
+        case 'oldest':
+          filters.sort_field = 'created_at';
+          filters.sort_order = 'asc';
+          sortField.value = 'created_at';
+          sortOrder.value = 1;
+          break;
+        case 'recently_updated':
+          filters.sort_field = 'updated_at';
+          filters.sort_order = 'desc';
+          sortField.value = 'updated_at';
+          sortOrder.value = -1;
+          break;
+        case 'least_recently_updated':
+          filters.sort_field = 'updated_at';
+          filters.sort_order = 'asc';
+          sortField.value = 'updated_at';
+          sortOrder.value = 1;
+          break;
+        case 'start_date_asc':
+          filters.sort_field = 'start_date';
+          filters.sort_order = 'asc';
+          sortField.value = 'start_date';
+          sortOrder.value = 1;
+          break;
+        case 'start_date_desc':
+          filters.sort_field = 'start_date';
+          filters.sort_order = 'desc';
+          sortField.value = 'start_date';
+          sortOrder.value = -1;
+          break;
+        case 'name_asc':
+          filters.sort_field = 'name';
+          filters.sort_order = 'asc';
+          sortField.value = 'name';
+          sortOrder.value = 1;
+          break;
+        case 'name_desc':
+          filters.sort_field = 'name';
+          filters.sort_order = 'desc';
+          sortField.value = 'name';
+          sortOrder.value = -1;
+          break;
+        default:
+          break;
+      }
+      
+      currentFilters.value = filters;
+      refreshConferenceWithFilters(filters);
+    };
+    
+    const onSort = (event: any) => {
+      // Handle the sort event from DataTable
+      const sortField = event.sortField;
+      const sortOrder = event.sortOrder === 1 ? 'asc' : 'desc';
+      
+      // Update filters and refresh data
+      const filters: ConferenceFilters = {
+        ...currentFilters.value,
+        sort_field: sortField as 'name' | 'title' | 'start_date' | 'end_date' | 'created_at' | 'updated_at',
+        sort_order: sortOrder as 'asc' | 'desc'
+      };
+      
+      // Update dropdown selection to match the column sorting if applicable
+      if (sortField === 'created_at') {
+        sortBy.value = sortOrder === 'asc' ? 'oldest' : 'newest';
+      } else if (sortField === 'updated_at') {
+        sortBy.value = sortOrder === 'asc' ? 'least_recently_updated' : 'recently_updated';
+      } else if (sortField === 'start_date') {
+        sortBy.value = sortOrder === 'asc' ? 'start_date_asc' : 'start_date_desc';
+      } else if (sortField === 'name') {
+        sortBy.value = sortOrder === 'asc' ? 'name_asc' : 'name_desc';
+      } else {
+        sortBy.value = '';
+      }
+      
+      currentFilters.value = filters;
+      refreshConferenceWithFilters(filters);
+    };
+    
+    const refreshConferenceWithFilters = async (filters: ConferenceFilters) => {
+      conferenceStore.loading = true;
+      
+      try {
+        await conferenceStore.fetchConferences(filters);
+        
+        if (searchPerformed.value) {
+          filterConferences();
+        }
+      } catch (error) {
+        toast.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: error instanceof Error ? error.message : 'Failed to fetch conferences',
+          life: 3000
+        });
+      } finally {
+        conferenceStore.loading = false;
+      }
+    };
+    
+    const refreshConferences = () => {
+      conferenceStore.fetchConferences(currentFilters.value);
+      if (searchPerformed.value) {
+        filterConferences();
+      }
+    };
+
+    // Initialize data on mount
+    onMounted(() => {
+      refreshConferences();
+    });
+
     return {
+      conferenceStore,
+      authStore,
+      toast,
       filteredConferences,
       searchQuery,
       lastSearchQuery,
       searchPerformed,
       sortField,
       sortOrder,
-      sortBy
-    };
-  },
-  data() {
-    return {
-      conferenceStore: useConferenceStore(),
-      authStore: useAuthStore(),
-      toast: useToast(),
-      selectedConferences: [] as Conference[],
-      filters: {
-        'global': { value: null, matchMode: FilterMatchMode.CONTAINS }
-      },
-      sortOptions: [
-        { label: 'Newest First', value: 'newest' },
-        { label: 'Oldest First', value: 'oldest' },
-        { label: 'Recently Updated', value: 'recently_updated' },
-        { label: 'Least Recently Updated', value: 'least_recently_updated' },
-        { label: 'Start Date (Upcoming)', value: 'start_date_asc' },
-        { label: 'Start Date (Recent)', value: 'start_date_desc' },
-        { label: 'Name A-Z', value: 'name_asc' },
-        { label: 'Name Z-A', value: 'name_desc' }
-      ],
-      currentFilters: {} as ConferenceFilters
+      sortBy,
+      selectedConferences,
+      filters,
+      sortOptions,
+      currentFilters,
+      dt,
+      debouncedSearch,
+      performSearch,
+      clearSearch,
+      applySorting,
+      onSort,
+      refreshConferenceWithFilters,
+      refreshConferences
     };
   },
   computed: {
@@ -222,9 +408,6 @@ export default defineComponent({
         : this.conferenceStore.conferences;
     }
   },
-  mounted() {
-    this.refreshConferences();
-  },
   methods: {
     editConference(conference: Conference): void {
       this.$emit('edit-conference', conference);
@@ -232,56 +415,6 @@ export default defineComponent({
     
     openCreateConferenceDialog(): void {
       this.$emit('edit-conference');
-    },
-    
-    performSearch(): void {
-      if (!this.searchQuery.trim()) {
-        this.toast.add({
-          severity: 'info',
-          summary: 'Info',
-          detail: 'Please enter a search term',
-          life: 3000
-        });
-        return;
-      }
-      
-      this.conferenceStore.loading = true;
-      this.lastSearchQuery = this.searchQuery;
-      this.searchPerformed = true;
-
-      const query = this.searchQuery.toLowerCase();
-      this.filteredConferences = this.conferenceStore.conferences.filter(conference => {
-        return (
-          (conference.name && conference.name.toLowerCase().includes(query)) ||
-          (conference.university?.full_name && conference.university.full_name.toLowerCase().includes(query)) ||
-          (conference.start_date && new Date(conference.start_date).toLocaleDateString().includes(query)) ||
-          (conference.end_date && new Date(conference.end_date).toLocaleDateString().includes(query))
-        );
-      });
-      
-      this.conferenceStore.loading = false;
-      
-      this.toast.add({
-        severity: 'info',
-        summary: 'Search Results',
-        detail: `Found ${this.filteredConferences.length} matching conferences`,
-        life: 3000
-      });
-    },
-    
-    clearSearch(): void {
-      this.searchQuery = '';
-      this.lastSearchQuery = '';
-      this.searchPerformed = false;
-      this.filteredConferences = null;
-      this.filters['global'].value = null;
-      
-      this.toast.add({
-        severity: 'info',
-        summary: 'Search Cleared',
-        detail: 'Showing all conferences',
-        life: 3000
-      });
     },
     
     formatDate(value: string): string {
@@ -348,123 +481,6 @@ export default defineComponent({
           detail: error instanceof Error ? error.message : 'Failed to delete conference',
           life: 3000
         });
-      }
-    },
-    
-    applySorting() {
-      const filters: ConferenceFilters = { ...this.currentFilters };
-      
-      switch (this.sortBy) {
-        case 'newest':
-          filters.sort_field = 'created_at';
-          filters.sort_order = 'desc';
-          this.sortField = 'created_at';
-          this.sortOrder = -1;
-          break;
-        case 'oldest':
-          filters.sort_field = 'created_at';
-          filters.sort_order = 'asc';
-          this.sortField = 'created_at';
-          this.sortOrder = 1;
-          break;
-        case 'recently_updated':
-          filters.sort_field = 'updated_at';
-          filters.sort_order = 'desc';
-          this.sortField = 'updated_at';
-          this.sortOrder = -1;
-          break;
-        case 'least_recently_updated':
-          filters.sort_field = 'updated_at';
-          filters.sort_order = 'asc';
-          this.sortField = 'updated_at';
-          this.sortOrder = 1;
-          break;
-        case 'start_date_asc':
-          filters.sort_field = 'start_date';
-          filters.sort_order = 'asc';
-          this.sortField = 'start_date';
-          this.sortOrder = 1;
-          break;
-        case 'start_date_desc':
-          filters.sort_field = 'start_date';
-          filters.sort_order = 'desc';
-          this.sortField = 'start_date';
-          this.sortOrder = -1;
-          break;
-        case 'name_asc':
-          filters.sort_field = 'name';
-          filters.sort_order = 'asc';
-          this.sortField = 'name';
-          this.sortOrder = 1;
-          break;
-        case 'name_desc':
-          filters.sort_field = 'name';
-          filters.sort_order = 'desc';
-          this.sortField = 'name';
-          this.sortOrder = -1;
-          break;
-        default:
-          break;
-      }
-      
-      this.currentFilters = filters;
-      this.refreshConferenceWithFilters(filters);
-    },
-    
-    onSort(event: any) {
-      // Handle the sort event from DataTable
-      const sortField = event.sortField;
-      const sortOrder = event.sortOrder === 1 ? 'asc' : 'desc';
-      
-      // Update filters and refresh data
-      const filters: ConferenceFilters = {
-        ...this.currentFilters,
-        sort_field: sortField as 'name' | 'title' | 'start_date' | 'end_date' | 'created_at' | 'updated_at',
-        sort_order: sortOrder as 'asc' | 'desc'
-      };
-      
-      // Update dropdown selection to match the column sorting if applicable
-      if (sortField === 'created_at') {
-        this.sortBy = sortOrder === 'asc' ? 'oldest' : 'newest';
-      } else if (sortField === 'updated_at') {
-        this.sortBy = sortOrder === 'asc' ? 'least_recently_updated' : 'recently_updated';
-      } else if (sortField === 'start_date') {
-        this.sortBy = sortOrder === 'asc' ? 'start_date_asc' : 'start_date_desc';
-      } else if (sortField === 'name') {
-        this.sortBy = sortOrder === 'asc' ? 'name_asc' : 'name_desc';
-      } else {
-        this.sortBy = '';
-      }
-      
-      this.currentFilters = filters;
-      this.refreshConferenceWithFilters(filters);
-    },
-    
-    async refreshConferenceWithFilters(filters: ConferenceFilters): Promise<void> {
-      this.conferenceStore.loading = true;
-      
-      try {
-        await this.conferenceStore.fetchConferences(filters);
-        
-        if (this.searchPerformed) {
-          this.performSearch();
-        }
-      } catch (error) {
-        this.toast.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: error instanceof Error ? error.message : 'Failed to fetch conferences',
-          life: 3000
-        });
-      } finally {
-        this.conferenceStore.loading = false;
-      }
-    },
-    
-    refreshConferences(): void {
-      this.conferenceStore.fetchConferences(this.currentFilters);
-      if (this.searchPerformed) {
-        this.performSearch();
       }
     },
     
@@ -539,11 +555,9 @@ export default defineComponent({
   box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
 }
 
-
 @media screen and (max-width: 960px) {
   :deep(.p-datatable-wrapper) {
     overflow-x: auto;
   }
-
 }
 </style>

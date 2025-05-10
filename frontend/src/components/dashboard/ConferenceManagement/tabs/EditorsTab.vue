@@ -18,7 +18,7 @@
         :loading="loading"
         dataKey="id"
         :paginator="true"
-        :rows="10"
+        :rows="filters.per_page"
         :rowsPerPageOptions="[5, 10, 25, 50]"
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
         :sortField="filters.sort_field"
@@ -28,6 +28,8 @@
         class="p-datatable-sm"
         v-model:filters="dt_filters"
         filterDisplay="menu"
+        @page="onPage"
+        @sort="onSort"
       >
         <template #empty>
           <div class="text-center p-4">
@@ -118,7 +120,7 @@
         :loading="loadingUnattached"
         dataKey="id"
         :paginator="true"
-        :rows="10"
+        :rows="unattachedFilters.per_page"
         :rowsPerPageOptions="[5, 10, 25, 50]"
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
         :sortField="unattachedFilters.sort_field"
@@ -127,6 +129,7 @@
         responsiveLayout="scroll"
         class="p-datatable-sm"
         @sort="onSortUnattached"
+        @page="onPageUnattached"
       >
         <template #empty>
           <div class="text-center p-4">
@@ -456,9 +459,27 @@ export default defineComponent({
       }
     },
     
+    onSort(event: any) {
+      this.filters.sort_field = event.sortField;
+      this.filters.sort_order = event.sortOrder === 1 ? 'asc' : 'desc';
+      this.loadEditors();
+    },
+    
+    onPage(event: any) {
+      this.filters.page = event.page + 1; // PrimeVue uses 0-based indexing, API uses 1-based
+      this.filters.per_page = event.rows;
+      this.loadEditors();
+    },
+    
     onSortUnattached(event: any) {
       this.unattachedFilters.sort_field = event.sortField;
       this.unattachedFilters.sort_order = event.sortOrder === 1 ? 'asc' : 'desc';
+      this.loadUnattachedEditors();
+    },
+    
+    onPageUnattached(event: any) {
+      this.unattachedFilters.page = event.page + 1; // PrimeVue uses 0-based indexing, API uses 1-based
+      this.unattachedFilters.per_page = event.rows;
       this.loadUnattachedEditors();
     }
   }

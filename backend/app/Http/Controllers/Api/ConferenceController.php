@@ -63,13 +63,13 @@ class ConferenceController extends Controller
         if ($request->has('page') || $request->has('per_page')) {
             $perPage = min(max(intval($request->per_page ?? 10), 1), 100);
             $conferences = $query->paginate($perPage)->withQueryString();
-            $conferences->load('university', 'editors');
+            $conferences->load(['university', 'editors.university']);
             return $this->paginatedResponse($conferences, ConferenceResource::collection($conferences));
         } else {
             $count = $query->count();
             
             $conferences = $query->get();
-            $conferences->load('university', 'editors');
+            $conferences->load(['university', 'editors.university']);
             return $this->successResponse(
                 ConferenceResource::collection($conferences),
                 'Conferences retrieved successfully'
@@ -85,16 +85,15 @@ class ConferenceController extends Controller
         $conference = Conference::create($validated);
 
         return $this->successResponse(
-            new ConferenceResource($conference->load('university', 'editors')),
+            new ConferenceResource($conference->load(['university', 'editors.university'])),
             'Conference created successfully',
             201
         );
-
     }
 
     public function show(Conference $conference): JsonResponse
     {
-        $conference->load('university', 'editors');
+        $conference->load(['university', 'editors.university']);
 
         return $this->successResponse(
             new ConferenceResource($conference),
@@ -107,7 +106,7 @@ class ConferenceController extends Controller
         $conference->update($request->validated());
 
         return $this->successResponse(
-            new ConferenceResource($conference->fresh(['university', 'editors'])),
+            new ConferenceResource($conference->fresh(['university', 'editors.university'])),
             'Conference updated successfully'
         );
     }
@@ -139,7 +138,7 @@ class ConferenceController extends Controller
         }
 
         return $this->successResponse(
-            new ConferenceResource($conference->fresh()),
+            new ConferenceResource($conference->fresh(['university', 'editors.university'])),
             $message
         );
     }
@@ -152,7 +151,7 @@ class ConferenceController extends Controller
             return $this->errorResponse('No latest conference found', 404);
         }
     
-        $conference->load('university', 'editors');
+        $conference->load(['university', 'editors.university']);
     
         return $this->successResponse(
             new ConferenceResource($conference),
