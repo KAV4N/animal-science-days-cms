@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
 import { useAuthStore } from '@/stores/authStore';
-import middleware from './middleware';
 
 import Dashboard from '@/views/Dashboard.vue';
 import ConferenceManagement from '@/views/dashboard/ConferenceManagement.vue';
@@ -17,7 +16,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/dashboard',
     component: Dashboard,
-    beforeEnter: middleware.requiresAuth,
+    meta: { requiresAuth: true },
     children: [
       {
         path: '',
@@ -45,7 +44,7 @@ const routes: Array<RouteRecordRaw> = [
     path: '/change-password',
     name: 'change-password',
     component: ChangePasswordCard,
-    beforeEnter: middleware.requiresAuth
+    meta: { requiresAuth: true }
   }
 ];
 
@@ -87,3 +86,4 @@ router.beforeEach(async (to, from, next) => {
 });
 
 export default router;
+

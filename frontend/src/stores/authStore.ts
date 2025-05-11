@@ -1,14 +1,14 @@
 import { defineStore } from 'pinia';
 import apiService from '@/services/apiService';
 import type {
-  User,
   LoginCredentials,
   ChangePasswordCredentials,
-  LoginResponsePayload,
+  LoginResponsePayload, // Used in setUserData
   ChangePasswordResponsePayload,
-  RefreshTokenResponsePayload,
-  UserResponsePayload,
-  ApiErrorResponse
+  RefreshTokenResponsePayload, // Structure is same as LoginResponsePayload for relevant parts
+  UserResponsePayload, // Used in fetchCurrentUser
+  ApiErrorResponse,
+  User // Keep this single import for the store's User type
 } from '@/types/user';
 import router from '@/router';
 
@@ -52,27 +52,20 @@ export const useAuthStore = defineStore('auth', {
   },
 
   actions: {
-    setUserData(userData: {
-      user: User;
-      roles: string[];
-      permissions: string[];
-      access_token: string;
-      first_login: boolean;
-    }) {
-      this.user = userData.user;
-      this.roles = userData.roles;
-      this.permissions = userData.permissions;
-      this.accessToken = userData.access_token;
+    setUserData(payload: LoginResponsePayload | RefreshTokenResponsePayload) {
+      // Construct the store's User object
+      this.user = {
+        ...payload.user, // Spread properties from UserFromResource
+        first_login: payload.first_login, // Add first_login from the root of the payload
+      };
+      this.roles = payload.user.roles || [];
+      this.permissions = payload.user.permissions || [];
+      this.accessToken = payload.access_token;
       this.isAuthenticated = true;
       this.error = null;
 
-      // Make sure first_login is set correctly on the user object
-      if (this.user) {
-        this.user.first_login = userData.first_login;
-      }
-
       // Save token to localStorage for persistence
-      localStorage.setItem('access_token', userData.access_token);
+      localStorage.setItem('access_token', payload.access_token);
 
       console.log('User data set in store:', {
         user: this.user,
@@ -208,11 +201,27 @@ export const useAuthStore = defineStore('auth', {
 
       try {
         const response = await apiService.auth.getCurrentUser();
-        const payload = response.data.payload;
+        const payload = response.data.payload as UserResponsePayload; // payload.user is from UserResource
 
-        this.user = payload.user;
-        this.roles = payload.roles;
-        this.permissions = payload.permissions;
+        const apiUserFromResource = payload.user; // This is UserFromResource
+
+        // Construct the store's User object
+        this.user = {
+          id: apiUserFromResource.id,
+          name: apiUserFromResource.name,
+          email: apiUserFromResource.email,
+          university_id: apiUserFromResource.university_id,
+          roles: apiUserFromResource.roles || [],
+          permissions: apiUserFromResource.permissions || [],
+          // UserFromResource doesn't have first_login.
+          // Preserve existing first_login if this.user exists, otherwise default to false.
+          // This is consistent with how it was handled before the UserFromResource change.
+          first_login: this.user?.first_login ?? false,
+        };
+
+        // Update roles and permissions from the newly constructed user object
+        this.roles = this.user.roles || []; // Ensure roles are taken from the new this.user
+        this.permissions = this.user.permissions || []; // Ensure permissions are taken from the new this.user
         this.isAuthenticated = true;
 
         return true;

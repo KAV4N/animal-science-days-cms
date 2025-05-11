@@ -39,8 +39,6 @@ class AuthController extends Controller
 
         return $this->successResponse([
             'user' => new UserResource($user),
-            'roles' => $user->roles->pluck('name'),
-            'permissions' => $user->getAllPermissions()->pluck('name'),
             'access_token' => $tokens['access_token']->plainTextToken,
             'first_login' => false,
         ], 'Registration successful', 201)->withCookie($refreshTokenCookie);
@@ -69,8 +67,6 @@ class AuthController extends Controller
 
         return $this->successResponse([
             'user' => new UserResource($user),
-            'roles' => $user->roles->pluck('name'),
-            'permissions' => $user->getAllPermissions()->pluck('name'),
             'access_token' => $tokens['access_token']->plainTextToken,
             'first_login' => $user->first_login,
         ], 'Login successful')->withCookie($refreshTokenCookie);
@@ -119,8 +115,6 @@ class AuthController extends Controller
 
         return $this->successResponse([
             'user' => new UserResource($user),
-            'roles' => $user->roles->pluck('name'),
-            'permissions' => $user->getAllPermissions()->pluck('name'),
         ], 'User data retrieved successfully');
     }
 }
