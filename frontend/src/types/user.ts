@@ -1,16 +1,27 @@
 import type { PaginationMeta, PaginationLinks, University } from './university';
 
-// src/types/user.ts
 export interface User {
   id: number;
   name: string;
   email: string;
-  university_id: number;
-  university: University;
+  first_login: boolean;
+  university_id?: number;
+  roles?: string[];
+  permissions?: string[];
   created_at?: string;
   updated_at?: string;
 }
 
+// Represents the user object as shaped by UserResource.php
+export interface UserFromResource {
+  id: number;
+  name: string;
+  email: string;
+  university_id?: number;
+  roles: string[];
+  permissions: string[];
+  // Note: first_login is not part of UserResource output
+}
 
 export interface UserListResponse {
   success: boolean;
@@ -22,7 +33,6 @@ export interface UserPaginatedResponse extends UserListResponse {
   meta: PaginationMeta;
   links: PaginationLinks;
 }
-
 
 export interface LoginCredentials {
   email: string;
@@ -39,55 +49,51 @@ export interface RegisterCredentials {
 export interface ChangePasswordCredentials {
   new_password: string;
   new_password_confirmation: string;
+  current_password?: string;
 }
 
-// API Response Types
-export interface LoginResponse {
+export interface ApiSuccessResponse<T> {
   success: boolean;
   message: string;
-  data: {
-    user: User;
-    roles: string[];
-    permissions: string[];
-    access_token: string;
-  };
+  payload: T;
 }
 
-export interface RegisterResponse {
-  success: boolean;
-  message: string;
-  data: {
-    user: User;
-    roles: string[];
-    permissions: string[];
-    access_token: string;
-  };
+export interface LoginResponsePayload {
+  user: UserFromResource;
+  access_token: string;
+  first_login: boolean; // Authoritative first_login from backend for this flow
 }
 
-export interface UserResponse {
-  success: boolean;
-  message: string;
-  data: User;
+export type LoginResponse = ApiSuccessResponse<LoginResponsePayload>;
+
+export interface RegisterResponsePayload {
+  user: UserFromResource;
+  access_token: string;
+  first_login: boolean; // Authoritative first_login from backend for this flow
 }
 
-export interface RefreshTokenResponse {
-  success: boolean;
-  message: string;
-  data: {
-    user: User;
-    roles: string[];
-    permissions: string[];
-    access_token: string;
-  };
+export type RegisterResponse = ApiSuccessResponse<RegisterResponsePayload>;
+
+export interface UserResponsePayload {
+  user: UserFromResource; // User data from /api/user endpoint, shaped by UserResource
 }
 
-export interface ChangePasswordResponse {
-  success: boolean;
-  message: string;
-  data: {
-    access_token: string;
-  };
+export type UserResponse = ApiSuccessResponse<UserResponsePayload>;
+
+export interface RefreshTokenResponsePayload {
+  user: UserFromResource;
+  access_token: string;
+  first_login: boolean; // Authoritative first_login from backend for this flow
 }
+
+export type RefreshTokenResponse = ApiSuccessResponse<RefreshTokenResponsePayload>;
+
+export interface ChangePasswordResponsePayload {
+  access_token: string;
+  first_login: boolean;
+}
+
+export type ChangePasswordResponse = ApiSuccessResponse<ChangePasswordResponsePayload>;
 
 export interface ApiErrorResponse {
   success: boolean;

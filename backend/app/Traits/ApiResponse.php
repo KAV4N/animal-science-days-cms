@@ -8,7 +8,7 @@ trait ApiResponse
         return response()->json([
             'success' => true,
             'message' => $message,
-            'data' => $data,
+            'payload' => $data,
         ], $status);
     }
 
@@ -17,7 +17,7 @@ trait ApiResponse
         return response()->json([
             'success' => true,
             'message' => $message,
-            'data' => $data ?? $paginator->items(),
+            'payload' => $data ?? $paginator->items(),
             'meta' => [
                 'current_page' => $paginator->currentPage(),
                 'last_page' => $paginator->lastPage(),
