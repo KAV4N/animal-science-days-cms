@@ -5,7 +5,7 @@ export interface User {
   id: number;
   name: string;
   email: string;
-  university_id: integer;
+  university_id: number;
   university: University;
   created_at?: string;
   updated_at?: string;

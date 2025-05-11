@@ -65,7 +65,7 @@ class Conference extends Model
     public function editors(): BelongsToMany
     {
         return $this->belongsToMany(User::class)
-                    ->withPivot('assigned_by', 'assigned_at')
+                    ->withPivot('assigned_by')
                     ->withTimestamps();
     }
 }

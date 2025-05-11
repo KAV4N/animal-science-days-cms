@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Conference\ConferenceEditorStoreRequest;
+use App\Http\Resources\Conference\ConferenceEditorResource;
 use App\Http\Resources\User\UserResource;
 use App\Models\Conference;
 use App\Models\User;
@@ -50,7 +51,7 @@ class ConferenceEditorController extends Controller
             $editors = $query->get();
             
             return $this->successResponse(
-                UserResource::collection($editors),
+                ConferenceEditorResource::collection($editors),
                 'Conference editors retrieved successfully'
             );
         }
@@ -60,7 +61,7 @@ class ConferenceEditorController extends Controller
         
         return $this->paginatedResponse(
             $editors, 
-            UserResource::collection($editors),
+            ConferenceEditorResource::collection($editors),
             'Conference editors retrieved successfully'
         );
     }
@@ -130,11 +131,13 @@ class ConferenceEditorController extends Controller
             'assigned_at' => now()
         ]);
 
-        $editor = User::with('university')
-                    ->findOrFail($userId);
+        $editor = $conference->editors()
+                    ->with('university')
+                    ->where('user_id', $userId)
+                    ->first();
         
         return $this->successResponse(
-            new UserResource($editor),
+            new ConferenceEditorResource($editor),
             'Editor added successfully',
             201
         );

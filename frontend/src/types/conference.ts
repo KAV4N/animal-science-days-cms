@@ -6,6 +6,22 @@ import type { PaginationMeta, PaginationLinks } from './university';
 /**
  * Conference entity
  */
+export interface EditorPivot {
+  conference_id: number;
+  assigned_by: number;
+  assigned_by_user: User;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Editor {
+  id: number;
+  name: string;
+  email: string;
+  university?: University;
+  pivot: EditorPivot;
+}
+
 export interface Conference {
   id: number;
   name: string;
@@ -21,7 +37,7 @@ export interface Conference {
   is_latest: boolean;
   is_published: boolean;
   university?: University;
-  editors?: ConferenceEditor[];
+  editors?: Editor[];
   created_at: string;
   updated_at: string;
 }
@@ -133,6 +149,7 @@ export interface ConferenceEditorsResponse {
   message: string;
   data: User[];
 }
+
 
 /**
  * Conference editor attachment payload

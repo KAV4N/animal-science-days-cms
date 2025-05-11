@@ -13,6 +13,29 @@
       </div>
 
       <!-- Editors DataTable -->
+      <div class="flex flex-wrap gap-3 mb-4">
+        <span class="p-input-icon-left w-full">
+          <i class="pi pi-search" />
+          <InputText
+            v-model="filters.search"
+            placeholder="Search editors..."
+            class="w-full"
+            @input="debouncedSearchEditors"
+          />
+        </span>
+
+        <Dropdown
+          v-model="filters.university_id"
+          :options="universities"
+          optionLabel="full_name"
+          optionValue="id"
+          placeholder="Filter by university"
+          class="w-full"
+          :showClear="true"
+          @change="loadEditors"
+        />
+      </div>
+      
       <DataTable
         :value="editors"
         :loading="loading"
@@ -26,8 +49,6 @@
         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} editors"
         responsiveLayout="scroll"
         class="p-datatable-sm"
-        v-model:filters="dt_filters"
-        filterDisplay="menu"
         @page="onPage"
         @sort="onSort"
       >
@@ -41,31 +62,21 @@
             Loading editors data...
           </div>
         </template>
-        <Column field="name" header="Name" sortable>
-          <template #filter="{ filterModel, filterCallback }">
-            <InputText
-              v-model="filterModel.value"
-              type="text"
-              class="p-column-filter"
-              placeholder="Search by name"
-              @input="filterCallback()"
-            />
-          </template>
-        </Column>
-        <Column field="email" header="Email" sortable>
-          <template #filter="{ filterModel, filterCallback }">
-            <InputText
-              v-model="filterModel.value"
-              type="text"
-              class="p-column-filter"
-              placeholder="Search by email"
-              @input="filterCallback()"
-            />
-          </template>
-        </Column>
-        <Column field="university.full_name" header="University">
+        <Column field="name" header="Name" sortable />
+        <Column field="email" header="Email" sortable />
+        <Column field="university.full_name" header="University" sortable>
           <template #body="slotProps">
             {{ slotProps.data.university?.full_name || '-' }}
+          </template>
+        </Column>
+        <Column field="pivot.created_at" header="Assigned At" sortable>
+          <template #body="slotProps">
+            {{ formatDate(slotProps.data.pivot?.created_at) }}
+          </template>
+        </Column>
+        <Column field="pivot.assigned_by_user.name" header="Assigned By" sortable>
+          <template #body="slotProps">
+            {{ slotProps.data.pivot?.assigned_by_user?.name || '-' }}
           </template>
         </Column>
         <Column headerStyle="width: 100px">
@@ -89,29 +100,27 @@
       modal
     >
       <div class="mb-4">
-        <div class="flex justify-between items-center mb-2">
-          <div class="flex items-center">
-            <span class="p-input-icon-left mr-3 flex-grow">
-              <i class="pi pi-search" />
-              <InputText
-                v-model="unattachedFilters.search"
-                placeholder="Search editors"
-                class="w-64"
-                @input="debouncedSearchUnattached"
-              />
-            </span>
-
-            <Dropdown
-              v-model="unattachedFilters.university_id"
-              :options="universities"
-              optionLabel="full_name"
-              optionValue="id"
-              placeholder="Filter by university"
-              class="w-64 mr-3"
-              :showClear="true"
-              @change="loadUnattachedEditors"
+        <div class="flex flex-wrap gap-3 mb-2">
+          <span class="p-input-icon-left w-full">
+            <i class="pi pi-search" />
+            <InputText
+              v-model="unattachedFilters.search"
+              placeholder="Search editors"
+              class="w-full"
+              @input="debouncedSearchUnattached"
             />
-          </div>
+          </span>
+
+          <Dropdown
+            v-model="unattachedFilters.university_id"
+            :options="universities"
+            optionLabel="full_name"
+            optionValue="id"
+            placeholder="Filter by university"
+            class="w-full"
+            :showClear="true"
+            @change="loadUnattachedEditors"
+          />
         </div>
       </div>
 
@@ -143,7 +152,7 @@
         </template>
         <Column field="name" header="Name" sortable />
         <Column field="email" header="Email" sortable />
-        <Column field="university.full_name" header="University">
+        <Column field="university.full_name" header="University" sortable>
           <template #body="slotProps">
             {{ slotProps.data.university?.full_name || '-' }}
           </template>
@@ -180,11 +189,11 @@ import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
 import type { User } from '@/types/user';
 import type { University } from '@/types/university';
-import type { FilterMatchModeOptions } from '@primevue/core/api';
-import { FilterMatchMode } from '@primevue/core/api';
 import apiService from '@/services/apiService';
 import { useUniversityStore } from '@/stores/universityStore';
 import debounce from 'lodash/debounce';
+import { format, parseISO } from 'date-fns';
+import type { Editor } from '@/types';
 
 interface EditorFilters {
   search?: string;
@@ -205,7 +214,7 @@ export default defineComponent({
   },
   data() {
     return {
-      editors: [] as User[],
+      editors: [] as Editor[],
       unattachedEditors: [] as User[],
       totalEditors: 0,
       totalUnattached: 0,
@@ -230,10 +239,7 @@ export default defineComponent({
         page: 1,
         per_page: 10
       } as EditorFilters,
-      dt_filters: {
-        name: { value: null, matchMode: FilterMatchMode.CONTAINS },
-        email: { value: null, matchMode: FilterMatchMode.CONTAINS }
-      } as Record<string, { value: any; matchMode: FilterMatchModeOptions }>,
+      debouncedSearchEditors: null as unknown as () => void,
       debouncedSearchUnattached: null as unknown as () => void,
       toast: useToast(),
       confirm: useConfirm()
@@ -247,21 +253,23 @@ export default defineComponent({
           this.loadEditors();
         }
       }
-    },
-    'dt_filters.name.value'(val) {
-      this.filters.search = val || '';
-      this.loadEditors();
-    },
-    'dt_filters.email.value'(val) {
-      this.filters.search = val || '';
-      this.loadEditors();
     }
   },
   mounted() {
     this.loadUniversities();
+    this.debouncedSearchEditors = debounce(this.loadEditors, 300);
     this.debouncedSearchUnattached = debounce(this.loadUnattachedEditors, 300);
   },
   methods: {
+    formatDate(dateString: string | undefined) {
+      if (!dateString) return '-';
+      try {
+        return format(parseISO(dateString), 'MMM dd, yyyy HH:mm');
+      } catch (e) {
+        return dateString;
+      }
+    },
+    
     async loadEditors() {
       if (!this.conferenceId) return;
       
@@ -282,10 +290,9 @@ export default defineComponent({
         
         if (response.data.success) {
           this.editors = response.data.data;
-          // Debugging logs to check university data
           console.log('Editors loaded:', this.editors);
           this.editors.forEach(editor => {
-            console.log(`Editor ${editor.name}:`, editor.university);
+            console.log(`Editor ${editor.name}:`, editor.pivot);
           });
           if (response.data.meta) {
             this.totalEditors = response.data.meta.total;
@@ -362,7 +369,7 @@ export default defineComponent({
       this.unattachedFilters = {
         search: '',
         university_id: null,
-        sort_field: 'full_name',
+        sort_field: 'name',
         sort_order: 'asc',
         page: 1,
         per_page: 10
