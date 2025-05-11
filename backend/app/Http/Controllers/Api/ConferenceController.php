@@ -5,11 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Conference\ConferenceStoreRequest;
 use App\Http\Requests\Conference\ConferenceUpdateRequest;
-use App\Http\Requests\Conference\ConferenceEditorStoreRequest;
 
 use App\Http\Resources\Conference\ConferenceResource;
 use App\Http\Resources\Conference\ConferenceCollection;
-use App\Http\Resources\User\UserResource;
 
 use App\Models\Conference;
 use App\Traits\ApiResponse;
@@ -24,7 +22,6 @@ class ConferenceController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Conference::query();
-
 
         if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
@@ -54,6 +51,7 @@ class ConferenceController extends Controller
             $query->where('end_date', '<=', $request->end_date_before);
         }
 
+
         $sortField = in_array($request->sort_field, ['name', 'title', 'start_date', 'end_date', 'created_at', 'updated_at']) 
             ? $request->sort_field 
             : 'created_at';
@@ -62,10 +60,21 @@ class ConferenceController extends Controller
             : 'desc';
         $query->orderBy($sortField, $sortOrder);
 
-        $perPage = min(max(intval($request->per_page ?? 10), 1), 100);
-        $conferences = $query->paginate($perPage)->withQueryString();
-        $conferences->load('university', 'editors');
-        return $this->paginatedResponse($conferences, ConferenceResource::collection($conferences));
+        if ($request->has('page') || $request->has('per_page')) {
+            $perPage = min(max(intval($request->per_page ?? 10), 1), 100);
+            $conferences = $query->paginate($perPage)->withQueryString();
+            $conferences->load(['university', 'editors.university']);
+            return $this->paginatedResponse($conferences, ConferenceResource::collection($conferences));
+        } else {
+            $count = $query->count();
+            
+            $conferences = $query->get();
+            $conferences->load(['university', 'editors.university']);
+            return $this->successResponse(
+                ConferenceResource::collection($conferences),
+                'Conferences retrieved successfully'
+            );
+        }
     }
 
     public function store(ConferenceStoreRequest $request): JsonResponse
@@ -76,16 +85,15 @@ class ConferenceController extends Controller
         $conference = Conference::create($validated);
 
         return $this->successResponse(
-            new ConferenceResource($conference->load('university', 'editors')),
+            new ConferenceResource($conference->load(['university', 'editors.university'])),
             'Conference created successfully',
             201
         );
-
     }
 
     public function show(Conference $conference): JsonResponse
     {
-        $conference->load('university', 'editors');
+        $conference->load(['university', 'editors.university']);
 
         return $this->successResponse(
             new ConferenceResource($conference),
@@ -98,7 +106,7 @@ class ConferenceController extends Controller
         $conference->update($request->validated());
 
         return $this->successResponse(
-            new ConferenceResource($conference->fresh(['university', 'editors'])),
+            new ConferenceResource($conference->fresh(['university', 'editors.university'])),
             'Conference updated successfully'
         );
     }
@@ -130,41 +138,9 @@ class ConferenceController extends Controller
         }
 
         return $this->successResponse(
-            new ConferenceResource($conference->fresh()),
+            new ConferenceResource($conference->fresh(['university', 'editors.university'])),
             $message
         );
-    }
-    
-    public function getEditors(Conference $conference): JsonResponse
-    {
-        $editors = $conference->editors()->with('university')->get();
-    
-        return $this->successResponse(
-            UserResource::collection($editors),
-            'Conference editors retrieved successfully'
-        );
-    }
-    
-    public function attachEditor(ConferenceEditorStoreRequest $request, Conference $conference): JsonResponse
-    {
-    
-        $conference->editors()->attach($request->user_id, [
-            'assigned_by' => $request->user()->id,
-            'assigned_at' => now()
-        ]);
-    
-        return $this->successResponse(
-            new ConferenceEditorResource($editor->load('user', 'assignedByUser')),
-            'Editor added successfully',
-            201
-        );
-    }
-    
-    public function detachEditor(Conference $conference, User $user): JsonResponse
-    {
-        $conference->editors()->detach($user->id);
-    
-        return $this->successResponse(null, 'Editor removed successfully');
     }
 
     public function latest(Request $request): JsonResponse
@@ -175,13 +151,11 @@ class ConferenceController extends Controller
             return $this->errorResponse('No latest conference found', 404);
         }
     
-        $conference->load('university', 'editors');
+        $conference->load(['university', 'editors.university']);
     
         return $this->successResponse(
             new ConferenceResource($conference),
             'Latest conference retrieved successfully'
         );
     }
-
-
 }

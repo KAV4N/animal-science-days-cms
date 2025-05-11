@@ -1,3 +1,5 @@
+import type { PaginationMeta, PaginationLinks, University } from './university';
+
 export interface User {
   id: number;
   name: string;
@@ -19,6 +21,17 @@ export interface UserFromResource {
   roles: string[];
   permissions: string[];
   // Note: first_login is not part of UserResource output
+}
+
+export interface UserListResponse {
+  success: boolean;
+  message: string;
+  data: User[];
+}
+
+export interface UserPaginatedResponse extends UserListResponse {
+  meta: PaginationMeta;
+  links: PaginationLinks;
 }
 
 export interface LoginCredentials {

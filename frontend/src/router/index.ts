@@ -1,5 +1,7 @@
-import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
+import { createRouter, createWebHistory, type RouteRecordRaw, type NavigationGuardNext, type RouteLocationNormalized } from 'vue-router';
 import { useAuthStore } from '@/stores/authStore';
+
+import middlewarePipeline from './middleware/middleware-pipeline';
 
 import Dashboard from '@/views/Dashboard.vue';
 import ConferenceManagement from '@/views/dashboard/ConferenceManagement.vue';
@@ -8,19 +10,44 @@ import Site from '@/views/Site.vue';
 import LoginCard from '@/components/auth/LoginCard.vue';
 import ChangePasswordCard from '@/components/auth/ChangePasswordCard.vue';
 
+import middleware from './middleware';
+
 const routes: Array<RouteRecordRaw> = [
   {
     path: '/',
     component: Site,
+    name: 'home'
+  },
+  {
+    path: '/login',
+    component: Login,
+    name: 'login',
+    meta: {
+      middleware: [middleware.guestOnly]
+    }
+  },
+  {
+    path: '/register',
+    component: Register,
+    name: 'register',
+    meta: {
+      middleware: [middleware.guestOnly]
+    }
   },
   {
     path: '/dashboard',
     component: Dashboard,
-    meta: { requiresAuth: true },
+
+
+    name: 'dashboard',
+    meta: {
+      middleware: [middleware.requiresAuth]
+    },
+
     children: [
       {
         path: '',
-        redirect: 'dashboard/conferences'
+        redirect: { name: 'ConferenceManagement' }
       },
       {
         path: 'conferences',
@@ -30,7 +57,10 @@ const routes: Array<RouteRecordRaw> = [
       {
         path: 'users',
         name: 'UserManagement',
-        component: UserManagement
+        component: UserManagement,
+        meta: {
+          middleware: [middleware.permission('access.admin')]
+        }
       }
     ]
   },
@@ -56,6 +86,7 @@ const router = createRouter({
 // Navigation guards
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
+
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
   const hideIfAuth = to.matched.some(record => record.meta.hideIfAuth);
 
@@ -87,3 +118,25 @@ router.beforeEach(async (to, from, next) => {
 
 export default router;
 
+
+  if (!to.meta.middleware) {
+    return next();
+  }
+  const middleware = Array.isArray(to.meta.middleware) 
+    ? to.meta.middleware 
+    : [to.meta.middleware];
+
+  const context = {
+    to,
+    from,
+    next,
+    authStore
+  };
+
+  return middleware[0]({
+    ...context,
+    next: middlewarePipeline(context, middleware, 1)
+  });
+});
+
+export default router;

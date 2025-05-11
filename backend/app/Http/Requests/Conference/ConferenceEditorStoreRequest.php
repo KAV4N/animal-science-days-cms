@@ -2,40 +2,30 @@
 
 namespace App\Http\Requests\Conference;
 
-use App\Models\ConferenceEditor;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Contracts\Validation\Validator;
-use Illuminate\Http\Exceptions\HttpResponseException;
+use App\Rules\UserIsEditor;
 
 class ConferenceEditorStoreRequest extends FormRequest
 {
-    public function authorize(): bool
+    /**
+     * Determine if the user is authorized to make this request.
+     *
+     * @return bool
+     */
+    public function authorize()
     {
         return auth()->check();
     }
 
-    public function rules(): array
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array
+     */
+    public function rules()
     {
-        $conference = $this->route('conference');
         return [
-            'user_id' => [
-                'required',
-                'exists:users,id',
-                function ($attribute, $value, $fail) {
-                    if ($value == auth()->id()) {
-                        $fail('The user and the assigner cannot be the same person.');
-                    }
-                },
-            ]
+            'user_id' => ['required', 'integer'],
         ];
-    }
-
-    protected function failedValidation(Validator $validator)
-    {
-        throw new HttpResponseException(response()->json([
-            'success' => false,
-            'message' => 'Validation errors',
-            'errors' => $validator->errors()
-        ], 422));
     }
 }

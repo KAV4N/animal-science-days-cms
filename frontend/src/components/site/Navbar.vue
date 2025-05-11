@@ -152,7 +152,7 @@ export default defineComponent({
               placeholder="Conferences" 
               class="conference-select rounded-lg"
               style="border-width: 0px; box-shadow:none; background: transparent;"
-              appendTo="body"
+              appendTo="self"
               @change="navigateToConference">
               <template #value="slotProps">
                 <div class="flex items-center">
@@ -189,7 +189,7 @@ export default defineComponent({
 
       <div class="md:hidden block transition-all duration-300 ease-out overflow-hidden"
         :style="{ maxHeight: isMobileMenuOpen ? '600px' : '0px', opacity: isMobileMenuOpen ? '1' : '0' }">
-        <div class="flex flex-col gap-8 transition-all pt-4">
+        <div class="flex flex-col ga@p-8 transition-all pt-4">
           <!-- Mobile navigation items -->
           <ul class="flex flex-col gap-2">
             <li v-for="item in regularItems" :key="item.label">
@@ -209,7 +209,7 @@ export default defineComponent({
                 placeholder="Conferences" 
                 class="w-full mobile-select rounded-lg shadow"
                 style="border-width: 0px; background: transparent;"
-                appendTo="body"
+                appendTo="self"
                 @change="navigateToConference">
                 <template #value="slotProps">
                   <div class="flex items-center">

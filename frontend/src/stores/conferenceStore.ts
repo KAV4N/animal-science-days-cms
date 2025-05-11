@@ -6,7 +6,7 @@ import type {
   CreateConferencePayload, 
   UpdateConferencePayload, 
   ConferenceStatusPayload,
-  ConferenceResponse, 
+  ConferencePaginatedResponse, 
   SingleConferenceResponse,
   ConferenceEditorsResponse,
   AttachEditorPayload
@@ -18,9 +18,7 @@ import type { ApiErrorResponse } from '@/types/user';
 
 interface ConferenceState {
   conferences: Conference[];
-  currentConference: Conference | null;
   latestConference: Conference | null; 
-  conferenceEditors: User[];
   loading: boolean;
   error: string | null;
   meta: PaginationMeta | null;
@@ -29,9 +27,7 @@ interface ConferenceState {
 export const useConferenceStore = defineStore('conference', {
   state: (): ConferenceState => ({
     conferences: [],
-    currentConference: null,
     latestConference: null, 
-    conferenceEditors: [],
     loading: false,
     error: null,
     meta: null,
@@ -39,8 +35,6 @@ export const useConferenceStore = defineStore('conference', {
 
   getters: {
     getConferences: (state) => state.conferences,
-    getCurrentConference: (state) => state.currentConference,
-    getConferenceEditors: (state) => state.conferenceEditors,
     isLoading: (state) => state.loading,
     getError: (state) => state.error,
     getPaginationMeta: (state) => state.meta,
@@ -60,7 +54,6 @@ export const useConferenceStore = defineStore('conference', {
   },
 
   actions: {
-    
     /**
      * Fetch conferences with filters
      */
@@ -69,7 +62,7 @@ export const useConferenceStore = defineStore('conference', {
       this.error = null;
       
       try {
-        const response = await apiService.get<ConferenceResponse>('/v1/conferences', { 
+        const response = await apiService.get<ConferencePaginatedResponse>('/v1/conferences', { 
           params: filters 
         });
         
@@ -89,21 +82,19 @@ export const useConferenceStore = defineStore('conference', {
     /**
      * Fetch the latest conference
      */
-    async fetchLatestConference(filters: ConferenceFilters = {}) {
+    async fetchLatestConference() {
       this.loading = true;
       this.error = null;
-
+      const response = await apiService.get<SingleConferenceResponse>('/v1/conferences/latest');
       try {
-        const response = await apiService.get<SingleConferenceResponse>('/v1/conferences/latest', {
-          params: filters // Support optional filters like university_id or is_published
-        });
+       
         
         this.latestConference = response.data.data;
         return response.data;
       } catch (error) {
         const axiosError = error as AxiosError<ApiErrorResponse>;
         this.error = axiosError.response?.data.message || 'Failed to fetch latest conference';
-        this.latestConference = null; // Clear latestConference on error
+        this.latestConference = null; 
         throw error;
       } finally {
         this.loading = false;
@@ -111,7 +102,7 @@ export const useConferenceStore = defineStore('conference', {
     },
 
     /**
-     * Fetch a single conference by ID
+     * Fetch a single conference by ID and update the list
      */
     async fetchConference(id: number) {
       this.loading = true;
@@ -119,8 +110,14 @@ export const useConferenceStore = defineStore('conference', {
       
       try {
         const response = await apiService.get<SingleConferenceResponse>(`/v1/conferences/${id}`);
-        this.currentConference = response.data.data;
-        return response.data;
+        const conference = response.data.data;
+        const index = this.conferences.findIndex(c => c.id === id);
+        if (index !== -1) {
+          this.conferences[index] = conference;
+        } else {
+          this.conferences.push(conference);
+        }
+        return conference;
       } catch (error) {
         const axiosError = error as AxiosError<ApiErrorResponse>;
         this.error = axiosError.response?.data.message || `Failed to fetch conference with ID: ${id}`;
@@ -145,7 +142,7 @@ export const useConferenceStore = defineStore('conference', {
           this.latestConference = response.data.data;
         }
         
-        // Optionally add to conferences list
+        // Add to conferences list
         this.conferences.push(response.data.data);
         
         return response.data;
@@ -167,23 +164,19 @@ export const useConferenceStore = defineStore('conference', {
       
       try {
         const response = await apiService.put<SingleConferenceResponse>(`/v1/conferences/${id}`, conferenceData);
-        
-        // Update currentConference if it matches
-        if (this.currentConference && this.currentConference.id === id) {
-          this.currentConference = response.data.data;
-        }
-        
-        // Update latestConference if this conference is now latest
-        if (response.data.data.is_latest) {
-          this.latestConference = response.data.data;
-        } else if (this.latestConference && this.latestConference.id === id && !response.data.data.is_latest) {
-          this.latestConference = null; // Clear if no longer latest
-        }
+        const updatedConference = response.data.data;
         
         // Update conference in the list if it exists
         const index = this.conferences.findIndex(c => c.id === id);
         if (index !== -1) {
-          this.conferences[index] = response.data.data;
+          this.conferences[index] = updatedConference;
+        }
+        
+        // Update latestConference if necessary
+        if (updatedConference.is_latest) {
+          this.latestConference = updatedConference;
+        } else if (this.latestConference && this.latestConference.id === id && !updatedConference.is_latest) {
+          this.latestConference = null; // Clear if no longer latest
         }
         
         return response.data;
@@ -205,25 +198,21 @@ export const useConferenceStore = defineStore('conference', {
       
       try {
         const response = await apiService.patch<SingleConferenceResponse>(`/v1/conferences/${id}/status`, statusData);
-        
-        // Update currentConference if it matches
-        if (this.currentConference && this.currentConference.id === id) {
-          this.currentConference = response.data.data;
-        }
-        
-        // Update latestConference if status includes latest
-        if (statusData.latest !== undefined) {
-          if (response.data.data.is_latest) {
-            this.latestConference = response.data.data;
-          } else if (this.latestConference && this.latestConference.id === id) {
-            this.latestConference = null; // Clear if no longer latest
-          }
-        }
+        const updatedConference = response.data.data;
         
         // Update conference in the list if it exists
         const index = this.conferences.findIndex(c => c.id === id);
         if (index !== -1) {
-          this.conferences[index] = response.data.data;
+          this.conferences[index] = updatedConference;
+        }
+        
+        // Update latestConference if status includes latest
+        if (statusData.latest !== undefined) {
+          if (updatedConference.is_latest) {
+            this.latestConference = updatedConference;
+          } else if (this.latestConference && this.latestConference.id === id) {
+            this.latestConference = null; // Clear if no longer latest
+          }
         }
         
         return response.data;
@@ -246,13 +235,8 @@ export const useConferenceStore = defineStore('conference', {
       try {
         const response = await apiService.delete(`/v1/conferences/${id}`);
         
-        // Remove conference from the list if it exists
+        // Remove conference from the list
         this.conferences = this.conferences.filter(c => c.id !== id);
-        
-        // Clear currentConference if it's the deleted one
-        if (this.currentConference && this.currentConference.id === id) {
-          this.currentConference = null;
-        }
         
         // Clear latestConference if it's the deleted one
         if (this.latestConference && this.latestConference.id === id) {
@@ -269,77 +253,9 @@ export const useConferenceStore = defineStore('conference', {
       }
     },
 
-    /**
-     * Fetch editors for a conference
-     */
-    async fetchConferenceEditors(conferenceId: number) {
-      this.loading = true;
-      this.error = null;
-      
-      try {
-        const response = await apiService.get<ConferenceEditorsResponse>(`/v1/conferences/${conferenceId}/editors`);
-        this.conferenceEditors = response.data.data;
-        return response.data;
-      } catch (error) {
-        const axiosError = error as AxiosError<ApiErrorResponse>;
-        this.error = axiosError.response?.data.message || `Failed to fetch editors for conference with ID: ${conferenceId}`;
-        throw error;
-      } finally {
-        this.loading = false;
-      }
-    },
-
-    /**
-     * Attach an editor to a conference
-     */
-    async attachEditor(conferenceId: number, editorData: AttachEditorPayload) {
-      this.loading = true;
-      this.error = null;
-      
-      try {
-        const response = await apiService.post(`/v1/conferences/${conferenceId}/editors`, editorData);
-        await this.fetchConferenceEditors(conferenceId); // Refresh editors list
-        return response.data;
-      } catch (error) {
-        const axiosError = error as AxiosError<ApiErrorResponse>;
-        this.error = axiosError.response?.data.message || `Failed to attach editor to conference with ID: ${conferenceId}`;
-        throw error;
-      } finally {
-        this.loading = false;
-      }
-    },
-
-    /**
-     * Detach an editor from a conference
-     */
-    async detachEditor(conferenceId: number, userId: number) {
-      this.loading = true;
-      this.error = null;
-      
-      try {
-        const response = await apiService.delete(`/v1/conferences/${conferenceId}/editors/${userId}`);
-        
-        // Remove editor from the list if it exists
-        this.conferenceEditors = this.conferenceEditors.filter(e => e.id !== userId);
-        
-        return response.data;
-      } catch (error) {
-        const axiosError = error as AxiosError<ApiErrorResponse>;
-        this.error = axiosError.response?.data.message || `Failed to detach editor from conference with ID: ${conferenceId}`;
-        throw error;
-      } finally {
-        this.loading = false;
-      }
-    },
-
-    /**
-     * Reset store state
-     */
     resetState() {
       this.conferences = [];
-      this.currentConference = null;
       this.latestConference = null;
-      this.conferenceEditors = [];
       this.loading = false;
       this.error = null;
       this.meta = null;

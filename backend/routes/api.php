@@ -26,29 +26,26 @@ Route::prefix('v1')->group(function () {
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/users/me', [UserController::class, 'current']);
-        /*
-        //TODO: implement this in admin controller its just a example code
-        Route::middleware('role:admin|super_admin')->group(function () {
-            Route::apiResource('users', UserController::class);
+        Route::middleware('permission:access.admin')->group(function () {
+            Route::get('/users', [UserController::class, 'index']);
         });
-        //-----------------------------
-        */
+
         Route::apiResource('universities', UniversityController::class)->only(['index', 'show']);
 
-        Route::middleware(['role:super_admin'])->group(function () {
+        Route::middleware('role:super_admin')->group(function () {
             Route::apiResource('universities', UniversityController::class)->except(['index', 'show']);
         });
-
-
-        Route::apiResource('conferences', ConferenceController::class)->only(['index', 'show']);
-        Route::middleware(['role:admin|super_admin'])->group(function () {
+  
+       
+        Route::middleware('permission:access.admin')->group(function () {
             Route::apiResource('conferences', ConferenceController::class)->except(['index', 'show']);
-            Route::patch('conferences/{conference}', [ConferenceController::class, 'updateStatus']);
-            Route::get('/conferences/{conference}/editors', [ConferenceController::class, 'getEditors']);
-            Route::post('/conferences/{conference}/editors', [ConferenceController::class, 'attachEditor']);
-            Route::delete('/conferences/{conference}/editors/{user}', [ConferenceController::class, 'detachEditor']);
+            Route::get('/conferences/{conference}/editors', [ConferenceEditorController::class, 'index']);
+            Route::get('/conferences/{conference}/editors/unattached', [ConferenceEditorController::class, 'unattached']);
+            Route::post('/conferences/{conference}/editors', [ConferenceEditorController::class, 'store']);
+            Route::delete('/conferences/{conference}/editors/{editor}', [ConferenceEditorController::class, 'destroy']);
             Route::get('/conferences/latest', [ConferenceController::class, 'latest']);
         });
+        Route::apiResource('conferences', ConferenceController::class)->only(['index', 'show']);
         /*
         //TODO: IMPLEMENT THESE ROUTES IN FUTURE!!!
         // Page menus
