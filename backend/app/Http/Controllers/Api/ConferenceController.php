@@ -7,7 +7,6 @@ use App\Http\Requests\Conference\ConferenceStoreRequest;
 use App\Http\Requests\Conference\ConferenceUpdateRequest;
 
 use App\Http\Resources\Conference\ConferenceResource;
-use App\Http\Resources\Conference\ConferenceCollection;
 
 use App\Models\Conference;
 use App\Traits\ApiResponse;
@@ -158,4 +157,48 @@ class ConferenceController extends Controller
             'Latest conference retrieved successfully'
         );
     }
+
+
+    public function myConferences(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $query = Conference::query();
+
+        $query->where('created_by', $user->id)
+              ->orWhereHas('editors', function ($q) use ($user) {
+                  $q->where('users.id', $user->id);
+              });
+
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('title', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->has('is_published')) {
+            $query->where('is_published', filter_var($request->is_published, FILTER_VALIDATE_BOOLEAN));
+        }
+
+        $sortField = in_array($request->sort_field, ['name', 'title', 'start_date', 'end_date', 'created_at', 'updated_at']) 
+            ? $request->sort_field 
+            : 'created_at';
+        $sortOrder = in_array(strtolower($request->sort_order), ['asc', 'desc']) 
+            ? strtolower($request->sort_order) 
+            : 'desc';
+        $query->orderBy($sortField, $sortOrder);
+
+        $perPage = min(max(intval($request->per_page ?? 10), 1), 100);
+        $conferences = $query->paginate($perPage)->withQueryString();
+        $conferences->load(['university', 'editors.university']);
+
+        return $this->paginatedResponse(
+            $conferences, 
+            ConferenceResource::collection($conferences),
+            'User conferences retrieved successfully'
+        );
+    }
+
 }

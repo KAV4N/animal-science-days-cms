@@ -289,7 +289,7 @@ export default defineComponent({
         const response = await apiService.get(url);
         
         if (response.data.success) {
-          this.editors = response.data.data;
+          this.editors = response.data.payload;
           console.log('Editors loaded:', this.editors);
           this.editors.forEach(editor => {
             console.log(`Editor ${editor.name}:`, editor.pivot);
@@ -330,7 +330,7 @@ export default defineComponent({
         const response = await apiService.get(url);
         
         if (response.data.success) {
-          this.unattachedEditors = response.data.data;
+          this.unattachedEditors = response.data.payload;
           if (response.data.meta) {
             this.totalUnattached = response.data.meta.total;
           }

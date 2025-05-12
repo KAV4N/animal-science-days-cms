@@ -11,71 +11,54 @@ use App\Http\Controllers\Api\ConferenceEditorController;
 use App\Http\Controllers\Api\UniversityController;
 
 Route::prefix('v1')->group(function () {
+    // Public routes for universities and conferences
+    Route::apiResource('universities', UniversityController::class)->only(['index', 'show']);
+
+    // Authentication routes
     Route::prefix('auth')->group(function () {
         Route::post('/login', [AuthController::class, 'login']);
         Route::post('/register', [AuthController::class, 'register']);
         Route::post('/refresh', [AuthController::class, 'refresh']);
-
-        // Protected routes
+        
         Route::middleware('auth:sanctum')->group(function () {
             Route::post('/logout', [AuthController::class, 'logout']);
-            Route::post('/change-password', [AuthController::class, 'changePassword']);
-            Route::get('/user', [AuthController::class, 'getUser']);
+            Route::middleware('ensure.must_change_password')->post('/change-password', [AuthController::class, 'changePassword']);
         });
     });
 
+    // Routes for authenticated users
     Route::middleware('auth:sanctum')->group(function () {
+
+
+        // User-specific route outside of password change middleware
         Route::get('/users/me', [UserController::class, 'current']);
-        Route::middleware('permission:access.admin')->group(function () {
-            Route::get('/users', [UserController::class, 'index']);
+        
+        // For retrieving attached conferences to a user
+        Route::get('/conferences/my', [ConferenceController::class, 'myConferences'])->name('conferences.my');
+
+        // Protected routes requiring password change
+        Route::middleware('ensure.password.changed')->group(function () {
+            // Admin-only routes
+            Route::middleware('permission:access.admin')->group(function () {
+                Route::get('/users', [UserController::class, 'index']);
+                
+                // University management for super admins
+                Route::middleware('role:super_admin')->group(function () {
+                    Route::apiResource('universities', UniversityController::class)->except(['index', 'show']);
+                });
+
+                // Conference management
+                Route::get('/conferences/latest', [ConferenceController::class, 'latest']);
+                Route::apiResource('conferences', ConferenceController::class)->only(['index', 'show']);
+
+                Route::apiResource('conferences', ConferenceController::class)->except(['index', 'show']);
+                
+                // Conference editors management
+                Route::get('/conferences/{conference}/editors', [ConferenceEditorController::class, 'index']);
+                Route::get('/conferences/{conference}/editors/unattached', [ConferenceEditorController::class, 'unattached']);
+                Route::post('/conferences/{conference}/editors', [ConferenceEditorController::class, 'store']);
+                Route::delete('/conferences/{conference}/editors/{editor}', [ConferenceEditorController::class, 'destroy']);
+            });
         });
-
-        Route::apiResource('universities', UniversityController::class)->only(['index', 'show']);
-
-        Route::middleware('role:super_admin')->group(function () {
-            Route::apiResource('universities', UniversityController::class)->except(['index', 'show']);
-        });
-  
-       
-        Route::middleware('permission:access.admin')->group(function () {
-            Route::apiResource('conferences', ConferenceController::class)->except(['index', 'show']);
-            Route::get('/conferences/{conference}/editors', [ConferenceEditorController::class, 'index']);
-            Route::get('/conferences/{conference}/editors/unattached', [ConferenceEditorController::class, 'unattached']);
-            Route::post('/conferences/{conference}/editors', [ConferenceEditorController::class, 'store']);
-            Route::delete('/conferences/{conference}/editors/{editor}', [ConferenceEditorController::class, 'destroy']);
-            Route::get('/conferences/latest', [ConferenceController::class, 'latest']);
-        });
-        Route::apiResource('conferences', ConferenceController::class)->only(['index', 'show']);
-        /*
-        //TODO: IMPLEMENT THESE ROUTES IN FUTURE!!!
-        // Page menus
-        Route::get('/conferences/{conferenceId}/menus', [PageMenuController::class, 'index']);
-        Route::get('/conferences/{conferenceId}/menus/{id}', [PageMenuController::class, 'show']);
-
-        Route::middleware('permission:edit.pages')->group(function () {
-            Route::post('/conferences/{conferenceId}/menus', [PageMenuController::class, 'store']);
-            Route::put('/conferences/{conferenceId}/menus/{id}', [PageMenuController::class, 'update']);
-            Route::delete('/conferences/{conferenceId}/menus/{id}', [PageMenuController::class, 'destroy']);
-        });
-
-        // Page content/data
-        Route::get('/menus/{menuId}/data', [PageDataController::class, 'index']);
-        Route::get('/menus/{menuId}/data/{id}', [PageDataController::class, 'show']);
-
-        Route::middleware('permission:edit.content')->group(function () {
-            Route::post('/menus/{menuId}/data', [PageDataController::class, 'store']);
-            Route::put('/menus/{menuId}/data/{id}', [PageDataController::class, 'update']);
-            Route::delete('/menus/{menuId}/data/{id}', [PageDataController::class, 'destroy']);
-        });
-
-        // Media management
-        Route::get('/media', [MediaController::class, 'index']);
-        Route::get('/media/{id}', [MediaController::class, 'show']);
-
-        Route::middleware('permission:upload.media')->group(function () {
-            Route::post('/media', [MediaController::class, 'store']);
-            Route::delete('/media/{id}', [MediaController::class, 'destroy']);
-        });
-    */
     });
 });

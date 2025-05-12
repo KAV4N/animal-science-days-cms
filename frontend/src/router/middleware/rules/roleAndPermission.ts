@@ -7,15 +7,10 @@ import type { MiddlewareContext } from '@/router/middleware/middleware-pipeline'
  */
 export default function roleAndPermission(requiredRole: string, requiredPermission: string) {
   return function({ next, authStore }: MiddlewareContext): void {
-    if (!authStore?.isAuthenticated) {
-      next({ name: 'login' });
-      return;
-    }
-    
-    if (authStore.hasRole(requiredRole) && authStore.hasPermission(requiredPermission)) {
+    if (authStore?.hasRole(requiredRole) && authStore.hasPermission(requiredPermission)) {
       next();
     } else {
-      next({ name: 'dashboard' });
+      next({ name: 'Dashboard' });
     }
   };
 }

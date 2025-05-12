@@ -9,25 +9,18 @@ class ChangePasswordRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return auth()->check();
+        return auth()->check() && auth()->user()->must_change_password;
     }
 
     public function rules(): array
     {
-        $user = $this->user();
-
-        // For first login, we don't require current password
-        if ($user && $user->first_login) {
-            return [
-                'new_password' => ['required', 'string', 'min:8', 'confirmed'],
-                'new_password_confirmation' => ['required', 'string', 'min:8'],
-            ];
-        }
-
-        // For regular password changes, require current password
         return [
-            'current_password' => ['required', 'string'],
-            'new_password' => ['required', 'string', 'min:8', 'confirmed', 'different:current_password'],
+            'new_password' => [
+                'required', 
+                'string', 
+                'min:8', 
+                'confirmed', 
+            ],
             'new_password_confirmation' => ['required', 'string', 'min:8'],
         ];
     }

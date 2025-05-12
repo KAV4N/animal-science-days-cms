@@ -51,6 +51,7 @@ export default defineComponent({
         this.loadLatestConference();
       }
     },
+
     async loadConferences() {
       try {
         await this.conferenceStore.fetchConferences();

@@ -5,12 +5,13 @@ import permission from './rules/permission';
 import role from './rules/role';
 import guestOnly from './rules/guestOnly';
 import roleAndPermission from './rules/roleAndPermission';
-
+import requiresUnchangedPassword from './rules/requiresUnchangedPassword';
 export default{
   guest,
   requiresAuth,
   permission,
   role,
   guestOnly,
-  roleAndPermission
+  roleAndPermission,
+  requiresUnchangedPassword
 };

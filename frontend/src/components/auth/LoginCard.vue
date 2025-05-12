@@ -24,7 +24,8 @@ export default defineComponent({
     return {
       email: '',
       password: '',
-      error: null as string | null
+      errorMessage: null as string | null,
+      isLoading: false
     }
   },
   computed: {
@@ -35,27 +36,26 @@ export default defineComponent({
       this.$emit('update:visible', false);
     },
     async handleLogin() {
-      this.error = null;
+      this.errorMessage = null;
+      this.isLoading = true;
 
       try {
-        await this.authStore.login({
+        const loginSuccessful = await this.authStore.login({
           email: this.email,
           password: this.password
         });
 
-        this.$emit('login');
-        this.closeDialog();
-
-        if (this.authStore.user?.first_login) {
-          console.log("First login detected, redirecting to change-password");
-          this.$router.push({ name: 'change-password' });
+        if (loginSuccessful) {
+          this.$emit('login');
+          this.closeDialog();
+          this.$router.push({ name: 'Dashboard' });
         } else {
-          console.log("Regular login, redirecting to dashboard");
-          this.$router.push({ name: 'dashboard' });
+          this.errorMessage = this.authStore.error || 'Login failed';
         }
       } catch (error: any) {
-        console.error("Login error:", error);
-        this.error = error.message || 'Login failed';
+        this.errorMessage = error.message || 'An unexpected error occurred';
+      } finally {
+        this.isLoading = false;
       }
     }
   }
@@ -73,7 +73,12 @@ export default defineComponent({
     <template #container="{ closeCallback }">
       <div class="flex flex-col px-8 py-8 gap-6 rounded-2xl" style="background-image: radial-gradient(circle at left top, var(--p-surface-400), var(--p-surface-700))">
         <img src="/school-logo.png" alt="School Logo" class="block mx-auto h-20 w-auto" />
-        <div v-if="error" class="text-red-400 text-sm">{{ error }}</div>
+        
+        <!-- Error Message Display -->
+        <div v-if="errorMessage" class="bg-red-500/20 border border-red-500 text-red-400 p-3 rounded-lg text-center">
+          {{ errorMessage }}
+        </div>
+
         <div class="inline-flex flex-col gap-2">
           <label for="email" class="primary-0 font-semibold text-surface-50">Email</label>
           <InputText
@@ -92,8 +97,21 @@ export default defineComponent({
           ></InputText>
         </div>
         <div class="flex items-center gap-4">
-          <Button label="Cancel" @click="closeCallback" text class="!p-4 w-full !text-primary-50 !border !border-white/30 hover:!bg-white/10"></Button>
-          <Button label="Log in" @click="handleLogin" text class="!p-4 w-full !text-primary-50 !border !border-white/30 hover:!bg-white/10"></Button>
+          <Button 
+            label="Cancel" 
+            @click="closeCallback" 
+            text 
+            class="!p-4 w-full !text-primary-50 !border !border-white/30 hover:!bg-white/10"
+          ></Button>
+          <Button 
+            label="Log in" 
+            @click="handleLogin" 
+            :disabled="isLoading"
+            text 
+            class="!p-4 w-full !text-primary-50 !border !border-white/30 hover:!bg-white/10"
+          >
+            {{ isLoading ? 'Logging in...' : 'Log in' }}
+          </Button>
         </div>
       </div>
     </template>

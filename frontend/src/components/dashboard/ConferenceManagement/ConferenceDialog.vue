@@ -110,7 +110,6 @@
     </template>
   </Dialog>
 </template>
-
 <script lang="ts">
 import { defineComponent, ref } from 'vue';
 import { useConferenceStore } from '@/stores/conferenceStore';
@@ -118,9 +117,16 @@ import { useUniversityStore } from '@/stores/universityStore';
 import { useToast } from 'primevue/usetoast';
 import useVuelidate from '@vuelidate/core';
 import { required, minLength, helpers } from '@vuelidate/validators';
-import type { Conference, CreateConferencePayload, UpdateConferencePayload } from '@/types/conference';
-import type { User } from '@/types/user';
+
 import type { University } from '@/types/university';
+import type { User } from '@/types/user';
+import type {
+  Conference,
+  Editor,
+  ConferenceStoreRequest,
+  ConferenceUpdateRequest,
+} from '@/types/conference';
+
 import BasicInfoTab from './tabs/BasicInfoTab.vue';
 import LocationDatesTab from './tabs/LocationDatesTab.vue';
 import ThemeColorsTab from './tabs/ThemeColorsTab.vue';
@@ -140,17 +146,17 @@ export default defineComponent({
   setup() {
     const dialogRef = ref();
     const v$ = useVuelidate();
-    
+
     const maximizeDialog = () => {
       if (dialogRef.value && !dialogRef.value.maximized) {
         dialogRef.value.maximize();
       }
     };
 
-    return { 
+    return {
       dialogRef,
       v$,
-      maximizeDialog 
+      maximizeDialog,
     };
   },
   data() {
@@ -169,12 +175,12 @@ export default defineComponent({
         name: '',
         title: '',
         slug: '',
-        description: '' as string | undefined,
+        description: '' as string | null,
         location: '',
-        venue_details: '' as string | undefined,
+        venue_details: '' as string | null,
         start_date: null as Date | string | null,
         end_date: null as Date | string | null,
-        editors: [] as User[],
+        editors: [] as Editor[],
         primary_color: '#3B82F6',
         secondary_color: '#10B981',
         is_latest: false,
@@ -267,26 +273,26 @@ export default defineComponent({
         });
       }
     },
-    
+
     openDialog(conference?: Conference) {
       this.isEditing = !!conference;
       this.currentConferenceId = conference?.id || null;
-      
+
       if (conference) {
         const startDate = conference.start_date ? new Date(conference.start_date) : null;
         const endDate = conference.end_date ? new Date(conference.end_date) : null;
-        
+
         this.formData = {
           university_id: conference.university?.id || null,
           name: conference.name || '',
           title: conference.title || '',
           slug: conference.slug || '',
-          description: conference.description || '',
+          description: conference.description,
           location: conference.location || '',
-          venue_details: conference.venue_details || '',
+          venue_details: conference.venue_details || null,
           start_date: startDate,
           end_date: endDate,
-          editors: conference.editors,
+          editors: conference.editors || [],
           primary_color: conference.primary_color || '#3B82F6',
           secondary_color: conference.secondary_color || '#10B981',
           is_latest: conference.is_latest || false,
@@ -295,11 +301,11 @@ export default defineComponent({
       } else {
         this.resetForm();
       }
-      
+
       this.visible = true;
       this.v$.$reset();
     },
-    
+
     resetForm() {
       this.formData = {
         university_id: null,
@@ -322,10 +328,10 @@ export default defineComponent({
       this.activeTabIndex = '0';
       this.v$.$reset();
     },
-    
+
     async handleSubmit() {
       const isFormValid = await this.v$.$validate();
-      
+
       if (!isFormValid) {
         this.showTabWithErrors();
         this.toast.add({
@@ -341,12 +347,11 @@ export default defineComponent({
 
       try {
         const formattedData = this.formatDataForApi();
-        
+
         if (this.isEditing && this.currentConferenceId) {
-          const payload: UpdateConferencePayload = formattedData;
+          const payload: ConferenceUpdateRequest = formattedData;
           const response = await this.conferenceStore.updateConference(this.currentConferenceId, payload);
-          this.$emit('conference-updated', response.data);
-          
+          this.$emit('conference-updated', response.payload);
           this.toast.add({
             severity: 'success',
             summary: 'Success',
@@ -354,10 +359,9 @@ export default defineComponent({
             life: 3000,
           });
         } else {
-          const payload: CreateConferencePayload = formattedData as CreateConferencePayload;
+          const payload: ConferenceStoreRequest = formattedData;
           const response = await this.conferenceStore.createConference(payload);
-          this.$emit('conference-created', response.data);
-          
+          this.$emit('conference-created', response.payload);
           this.toast.add({
             severity: 'success',
             summary: 'Success',
@@ -379,8 +383,8 @@ export default defineComponent({
         this.loading = false;
       }
     },
-    
-    formatDataForApi() {
+
+    formatDataForApi(): ConferenceStoreRequest {
       const formatDate = (date: Date | string | null): string => {
         if (!date) return '';
         if (date instanceof Date) {
@@ -388,15 +392,15 @@ export default defineComponent({
         }
         return date;
       };
-      
+
       return {
         university_id: this.formData.university_id as number,
         name: this.formData.name.trim(),
         title: this.formData.title.trim(),
         slug: this.formData.slug.trim(),
-        description: this.formData.description || undefined,
+        description: this.formData.description || null,
         location: this.formData.location.trim(),
-        venue_details: this.formData.venue_details || undefined,
+        venue_details: this.formData.venue_details || null,
         start_date: formatDate(this.formData.start_date),
         end_date: formatDate(this.formData.end_date),
         primary_color: this.formData.primary_color,
@@ -405,7 +409,7 @@ export default defineComponent({
         is_published: this.formData.is_published,
       };
     },
-    
+
     showTabWithErrors() {
       if (this.hasBasicInfoErrors()) {
         this.activeTabIndex = '0';
@@ -415,25 +419,25 @@ export default defineComponent({
         this.activeTabIndex = '2';
       }
     },
-    
+
     hasBasicInfoErrors() {
-      return this.v$.formData.name.$error || 
-             this.v$.formData.title.$error || 
-             this.v$.formData.slug.$error || 
+      return this.v$.formData.name.$error ||
+             this.v$.formData.title.$error ||
+             this.v$.formData.slug.$error ||
              this.v$.formData.university_id.$error;
     },
-    
+
     hasLocationDateErrors() {
-      return this.v$.formData.start_date.$error || 
-             this.v$.formData.end_date.$error || 
+      return this.v$.formData.start_date.$error ||
+             this.v$.formData.end_date.$error ||
              this.v$.formData.location.$error;
     },
-    
+
     hasColorErrors() {
-      return this.v$.formData.primary_color.$error || 
+      return this.v$.formData.primary_color.$error ||
              this.v$.formData.secondary_color.$error;
     },
-    
+
     handleConferenceDeleted() {
       this.visible = false;
       this.resetForm();

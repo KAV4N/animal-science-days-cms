@@ -6,8 +6,12 @@ import type { MiddlewareContext } from '@/router/middleware/middleware-pipeline'
  */
 export default function requiresAuth({ next, authStore }: MiddlewareContext): void {
   if (!authStore?.isAuthenticated) {
-    next({ name: 'login' });
-  } else {
+    next({ name: 'Login' });
+  } 
+  else if (authStore?.user?.must_change_password) {
+    next({ name: 'ChangePassword' });
+  } 
+  else {
     next();
   }
 }

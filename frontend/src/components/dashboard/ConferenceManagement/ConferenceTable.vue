@@ -1,25 +1,27 @@
 <template>
   <div>
-    <!-- Add the toolbar component -->
+    <!-- Toolbar component -->
     <ConferenceToolbar 
       v-if="authStore.hasAdminAccess"
       :selectedConferences="selectedConferences"
       @new-conference="openCreateConferenceDialog" 
       @confirm-delete-selected="confirmDeleteSelected"
     />
-    
+
     <Card class="card rounded-md">
       <template #content>
         <DataTable
           ref="dt"
           v-model:selection="selectedConferences"
-          :value="displayedConferences"
+          :value="conferenceStore.conferences"
           dataKey="id"
           :paginator="true"
-          :rows="10"
-          :filters="filters"
-          paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+          :rows="filters.per_page"
           :rowsPerPageOptions="[5, 10, 25]"
+          :totalRecords="conferenceStore.meta?.total || 0"
+          paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+          :sortField="filters.sort_field"
+          :sortOrder="filters.sort_order === 'desc' ? -1 : 1"
           currentPageReportTemplate="Showing {first} to {last} of {totalRecords} conferences"
           responsiveLayout="stack"
           breakpoint="960px"
@@ -27,29 +29,21 @@
           :loading="conferenceStore.loading"
           scrollable
           scrollHeight="flex"
-          v-model:sortField="sortField"
-          v-model:sortOrder="sortOrder"
+          @page="onPage"
           @sort="onSort"
         >
           <template #header>
             <div class="flex flex-column md:flex-row md:justify-between md:items-center gap-2">
               <h4 class="m-0">Manage Conferences</h4>
-              <div class="flex flex-wrap gap-2">
-                <Dropdown v-model="sortBy" :options="sortOptions" optionLabel="label" optionValue="value" 
-                  placeholder="Sort by" class="w-full md:w-auto" @change="applySorting" />
-                <InputGroup class="w-full md:w-auto">
-                  <InputGroupAddon>
-                    <i class="pi pi-search" />
-                  </InputGroupAddon>
-                  <InputText v-model="searchQuery" placeholder="Search..." class="w-full" @input="debouncedSearch" />
-                  <InputGroupAddon v-if="searchQuery.trim().length > 0">
-                    <Button icon="pi pi-times" @click="clearSearch" class="p-button-text p-button-plain" />
-                  </InputGroupAddon>
-                </InputGroup>
-              </div>
-            </div>
-            <div v-if="searchPerformed" class="mt-2 text-sm text-blue-500">
-              Results for "{{ lastSearchQuery }}"
+              <InputGroup class="w-full md:w-auto">
+                <InputGroupAddon>
+                  <i class="pi pi-search" />
+                </InputGroupAddon>
+                <InputText v-model="filters.search" placeholder="Search..." class="w-full" @input="debouncedSearch" />
+                <InputGroupAddon v-if="filters.search">
+                  <Button icon="pi pi-times" @click="clearSearch" class="p-button-text p-button-plain" />
+                </InputGroupAddon>
+              </InputGroup>
             </div>
           </template>
 
@@ -111,7 +105,7 @@
 
           <template #empty>
             <div class="p-4 text-center">
-              <p>No conferences found. {{ searchPerformed ? 'Try a different search term.' : 'Create a new conference to get started.' }}</p>
+              <p>No conferences found.</p>
             </div>
           </template>
         </DataTable>
@@ -121,8 +115,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, watch, onMounted } from 'vue';
-import { FilterMatchMode } from '@primevue/core/api';
+import { defineComponent, ref, onMounted } from 'vue';
 import { useConferenceStore } from '@/stores/conferenceStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useToast } from 'primevue/usetoast';
@@ -132,7 +125,6 @@ import Card from 'primevue/card';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';
-import Dropdown from 'primevue/dropdown';
 import InputGroup from 'primevue/inputgroup';
 import InputGroupAddon from 'primevue/inputgroupaddon';
 import InputText from 'primevue/inputtext';
@@ -148,7 +140,6 @@ export default defineComponent({
     DataTable,
     Column,
     Button,
-    Dropdown,
     InputGroup,
     InputGroupAddon,
     InputText,
@@ -161,252 +152,69 @@ export default defineComponent({
     const authStore = useAuthStore();
     const toast = useToast();
     
-    // Reactive state
-    const filteredConferences = ref<Conference[] | null>(null);
-    const searchQuery = ref('');
-    const lastSearchQuery = ref('');
-    const searchPerformed = ref(false);
-    const sortField = ref<string | null>(null);
-    const sortOrder = ref<number>(1); // 1 for ascending, -1 for descending
-    const sortBy = ref('');
+    const filters = ref<ConferenceFilters>({
+      search: '',
+      sort_field: 'created_at',
+      sort_order: 'desc',
+      page: 1,
+      per_page: 10
+    });
+    
     const selectedConferences = ref<Conference[]>([]);
     const dt = ref();
-    
-    const filters = ref({
-      'global': { value: null, matchMode: FilterMatchMode.CONTAINS }
-    });
 
-    const sortOptions = [
-      { label: 'Newest First', value: 'newest' },
-      { label: 'Oldest First', value: 'oldest' },
-      { label: 'Recently Updated', value: 'recently_updated' },
-      { label: 'Least Recently Updated', value: 'least_recently_updated' },
-      { label: 'Start Date (Upcoming)', value: 'start_date_asc' },
-      { label: 'Start Date (Recent)', value: 'start_date_desc' },
-      { label: 'Name A-Z', value: 'name_asc' },
-      { label: 'Name Z-A', value: 'name_desc' }
-    ];
-
-    const currentFilters = ref<ConferenceFilters>({});
-    
-    // Create a debounced search function
-    const debouncedSearch = debounce(() => {
-      performSearch();
-    }, 300);
-
-    // Watch for changes in the conferenceStore.conferences
-    watch(() => conferenceStore.conferences, (newValue) => {
-      if (searchPerformed.value) {
-        // Re-apply the search filter when the conferences are updated
-        filterConferences();
-      }
-    }, { deep: true });
-
-    // Methods
-    const filterConferences = () => {
-      const query = lastSearchQuery.value.toLowerCase();
-      filteredConferences.value = conferenceStore.conferences.filter(conference => {
-        return (
-          (conference.name && conference.name.toLowerCase().includes(query)) ||
-          (conference.university?.full_name && conference.university.full_name.toLowerCase().includes(query)) ||
-          (conference.start_date && new Date(conference.start_date).toLocaleDateString().includes(query)) ||
-          (conference.end_date && new Date(conference.end_date).toLocaleDateString().includes(query))
-        );
-      });
-    };
-    
-    const performSearch = () => {
-      if (!searchQuery.value.trim()) {
-        if (searchPerformed.value) {
-          clearSearch();
-        }
-        return;
-      }
-      
+    const loadConferences = async () => {
       conferenceStore.loading = true;
-      lastSearchQuery.value = searchQuery.value;
-      searchPerformed.value = true;
-
-      filterConferences();
-      
-      conferenceStore.loading = false;
-      
-      toast.add({
-        severity: 'info',
-        summary: 'Search Results',
-        detail: `Found ${filteredConferences.value?.length} matching conferences`,
-        life: 3000
-      });
-    };
-    
-    const clearSearch = () => {
-      searchQuery.value = '';
-      lastSearchQuery.value = '';
-      searchPerformed.value = false;
-      filteredConferences.value = null;
-      filters.value['global'].value = null;
-      
-      toast.add({
-        severity: 'info',
-        summary: 'Search Cleared',
-        detail: 'Showing all conferences',
-        life: 3000
-      });
-    };
-    
-    const applySorting = () => {
-      const filters: ConferenceFilters = { ...currentFilters.value };
-      
-      switch (sortBy.value) {
-        case 'newest':
-          filters.sort_field = 'created_at';
-          filters.sort_order = 'desc';
-          sortField.value = 'created_at';
-          sortOrder.value = -1;
-          break;
-        case 'oldest':
-          filters.sort_field = 'created_at';
-          filters.sort_order = 'asc';
-          sortField.value = 'created_at';
-          sortOrder.value = 1;
-          break;
-        case 'recently_updated':
-          filters.sort_field = 'updated_at';
-          filters.sort_order = 'desc';
-          sortField.value = 'updated_at';
-          sortOrder.value = -1;
-          break;
-        case 'least_recently_updated':
-          filters.sort_field = 'updated_at';
-          filters.sort_order = 'asc';
-          sortField.value = 'updated_at';
-          sortOrder.value = 1;
-          break;
-        case 'start_date_asc':
-          filters.sort_field = 'start_date';
-          filters.sort_order = 'asc';
-          sortField.value = 'start_date';
-          sortOrder.value = 1;
-          break;
-        case 'start_date_desc':
-          filters.sort_field = 'start_date';
-          filters.sort_order = 'desc';
-          sortField.value = 'start_date';
-          sortOrder.value = -1;
-          break;
-        case 'name_asc':
-          filters.sort_field = 'name';
-          filters.sort_order = 'asc';
-          sortField.value = 'name';
-          sortOrder.value = 1;
-          break;
-        case 'name_desc':
-          filters.sort_field = 'name';
-          filters.sort_order = 'desc';
-          sortField.value = 'name';
-          sortOrder.value = -1;
-          break;
-        default:
-          break;
-      }
-      
-      currentFilters.value = filters;
-      refreshConferenceWithFilters(filters);
-    };
-    
-    const onSort = (event: any) => {
-      // Handle the sort event from DataTable
-      const sortField = event.sortField;
-      const sortOrder = event.sortOrder === 1 ? 'asc' : 'desc';
-      
-      // Update filters and refresh data
-      const filters: ConferenceFilters = {
-        ...currentFilters.value,
-        sort_field: sortField as 'name' | 'title' | 'start_date' | 'end_date' | 'created_at' | 'updated_at',
-        sort_order: sortOrder as 'asc' | 'desc'
-      };
-      
-      // Update dropdown selection to match the column sorting if applicable
-      if (sortField === 'created_at') {
-        sortBy.value = sortOrder === 'asc' ? 'oldest' : 'newest';
-      } else if (sortField === 'updated_at') {
-        sortBy.value = sortOrder === 'asc' ? 'least_recently_updated' : 'recently_updated';
-      } else if (sortField === 'start_date') {
-        sortBy.value = sortOrder === 'asc' ? 'start_date_asc' : 'start_date_desc';
-      } else if (sortField === 'name') {
-        sortBy.value = sortOrder === 'asc' ? 'name_asc' : 'name_desc';
-      } else {
-        sortBy.value = '';
-      }
-      
-      currentFilters.value = filters;
-      refreshConferenceWithFilters(filters);
-    };
-    
-    const refreshConferenceWithFilters = async (filters: ConferenceFilters) => {
-      conferenceStore.loading = true;
-      
       try {
-        await conferenceStore.fetchConferences(filters);
-        
-        if (searchPerformed.value) {
-          filterConferences();
-        }
+        await conferenceStore.fetchConferences(filters.value);
       } catch (error) {
         toast.add({
           severity: 'error',
           summary: 'Error',
-          detail: error instanceof Error ? error.message : 'Failed to fetch conferences',
+          detail: 'Failed to load conferences',
           life: 3000
         });
       } finally {
         conferenceStore.loading = false;
       }
     };
-    
-    const refreshConferences = () => {
-      conferenceStore.fetchConferences(currentFilters.value);
-      if (searchPerformed.value) {
-        filterConferences();
-      }
+
+    const onPage = (event: any) => {
+      filters.value.page = event.page + 1; // PrimeVue uses 0-based indexing, API uses 1-based
+      filters.value.per_page = event.rows;
+      loadConferences();
     };
 
-    // Initialize data on mount
-    onMounted(() => {
-      refreshConferences();
-    });
+    const onSort = (event: any) => {
+      filters.value.sort_field = event.sortField;
+      filters.value.sort_order = event.sortOrder === 1 ? 'asc' : 'desc';
+      loadConferences();
+    };
+
+    const debouncedSearch = debounce(() => {
+      filters.value.page = 1; // Reset to first page on search
+      loadConferences();
+    }, 300);
+
+    const clearSearch = () => {
+      filters.value.search = '';
+      filters.value.page = 1;
+      loadConferences();
+    };
 
     return {
       conferenceStore,
       authStore,
       toast,
-      filteredConferences,
-      searchQuery,
-      lastSearchQuery,
-      searchPerformed,
-      sortField,
-      sortOrder,
-      sortBy,
-      selectedConferences,
       filters,
-      sortOptions,
-      currentFilters,
+      selectedConferences,
       dt,
-      debouncedSearch,
-      performSearch,
-      clearSearch,
-      applySorting,
+      loadConferences,
+      onPage,
       onSort,
-      refreshConferenceWithFilters,
-      refreshConferences
+      debouncedSearch,
+      clearSearch
     };
-  },
-  computed: {
-    displayedConferences(): Conference[] {
-      return this.filteredConferences !== null 
-        ? this.filteredConferences 
-        : this.conferenceStore.conferences;
-    }
   },
   methods: {
     editConference(conference: Conference): void {
@@ -463,11 +271,7 @@ export default defineComponent({
     async deleteConference(id: number): Promise<void> {
       try {
         await this.conferenceStore.deleteConference(id);
-        
-        if (this.searchPerformed) {
-          this.performSearch();
-        }
-        
+        this.loadConferences();
         this.toast.add({
           severity: 'success',
           summary: 'Success',
@@ -515,12 +319,8 @@ export default defineComponent({
         for (const conference of this.selectedConferences) {
           await this.conferenceStore.deleteConference(conference.id);
         }
-        
         this.selectedConferences = [];
-        
-        // Refresh the list after deletion
-        this.refreshConferences();
-        
+        this.loadConferences();
         this.toast.add({
           severity: 'success',
           summary: 'Success',

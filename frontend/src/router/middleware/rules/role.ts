@@ -6,15 +6,10 @@ import type { MiddlewareContext } from '@/router/middleware/middleware-pipeline'
  */
 export default function role(requiredRole: string) {
   return function({ next, authStore }: MiddlewareContext): void {
-    if (!authStore?.isAuthenticated) {
-      next({ name: 'login' });
-      return;
-    }
-    
-    if (authStore.hasRole(requiredRole)) {
+    if (authStore?.hasRole(requiredRole)) {
       next();
     } else {
-      next({ name: 'dashboard' });
+      next({ name: 'Dashboard' });
     }
   };
 }

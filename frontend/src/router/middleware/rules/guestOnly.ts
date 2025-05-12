@@ -6,7 +6,7 @@ import type { MiddlewareContext } from '@/router/middleware/middleware-pipeline'
  */
 export default function guestOnly({ next, authStore }: MiddlewareContext): void {
   if (authStore?.isAuthenticated) {
-    next({ name: 'home' });
+    next({ name: 'HomePage' });
   } else {
     next();
   }

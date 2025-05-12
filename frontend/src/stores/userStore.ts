@@ -75,7 +75,7 @@ export const useUserStore = defineStore('user', () => {
       );
       
       if (response.data.success) {
-        users.value = response.data.data;
+        users.value = response.data.payload;
         
         if ('meta' in response.data) {
           currentPage.value = response.data.meta.current_page;
