@@ -1,9 +1,10 @@
-import { AxiosError, type AxiosInstance, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
-import { tokenService } from '@/services/tokenService';
-
+// src/interceptors/requestInterceptor.ts
+import { type InternalAxiosRequestConfig } from 'axios';
+import { useAuthStore } from '@/stores/authStore';
 
 export const requestInterceptor = (config: InternalAxiosRequestConfig) => {
-  const accessToken = tokenService.getAccessToken();
+  const authStore = useAuthStore();
+  const accessToken = authStore.getToken;
   
   if (accessToken) {
     config.headers['Authorization'] = `Bearer ${accessToken}`;

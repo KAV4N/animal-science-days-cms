@@ -17,13 +17,15 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+            'ensure.password.changed' => \App\Http\Middleware\EnsurePasswordChanged::class,
+            'ensure.must_change_password' => \App\Http\Middleware\EnsureMustChangePassword::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->render(function (\Spatie\Permission\Exceptions\UnauthorizedException $e, $request) {
             return response()->json([
-                'responseMessage' => 'You do not have the required authorization.',
-                'responseStatus'  => 403,
-            ]);
+                'success' => false,
+                'message' => 'You do not have the required authorization.',
+            ], 403);
         });
     })->create();

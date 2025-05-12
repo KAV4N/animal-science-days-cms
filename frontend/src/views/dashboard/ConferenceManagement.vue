@@ -1,76 +1,107 @@
 <!-- components/dashboard/ConferenceManagement.vue -->
 <template>
   <div>
-    <!-- 
-    TODO: Add LATEST conference. The user selects one conference to be latest and vissible on the main home page.
-      When the latest conference is delete, set the latest conference to be always the latest date/to be up to date.
-      New field in setting set latest, new field in database is_latest.
-    -->
-    <LatestConferenceCard />
-
-    <ConferenceToolbar 
-      :selectedConferences="store.selectedConferences" 
-      @new-conference="store.openNewConference" 
-      @confirm-delete-selected="store.confirmDeleteSelected" 
+    <Toast />
+    <LatestConferenceCard 
+      v-if="authStore.hasAdminAccess" 
+      @edit-conference="openConferenceDialog" 
     />
-
-
-
-    <ConferenceTable />
-    
-    <ConferenceForm />
-    
-    <ConfirmationDialog
-      v-model:visible="store.deleteConferenceDialog"
-      :message="'Are you sure you want to delete <b>' + (store.currentConference?.name || '') + '</b>?'"
-      @confirm="deleteConference"
-    />
-    
-    <ConfirmationDialog
-      v-model:visible="store.deleteConferencesDialog"
-      message="Are you sure you want to delete the selected conferences?"
-      @confirm="deleteSelectedConferences"
+    <ConferenceTable @edit-conference="openConferenceDialog" />
+    <ConferenceDialog 
+      ref="conferenceDialog" 
+      @conference-updated="onConferenceUpdated" 
+      @conference-created="onConferenceCreated" 
     />
   </div>
 </template>
 
-<script>
+<script lang="ts">
 import { defineComponent } from 'vue';
-import { useConferenceStore } from '@/stores/conferenceManagement';
+import { useConferenceStore } from '@/stores/conferenceStore';
 import { useToast } from 'primevue/usetoast';
-
+import Toast from 'primevue/toast';
 import ConferenceTable from '@/components/dashboard/ConferenceManagement/ConferenceTable.vue';
-import ConferenceForm from '@/components/dashboard/ConferenceManagement/ConferenceForm.vue';
-import ConfirmationDialog from '@/components/dashboard/ConferenceManagement/ConfirmationDialog.vue';
+import ConferenceDialog from '@/components/dashboard/ConferenceManagement/ConferenceDialog.vue';
+import type { Conference } from '@/types/conference';
 import LatestConferenceCard from '@/components/dashboard/ConferenceManagement/LatestConferenceCard.vue';
-import ConferenceToolbar from '@/components/dashboard/ConferenceManagement/ConferenceToolbar.vue';
+import { useAuthStore } from '@/stores/authStore';
 
 export default defineComponent({
   name: 'ConferenceManagement',
   components: {
-    ConferenceTable,
-    ConferenceForm,
-    ConfirmationDialog,
     LatestConferenceCard,
-    ConferenceToolbar
+    ConferenceTable,
+    ConferenceDialog,
+    Toast
   },
   data() {
     return {
-      store: useConferenceStore(),
+      conferenceStore: useConferenceStore(),
+      authStore: useAuthStore(),
       toast: useToast()
     };
   },
+  mounted() {
+    this.loadData();
+  },
   methods: {
-    deleteConference() {
-      if (this.store.currentConference?.id) {
-        this.store.deleteConference(this.store.currentConference.id);
-        this.toast.add({ severity: 'success', summary: 'Successful', detail: 'Conference Deleted', life: 3000 });
+    loadData() {
+      this.loadConferences();
+      if (this.authStore.hasAdminAccess) {
+        this.loadLatestConference();
       }
     },
-    
-    deleteSelectedConferences() {
-      this.store.deleteSelectedConferences();
-      this.toast.add({ severity: 'success', summary: 'Successful', detail: 'Conferences Deleted', life: 3000 });
+
+    async loadConferences() {
+      try {
+        await this.conferenceStore.fetchConferences();
+      } catch (error) {
+        this.toast.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to load conferences',
+          life: 3000
+        });
+      }
+    },
+    async loadLatestConference() {
+      try {
+        await this.conferenceStore.fetchLatestConference();
+      } catch (error) {
+        this.toast.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to load latest conference',
+          life: 3000
+        });
+      }
+    },
+    openConferenceDialog(conference?: Conference) {
+      (this.$refs.conferenceDialog as any).openDialog(conference);
+    },
+    onConferenceUpdated(conference: Conference) {
+      this.toast.add({
+        severity: 'success',
+        summary: 'Success',
+        detail: `Conference "${conference.name}" updated successfully`,
+        life: 3000
+      });
+      this.loadConferences();
+      if (this.authStore.hasAdminAccess) {
+        this.loadLatestConference();
+      }
+    },
+    onConferenceCreated(conference: Conference) {
+      this.toast.add({
+        severity: 'success',
+        summary: 'Success',
+        detail: `Conference "${conference.name}" created successfully`,
+        life: 3000
+      });
+      this.loadConferences();
+      if (this.authStore.hasAdminAccess) {
+        this.loadLatestConference();
+      }
     }
   }
 });

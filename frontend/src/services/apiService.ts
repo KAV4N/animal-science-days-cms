@@ -1,7 +1,7 @@
-// src/services/api-service.ts
+// src/services/apiService.ts
 import { api } from '@/plugins/axios';
-import { tokenService } from '@/services/tokenService';
-import type { LoginResponse, RegisterResponse, UserResponse, RefreshTokenResponse } from '@/types/user';
+import type { LoginResponse, RegisterResponse, UserResponse, RefreshTokenResponse, ChangePasswordResponse } from '@/types/user';
+import type { AxiosRequestConfig, AxiosResponse } from 'axios';
 
 /**
  * Authentication related API calls
@@ -28,18 +28,18 @@ const authService = {
 
   /**
    * Logout the current user
+   * No need to send refresh token in the payload since it's in the cookie
    */
   logout() {
-    const refreshToken = tokenService.getRefreshToken();
-    return api.post('/v1/auth/logout', { refresh_token: refreshToken });
+    return api.post('/v1/auth/logout');
   },
 
   /**
    * Refresh authentication tokens
+   * Refresh token is now sent automatically via HTTP-only cookie
    */
   refresh() {
-    const refreshToken = tokenService.getRefreshToken();
-    return api.post<RefreshTokenResponse>('/v1/auth/refresh', { refresh_token: refreshToken });
+    return api.post<RefreshTokenResponse>('/v1/auth/refresh');
   },
 
   /**
@@ -53,15 +53,12 @@ const authService = {
    * Change user password
    */
   changePassword(new_password: string, new_password_confirmation: string) {
-    //TODO: not defined on
-    return api.post('/v1/auth/change-password', {
+    return api.post<ChangePasswordResponse>('/v1/auth/change-password', {
       new_password,
       new_password_confirmation
     });
   }
 };
-
-
 
 /**
  * General API methods
@@ -72,29 +69,24 @@ const apiService = {
   /**
    * Generic GET request
    */
-  get(url: string, config = {}) {
-    return api.get(url, config);
+  get<T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+    return api.get<T>(url, config);
   },
   
-  /**
-   * Generic POST request
-   */
-  post(url: string, data = {}, config = {}) {
-    return api.post(url, data, config);
+  post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+    return api.post<T>(url, data, config);
+  },
+  
+  put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+    return api.put<T>(url, data, config);
   },
 
-  /**
-   * Generic PUT request
-   */
-  put(url: string, data = {}, config = {}) {
-    return api.put(url, data, config);
+  patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+    return api.patch<T>(url, data, config);
   },
-
-  /**
-   * Generic DELETE request
-   */
-  delete(url: string, config = {}) {
-    return api.delete(url, config);
+  
+  delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+    return api.delete<T>(url, config);
   }
 };
 

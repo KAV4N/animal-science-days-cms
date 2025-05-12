@@ -1,29 +1,53 @@
-import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
+import { createRouter, createWebHistory, type RouteRecordRaw, type NavigationGuardNext, type RouteLocationNormalized } from 'vue-router';
 import { useAuthStore } from '@/stores/authStore';
-import middleware from './middleware';
+import middlewarePipeline from './middleware/middleware-pipeline';
 
-import Login from '@/views/auth/Login.vue';
-import Register from '@/views/auth/Register.vue';
+
 
 import Dashboard from '@/views/Dashboard.vue';
 import ConferenceManagement from '@/views/dashboard/ConferenceManagement.vue';
 import UserManagement from '@/views/dashboard/UserManagement.vue';
-
 import Site from '@/views/Site.vue';
+
+import AuthGateway from '@/views/auth/Login.vue';
+
+import middleware from './middleware';
+import ChangePassword from '@/views/auth/ChangePassword.vue';
+import Login from '@/views/auth/Login.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
     path: '/',
     component: Site,
+    name: 'HomePage'
+  },
+  {
+    path: '/login',
+    name: 'Login',
+    component: Login,
+    meta: {
+      middleware: [middleware.guestOnly]
+    }
+  },
+  {
+    path: '/change-password',
+    name: 'ChangePassword',
+    component: ChangePassword,
+    meta: {
+      middleware: [middleware.requiresUnchangedPassword]
+    }
   },
   {
     path: '/dashboard',
     component: Dashboard,
-    beforeEnter: middleware.requiresAuth,
+    name: 'Dashboard',
+    meta: {
+      middleware: [middleware.requiresAuth]
+    },
     children: [
       {
         path: '',
-        redirect: 'dashboard/conferences'
+        redirect: { name: 'ConferenceManagement' }
       },
       {
         path: 'conferences',
@@ -33,11 +57,15 @@ const routes: Array<RouteRecordRaw> = [
       {
         path: 'users',
         name: 'UserManagement',
-        component: UserManagement
+        component: UserManagement,
+        meta: {
+          middleware: [middleware.permission('access.admin')]
+        }
       }
     ]
   }
 ];
+
 const router = createRouter({
   history: createWebHistory(),
   routes
@@ -45,14 +73,24 @@ const router = createRouter({
 
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
-  if (!authStore.user && localStorage.getItem('isLoggedIn') === 'true') {
-    try {
-      await authStore.fetchCurrentUser();
-    } catch (error) {
-      localStorage.removeItem('isLoggedIn');
-    }
+  if (!to.meta.middleware) {
+    return next();
   }
-  next();
+  const middleware = Array.isArray(to.meta.middleware) 
+    ? to.meta.middleware 
+    : [to.meta.middleware];
+
+  const context = {
+    to,
+    from,
+    next,
+    authStore
+  };
+
+  return middleware[0]({
+    ...context,
+    next: middlewarePipeline(context, middleware, 1)
+  });
 });
 
 export default router;

@@ -1,74 +1,94 @@
-import { AxiosError, type AxiosInstance, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
-import router from '@/router';
+import { AxiosError, type AxiosInstance } from 'axios';
 import { useAuthStore } from '@/stores/authStore';
-import { tokenService } from '@/services/tokenService';
 
+const handleApiError = (error: AxiosError) => {
+  if (!error.response) {
+    console.error('Network error:', 'No response received from the server');
+    return;
+  }
+
+  switch (error.response.status) {
+    case 403:
+      console.error('Permission denied:', 'You do not have permission to access this resource');
+      break;
+    case 422:
+      console.error('Validation errors:', error.response.data);
+      break;
+    case 429:
+      console.error('Rate limit exceeded. Please try again later.');
+      break;
+    default:
+      console.error(`Request failed with status ${error.response.status}:`, error.response.data);
+  }
+};
+
+let isRefreshing = false;
+let refreshSubscribers: Array<(token: string) => void> = [];
+
+const subscribeTokenRefresh = (callback: (token: string) => void) => {
+  refreshSubscribers.push(callback);
+};
+
+const onTokenRefreshed = (token: string) => {
+  refreshSubscribers.forEach(callback => callback(token));
+  refreshSubscribers = [];
+};
 
 export const responseErrorInterceptor = async (error: AxiosError, api: AxiosInstance) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+  const originalRequest = error.config;
+
+  if (!originalRequest) {
+    handleApiError(error);
+    return Promise.reject(error);
+  }
+
+  if (error.response?.status === 401) {
+    const authStore = useAuthStore();
     
-    if (!error.response) {
-      console.error('Network error: No response received');
+    if (originalRequest.url?.includes('/auth/refresh')) {
+      console.log(originalRequest.url);
+      authStore.clearUserData();
+      handleApiError(error);
       return Promise.reject(error);
     }
-    
-    if (error.response.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-      
+
+    if (!isRefreshing) {
+      isRefreshing = true;
+
       try {
-        const refreshToken = tokenService.getRefreshToken();
-        
-        if (!refreshToken) {
-          const authStore = useAuthStore();
-          authStore.resetState();
-          
-          if (router.currentRoute.value.name !== 'login') {
-            router.push({ name: 'login' });
+        await authStore.refreshToken();
+        const newToken = authStore.getToken;
+
+        if (newToken) {
+          onTokenRefreshed(newToken);
+
+          if (originalRequest.headers) {
+            originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
           }
-          
-          return Promise.reject(error);
-        }
-        
-        const refreshResponse = await tokenService.refreshToken();
-        
-        originalRequest.headers['Authorization'] = `Bearer ${refreshResponse.access_token}`;
 
-        return api(originalRequest);
+          return api(originalRequest);
+        }
       } catch (refreshError) {
-        const authStore = useAuthStore();
-        authStore.resetState();
-        
-        if (router.currentRoute.value.name !== 'login') {
-          router.push({ name: 'login' });
-        }
-        
+        refreshSubscribers = [];
+        authStore.clearUserData();
+        handleApiError(error);
         return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
-    }
-    
-    handleApiError(error);
-    
-    return Promise.reject(error);
-  };
+    } else {
 
-
-  const handleApiError = (error: AxiosError) => {
-    if (!error.response) return;
-    
-    switch (error.response.status) {
-      case 403:
-        console.error('Permission denied:', 'You do not have permission to access this resource');
-        break;
-      
-      case 422:
-        console.error('Validation errors:', error.response.data);
-        break;
-      
-      case 429:
-        console.error('Rate limit exceeded. Please try again later.');
-        break;
-      
-      default:
-        console.error(`Request failed with status ${error.response.status}:`, error.response.data);
+      return new Promise(resolve => {
+        subscribeTokenRefresh(token => {
+          if (originalRequest.headers) {
+            originalRequest.headers['Authorization'] = `Bearer ${token}`;
+          }
+          resolve(api(originalRequest));
+        });
+      });
     }
-  };
+  }
+
+  handleApiError(error);
+  return Promise.reject(error);
+};

@@ -4,13 +4,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Conference extends Model
 {
     protected static function boot()
     {
         parent::boot();
-        // To set only one conference is_Latest at the time
         static::saving(function ($conference) {
             if ($conference->is_latest) {
                 static::where('id', '!=', $conference->id)
@@ -22,6 +22,7 @@ class Conference extends Model
 
     protected $fillable = [
         'university_id',
+        'created_by',
         'name',
         'title',
         'slug',
@@ -45,31 +46,26 @@ class Conference extends Model
 
     public function university(): BelongsTo
     {
-        return $this->belongsTo(University::class, 'university_id', 'id');
+        return $this->belongsTo(University::class);
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function pageMenus(): HasMany
     {
-        return $this->hasMany(PageMenu::class, 'conference_id', 'id');
+        return $this->hasMany(PageMenu::class);
     }
-
-    public function conferenceEditors(): HasMany
+    
+    /**
+     * The editors (users) that belong to the conference.
+     */
+    public function editors(): BelongsToMany
     {
-        return $this->hasMany(ConferenceEditor::class, 'conference_id', 'id');
+        return $this->belongsToMany(User::class)
+                    ->withPivot('assigned_by')
+                    ->withTimestamps();
     }
-    
-    public function editors()
-    {
-        return $this->hasManyThrough(
-            User::class, 
-            ConferenceEditor::class,
-            'conference_id', // Foreign key on conference_editors table
-            'id', // Foreign key on users table
-            'id', // Local key on conferences table
-            'user_id' // Local key on conference_editors table
-        );
-    }
-
-    
-    
 }

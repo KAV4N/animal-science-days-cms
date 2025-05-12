@@ -1,224 +1,200 @@
 import { defineStore } from 'pinia';
 import apiService from '@/services/apiService';
-import { tokenService } from '@/services/tokenService';
 import type { User } from '@/types/user';
+import router from '@/router';
+
+// Import the auth types
+import type { 
+  LoginRequest, 
+  RegisterRequest, 
+  ChangePasswordRequest,
+  LoginResponse,
+  RegisterResponse,
+  RefreshTokenResponse,
+  ChangePasswordResponse,
+  AuthResponse
+} from '@/types/auth';
 
 interface AuthState {
   user: User | null;
-  roles: string[];
-  permissions: string[];
-  token:  boolean,
-  loading: boolean;
+  accessToken: string | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
   error: string | null;
 }
 
 export const useAuthStore = defineStore('auth', {
   state: (): AuthState => ({
     user: null,
-    roles: [],
-    token: tokenService.hasTokens(),
-    permissions: [],
-    loading: false,
-    error: null
+    accessToken: null,
+    isAuthenticated: false,
+    isLoading: false,
+    error: null,
   }),
 
   getters: {
-    isEditor: (state) => state.roles.includes('editor'),
-    isAdmin: (state) => state.roles.includes('admin'),
-    isSuperAdmin: (state) => state.roles.includes('super_admin'),
+    isEditor: (state) => state.user?.roles.includes('editor') || false,
+    isAdmin: (state) => state.user?.permissions.includes('admin') || false,
+    isSuperAdmin: (state) => state.user?.roles.includes('super_admin') || false,
 
-    hasEditorAccess: (state) => state.permissions.includes('access.editor'),
-    hasAdminAccess: (state) => state.permissions.includes('access.admin'),
-    hasSuperAdminAccess: (state) => state.permissions.includes('access.super_admin'),
+    hasEditorAccess: (state) => state.user?.permissions.includes('access.editor') || false,
+    hasAdminAccess: (state) => state.user?.permissions.includes('access.admin') || false,
+    hasSuperAdminAccess: (state) => state.user?.permissions.includes('access.super_admin') || false,
 
-    currentUser: (state) => state.user,
+    hasRole: (state) => (role: string) => state.user?.roles.includes(role) || false,
+    hasPermission: (state) => (permission: string) => state.user?.permissions.includes(permission) || false,
 
-    hasRole: (state) => {
-      return (roleName: string): boolean => state.roles.includes(roleName);
-    },
-
-    hasPermission: (state) => {
-      return (permissionName: string): boolean => state.permissions.includes(permissionName);
-    },
-
-    isAuthenticated: (state) => state.token,
+    getToken: (state) => state.accessToken,
+    getUser: (state) => state.user,
+    getIsAuthenticated: (state) => state.isAuthenticated,
+    getIsLoading: (state) => state.isLoading,
+    getRoles: (state) => state.user?.roles || [],
+    getPermissions: (state) => state.user?.permissions || [],
+    getError: (state) => state.error,
   },
 
   actions: {
+    setUserData(authResponse: AuthResponse) {
+      this.user = authResponse.user;
+      this.accessToken = authResponse.access_token;
+      this.isAuthenticated = true;
+      this.error = null;
+    },
 
-    /**
-     * Register a new user
-     */
-    async register(name: string, email: string, password: string, passwordConfirmation: string) {
-      this.loading = true;
+    clearUserData() {
+      this.user = null;
+      this.accessToken = null;
+      this.isAuthenticated = false;
+      this.error = null;
+    },
+
+    setError(error: string) {
+      this.error = error;
+    },
+
+    async login(credentials: LoginRequest) {
+      this.isLoading = true;
+      this.error = null;
+
+      try {
+        const response = await apiService.auth.login(credentials.email, credentials.password);
+        const authData = response.data.payload;
+        console.log(response);
+        this.setUserData(authData);
+        return true;
+      } catch (error: any) {
+        console.log(error);
+        this.isAuthenticated = false;
+        this.error = error.response?.data?.message || 'Login failed';
+        return false;
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
+    async register(credentials: RegisterRequest) {
+      this.isLoading = true;
       this.error = null;
 
       try {
         const response = await apiService.auth.register(
-          name,
-          email,
-          password,
-          passwordConfirmation
+          credentials.name,
+          credentials.email,
+          credentials.password,
+          credentials.password_confirmation
         );
-
-        const { user, roles, permissions, access_token, refresh_token } = response.data.data;
-
-        tokenService.setTokens(access_token, refresh_token);
-
-        this.updateAuthState(user, roles, permissions);
-
-        return response;
+        const authData = response.data.payload;
+        this.setUserData(authData);
+        return true;
       } catch (error: any) {
-        this.handleError(error, 'Registration failed');
-        throw error;
+        this.isAuthenticated = false;
+        this.error = error.response?.data?.message || 'Registration failed';
+        return false;
       } finally {
-        this.loading = false;
+        this.isLoading = false;
       }
     },
 
-    /**
-     * Login with email and password
-     */
-    async login(email: string, password: string) {
-      this.loading = true;
-      this.error = null;
-
-      try {
-        const response = await apiService.auth.login(email, password);
-
-        const { user, roles, permissions, access_token, refresh_token } = response.data.data;
-
-        tokenService.setTokens(access_token, refresh_token);
-
-        this.updateAuthState(user, roles, permissions);
-
-        return response;
-      } catch (error: any) {
-        this.handleError(error, 'Login failed');
-        throw error;
-      } finally {
-        this.loading = false;
-      }
-    },
-
-    /**
-     * Logout the current user
-     */
     async logout() {
-      this.loading = true;
-      this.error = null;
+      this.isLoading = true;
 
       try {
-        if (this.isAuthenticated) {
-          await apiService.auth.logout();
-        }
-        
-        this.resetState();
-        return { success: true };
+        await apiService.auth.logout();
+        this.clearUserData();
+        router.push({ name: 'Login' });
+        return true;
       } catch (error: any) {
-        this.handleError(error, 'Logout failed');
-        
-        this.resetState();
-        
-        throw error;
+        this.error = error.response?.data?.message || 'Logout failed';
+        return false;
       } finally {
-        this.loading = false;
+        this.isLoading = false;
       }
     },
 
-    /**
-     * Reset authentication state and remove tokens
-     */
-    resetState() {
-      this.user = null;
-      this.roles = [];
-      this.permissions = [];
-
-      tokenService.removeTokens();
-    },
-
-    /**
-     * Update authentication state with user data
-     */
-    updateAuthState(user: User, roles: string[], permissions: string[]) {
-      this.user = user;
-      this.roles = roles;
-      this.permissions = permissions;
-    },
-
-    /**
-     * Handle authentication errors
-     */
-    handleError(error: any, defaultMessage: string) {
-      this.error = error.response?.data?.message || defaultMessage;
-    },
-
-    /**
-     * Fetch the current authenticated user
-     */
-    async fetchCurrentUser() {
-      if (tokenService.hasTokens()) {
-        this.loading = true;
-        this.error = null;
-        try {
-          const response = await apiService.auth.getCurrentUser();
-          const { user, roles, permissions } = response.data.data;
-
-          this.updateAuthState(user, roles, permissions);
-
-          return response;
-        } catch (error: any) {
-          this.handleError(error, 'Failed to fetch user');
-          throw error;
-        } finally {
-          this.loading = false;
-        }
-      }else{
-        this.resetState();
-      }
-    },
-
-    /**
-     * Refresh authentication tokens
-     */
     async refreshToken() {
+      this.isLoading = true;
+
       try {
-        if (!tokenService.getRefreshToken()) {
-          this.resetState();
-          throw new Error('No refresh token found');
-        }
-
         const response = await apiService.auth.refresh();
-        const { access_token, refresh_token } = response.data;
-
-        tokenService.setTokens(access_token, refresh_token);
-
-        return response;
-      } catch (error) {
-        this.resetState();
-        throw error;
+        const authData = response.data.payload;
+        this.setUserData(authData);
+        return true;
+      } catch (error: any) {
+        this.clearUserData();
+        this.error = error.response?.data?.message || 'Session expired';
+        router.push({ name: 'Login' });
+        return false;
+      } finally {
+        this.isLoading = false;
       }
     },
 
+    async fetchCurrentUser() {
+      this.isLoading = true;
 
-    /**
-     * Change user password
-     */
-    async changePassword(newPassword: string, newPasswordConfirmation: string) {
-      this.loading = true;
+      try {
+        const response = await apiService.auth.getCurrentUser();
+        this.user = response.data.payload;
+        this.isAuthenticated = true;
+        return true;
+      } catch (error: any) {
+        this.error = error.response?.data?.message || 'Failed to fetch user data';
+        return false;
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
+    async changePassword(credentials: ChangePasswordRequest) {
+      this.isLoading = true;
       this.error = null;
 
       try {
         const response = await apiService.auth.changePassword(
-          newPassword, 
-          newPasswordConfirmation
+          credentials.new_password,
+          credentials.new_password_confirmation
         );
-        return response;
+        this.accessToken = response.data.payload.access_token;
+        return true;
       } catch (error: any) {
-        this.handleError(error, 'Password change failed');
-        throw error;
+        this.error = error.response?.data?.message || 'Failed to change password';
+        return false;
       } finally {
-        this.loading = false;
+        this.isLoading = false;
+      }
+    },
+
+    async checkAuth() {
+      if (this.user && this.accessToken) {
+        return true;
+      }
+
+      try {
+        const success = await this.refreshToken();
+        return success;
+      } catch (error) {
+        this.clearUserData();
+        return false;
       }
     }
   }

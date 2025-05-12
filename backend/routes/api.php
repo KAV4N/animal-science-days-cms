@@ -3,10 +3,18 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-use App\Http\Controllers\Api\Auth\AuthController;
+use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\UserController;
 
+use App\Http\Controllers\Api\ConferenceController;
+use App\Http\Controllers\Api\ConferenceEditorController;
+use App\Http\Controllers\Api\UniversityController;
+
 Route::prefix('v1')->group(function () {
+    // Public routes for universities and conferences
+    Route::apiResource('universities', UniversityController::class)->only(['index', 'show']);
+
+    // Authentication routes
     Route::prefix('auth')->group(function () {
         Route::post('/login', [AuthController::class, 'login']);
         Route::post('/register', [AuthController::class, 'register']);
@@ -14,72 +22,43 @@ Route::prefix('v1')->group(function () {
         
         Route::middleware('auth:sanctum')->group(function () {
             Route::post('/logout', [AuthController::class, 'logout']);
-            //TODO: implement this route in controller for changing password
-            //Route::post('/change-password', [AuthController::class, 'changePassword']);
+            Route::middleware('ensure.must_change_password')->post('/change-password', [AuthController::class, 'changePassword']);
         });
     });
 
+    // Routes for authenticated users
     Route::middleware('auth:sanctum')->group(function () {
+
+
+        // User-specific route outside of password change middleware
         Route::get('/users/me', [UserController::class, 'current']);
-        /*
-        //TODO: implement this in admin controller its just a example code
-        Route::middleware('permission:access.admin')->group(function () {
-            Route::apiResource('users', UserController::class);
-        });
-        //-----------------------------
+        
+        // For retrieving attached conferences to a user
+        Route::get('/conferences/my', [ConferenceController::class, 'myConferences'])->name('conferences.my');
 
-        // CONFERENCE SECTION
-           Route::apiResource('universities', UniversityController::class)
-        ->middleware('permission:manage.universities');
-        
+        // Protected routes requiring password change
+        Route::middleware('ensure.password.changed')->group(function () {
+            // Admin-only routes
+            Route::middleware('permission:access.admin')->group(function () {
+                Route::get('/users', [UserController::class, 'index']);
+                
+                // University management for super admins
+                Route::middleware('role:super_admin')->group(function () {
+                    Route::apiResource('universities', UniversityController::class)->except(['index', 'show']);
+                });
 
-        // Conference management
-        Route::get('/conferences', [ConferenceController::class, 'index']);
-        Route::get('/conferences/{id}', [ConferenceController::class, 'show']);
-        
-        Route::middleware('permission:access.admin')->group(function () {
-            Route::post('/conferences', [ConferenceController::class, 'store']);
-            Route::put('/conferences/{id}', [ConferenceController::class, 'update']);
-            Route::delete('/conferences/{id}', [ConferenceController::class, 'destroy']);
+                // Conference management
+                Route::get('/conferences/latest', [ConferenceController::class, 'latest']);
+                Route::apiResource('conferences', ConferenceController::class)->only(['index', 'show']);
+
+                Route::apiResource('conferences', ConferenceController::class)->except(['index', 'show']);
+                
+                // Conference editors management
+                Route::get('/conferences/{conference}/editors', [ConferenceEditorController::class, 'index']);
+                Route::get('/conferences/{conference}/editors/unattached', [ConferenceEditorController::class, 'unattached']);
+                Route::post('/conferences/{conference}/editors', [ConferenceEditorController::class, 'store']);
+                Route::delete('/conferences/{conference}/editors/{editor}', [ConferenceEditorController::class, 'destroy']);
+            });
         });
-        
-        
-        // Conference editors
-        Route::get('/conferences/{conferenceId}/editors', [ConferenceEditorController::class, 'index']);
-        
-        Route::middleware('permission:manage.conference_editors')->group(function () {
-            Route::post('/conferences/{conferenceId}/editors', [ConferenceEditorController::class, 'store']);
-            Route::delete('/conferences/{conferenceId}/editors/{userId}', [ConferenceEditorController::class, 'destroy']);
-        });
-        
-        // Page menus
-        Route::get('/conferences/{conferenceId}/menus', [PageMenuController::class, 'index']);
-        Route::get('/conferences/{conferenceId}/menus/{id}', [PageMenuController::class, 'show']);
-        
-        Route::middleware('permission:edit.pages')->group(function () {
-            Route::post('/conferences/{conferenceId}/menus', [PageMenuController::class, 'store']);
-            Route::put('/conferences/{conferenceId}/menus/{id}', [PageMenuController::class, 'update']);
-            Route::delete('/conferences/{conferenceId}/menus/{id}', [PageMenuController::class, 'destroy']);
-        });
-        
-        // Page content/data
-        Route::get('/menus/{menuId}/data', [PageDataController::class, 'index']);
-        Route::get('/menus/{menuId}/data/{id}', [PageDataController::class, 'show']);
-        
-        Route::middleware('permission:edit.content')->group(function () {
-            Route::post('/menus/{menuId}/data', [PageDataController::class, 'store']);
-            Route::put('/menus/{menuId}/data/{id}', [PageDataController::class, 'update']);
-            Route::delete('/menus/{menuId}/data/{id}', [PageDataController::class, 'destroy']);
-        });
-        
-        // Media management
-        Route::get('/media', [MediaController::class, 'index']);
-        Route::get('/media/{id}', [MediaController::class, 'show']);
-        
-        Route::middleware('permission:upload.media')->group(function () {
-            Route::post('/media', [MediaController::class, 'store']);
-            Route::delete('/media/{id}', [MediaController::class, 'destroy']);
-        });
-*/
     });
 });
