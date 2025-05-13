@@ -30,7 +30,7 @@
           <i class="pi pi-palette mr-2"></i>
           Theme & Colors
         </Tab>
-        <Tab value="3">
+        <Tab value="3" v-if="isEditing">
           <i class="pi pi-users mr-2"></i>
           Editors
         </Tab>
@@ -67,7 +67,7 @@
         </TabPanel>
 
 
-        <TabPanel value="3">
+        <TabPanel value="3" v-if="isEditing">
           <div class="p-4">
             <EditorsTab 
               :conferenceId="currentConferenceId"

@@ -191,6 +191,7 @@ import type { User } from '@/types/user';
 import type { University } from '@/types/university';
 import apiService from '@/services/apiService';
 import { useUniversityStore } from '@/stores/universityStore';
+import { useConferenceStore } from '@/stores/conferenceStore';
 import debounce from 'lodash/debounce';
 import { format, parseISO } from 'date-fns';
 import type { Editor } from '@/types';
@@ -223,6 +224,7 @@ export default defineComponent({
       addEditorsDialogVisible: false,
       universities: [] as University[],
       universityStore: useUniversityStore(),
+      conferenceStore: useConferenceStore(),
       filters: {
         search: '',
         university_id: null as number | null,
@@ -290,10 +292,6 @@ export default defineComponent({
         
         if (response.data.success) {
           this.editors = response.data.payload;
-          console.log('Editors loaded:', this.editors);
-          this.editors.forEach(editor => {
-            console.log(`Editor ${editor.name}:`, editor.pivot);
-          });
           if (response.data.meta) {
             this.totalEditors = response.data.meta.total;
           }
@@ -352,7 +350,6 @@ export default defineComponent({
       try {
         await this.universityStore.fetchUniversities();
         this.universities = this.universityStore.universities;
-        console.log(this.universities);
       } catch (error) {
         this.toast.add({
           severity: 'error',
@@ -406,8 +403,10 @@ export default defineComponent({
             detail: 'Editor added successfully',
             life: 3000
           });
-          this.loadEditors();
-          this.loadUnattachedEditors();
+          
+          await this.loadEditors();
+          await this.loadUnattachedEditors();
+          await this.refreshConferenceInStore();
         } else {
           this.toast.add({
             severity: 'error',
@@ -452,8 +451,10 @@ export default defineComponent({
             detail: 'Editor removed successfully',
             life: 3000
           });
-          this.loadEditors();
-          this.loadUnattachedEditors();
+          
+          await this.loadEditors();
+          await this.loadUnattachedEditors();
+          await this.refreshConferenceInStore();
         }
       } catch (error) {
         this.toast.add({
@@ -463,6 +464,24 @@ export default defineComponent({
           life: 3000
         });
         console.error('Failed to detach editor:', error);
+      }
+    },
+    
+    async refreshConferenceInStore() {
+      if (!this.conferenceId) return;
+      
+      try {
+        const conference = await this.conferenceStore.fetchConference(this.conferenceId);
+        if (conference.is_latest) {
+          await this.conferenceStore.fetchLatestConference();
+        }
+        const filters = this.conferenceStore.getPaginationMeta 
+          ? { page: this.conferenceStore.getPaginationMeta.current_page } 
+          : {};
+        
+        await this.conferenceStore.fetchConferences(filters);
+      } catch (error) {
+        console.error('Failed to refresh conference data in store:', error);
       }
     },
     

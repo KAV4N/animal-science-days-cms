@@ -19,7 +19,7 @@ class ConferenceStoreRequest extends FormRequest
             
             'name' => 'required|string|max:255',
             'title' => 'required|string|max:255',
-            'slug' => 'required|string|max:255|unique:conferences',
+            'slug' => 'required|string|min:3|max:255|unique:conferences',
             'description' => 'nullable|string',
             'location' => 'required|string|max:255',
             'venue_details' => 'nullable|string',

@@ -1,6 +1,7 @@
 // src/services/apiService.ts
 import { api } from '@/plugins/axios';
-import type { LoginResponse, RegisterResponse, UserResponse, RefreshTokenResponse, ChangePasswordResponse } from '@/types/user';
+import type { LoginResponse, RegisterResponse, RefreshTokenResponse, ChangePasswordResponse } from '@/types/auth';
+import type {UserResponse} from '@/types/user'
 import type { AxiosRequestConfig, AxiosResponse } from 'axios';
 
 /**
