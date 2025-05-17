@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\ConferenceController;
 use App\Http\Controllers\Api\ConferenceEditorController;
 use App\Http\Controllers\Api\UniversityController;
+use App\Http\Controllers\Api\RoleController;
 
 Route::prefix('v1')->group(function () {
     // Public routes for universities and conferences
@@ -58,6 +59,14 @@ Route::prefix('v1')->group(function () {
                 Route::get('/conferences/{conference}/editors/unattached', [ConferenceEditorController::class, 'unattached']);
                 Route::post('/conferences/{conference}/editors', [ConferenceEditorController::class, 'store']);
                 Route::delete('/conferences/{conference}/editors/{editor}', [ConferenceEditorController::class, 'destroy']);
+
+                //User management
+                Route::get('/users', [UserController::class, 'index']);
+                Route::post('/users', [UserController::class, 'store']);
+                Route::put('/users/{user}', [UserController::class, 'update']);
+                Route::delete('/users/{user}', [UserController::class, 'destroy']);
+                Route::get('/roles', [RoleController::class, 'index']);
+                Route::get('/roles/available', [RoleController::class, 'availableRoles']);
             });
         });
     });
