@@ -10,6 +10,8 @@ use App\Http\Controllers\Api\ConferenceController;
 use App\Http\Controllers\Api\ConferenceEditorController;
 use App\Http\Controllers\Api\UniversityController;
 
+use App\Http\Controllers\Api\ConferenceLockController;
+
 Route::prefix('v1')->group(function () {
     // Public routes for universities and conferences
     Route::apiResource('universities', UniversityController::class)->only(['index', 'show']);
@@ -26,18 +28,30 @@ Route::prefix('v1')->group(function () {
         });
     });
 
+   
     // Routes for authenticated users
     Route::middleware('auth:sanctum')->group(function () {
-
-
         // User-specific route outside of password change middleware
         Route::get('/users/me', [UserController::class, 'current']);
         
-        // For retrieving attached conferences to a user
-        Route::get('/conferences/my', [ConferenceController::class, 'myConferences'])->name('conferences.my');
 
         // Protected routes requiring password change
         Route::middleware('ensure.password.changed')->group(function () {
+
+            // For retrieving attached conferences to a user
+            Route::get('/conferences/my', [ConferenceController::class, 'myConferences'])->name('conferences.my');
+
+            // Conference lock management
+            Route::prefix('conferences/{conference}/lock')->group(function () {
+                Route::get('/', [ConferenceLockController::class, 'checkLock']);
+                Route::post('/', [ConferenceLockController::class, 'acquireLock']);
+                Route::delete('/', [ConferenceLockController::class, 'releaseLock']);
+                Route::post('/refresh', [ConferenceLockController::class, 'refreshLock']);
+                //Route::delete('/force', [ConferenceLockController::class, 'forceReleaseLock']);
+            });
+        
+
+
             // Admin-only routes
             Route::middleware('permission:access.admin')->group(function () {
                 Route::get('/users', [UserController::class, 'index']);
@@ -48,10 +62,15 @@ Route::prefix('v1')->group(function () {
                 });
 
                 // Conference management
-                Route::get('/conferences/latest', [ConferenceController::class, 'latest']);
-                Route::apiResource('conferences', ConferenceController::class)->only(['index', 'show']);
+                
+                
 
-                Route::apiResource('conferences', ConferenceController::class)->except(['index', 'show']);
+                Route::middleware('check.conference.lock')->group(function () {
+                    Route::get('/conferences/latest', [ConferenceController::class, 'latest']);
+                    Route::apiResource('conferences', ConferenceController::class)->except(['index', 'show']);
+                    Route::patch('/conferences/{conference}/status', [ConferenceController::class, 'updateStatus']);
+                });
+                Route::apiResource('conferences', ConferenceController::class)->only(['index', 'show']);
                 
                 // Conference editors management
                 Route::get('/conferences/{conference}/editors', [ConferenceEditorController::class, 'index']);

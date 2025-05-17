@@ -5,18 +5,25 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Conference\ConferenceStoreRequest;
 use App\Http\Requests\Conference\ConferenceUpdateRequest;
-
 use App\Http\Resources\Conference\ConferenceResource;
-
 use App\Models\Conference;
+use App\Services\ConferenceLockService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 
 class ConferenceController extends Controller
 {
     use ApiResponse;
+    
+    protected $lockService;
+    
+    public function __construct(ConferenceLockService $lockService)
+    {
+        $this->lockService = $lockService;
+    }
 
     public function index(Request $request): JsonResponse
     {
@@ -50,7 +57,6 @@ class ConferenceController extends Controller
             $query->where('end_date', '<=', $request->end_date_before);
         }
 
-
         $sortField = in_array($request->sort_field, ['name', 'title', 'start_date', 'end_date', 'created_at', 'updated_at']) 
             ? $request->sort_field 
             : 'created_at';
@@ -63,12 +69,20 @@ class ConferenceController extends Controller
             $perPage = min(max(intval($request->per_page ?? 10), 1), 100);
             $conferences = $query->paginate($perPage)->withQueryString();
             $conferences->load(['university', 'editors.university']);
+            
+            $conferences->each(function ($conference) {
+                $conference->lock_status = $this->lockService->checkLock($conference->id);
+            });
+            
             return $this->paginatedResponse($conferences, ConferenceResource::collection($conferences));
         } else {
-            $count = $query->count();
-            
             $conferences = $query->get();
             $conferences->load(['university', 'editors.university']);
+            
+            $conferences->each(function ($conference) {
+                $conference->lock_status = $this->lockService->checkLock($conference->id);
+            });
+            
             return $this->successResponse(
                 ConferenceResource::collection($conferences),
                 'Conferences retrieved successfully'
@@ -80,6 +94,22 @@ class ConferenceController extends Controller
     {
         $validated = $request->validated();
         $validated['created_by'] = $request->user()->id;
+        
+        // Check if trying to create a conference set as latest
+        if (isset($validated['is_latest']) && $validated['is_latest']) {
+            // Check if the current latest conference is locked by another user
+            $latestConference = Conference::where('is_latest', true)->first();
+            if ($latestConference) {
+                $latestLockInfo = $this->lockService->checkLock($latestConference->id);
+                if ($latestLockInfo && $latestLockInfo['user_id'] !== $request->user()->id) {
+                    return $this->errorResponse(
+                        'Cannot create conference as latest: Current latest conference is being edited by another user',
+                        423,
+                        ['lock_info' => $latestLockInfo]
+                    );
+                }
+            }
+        }
 
         $conference = Conference::create($validated);
 
@@ -92,7 +122,13 @@ class ConferenceController extends Controller
 
     public function show(Conference $conference): JsonResponse
     {
+        if (!Gate::allows('view', $conference)) {
+            return $this->errorResponse('You are not authorized to view this conference', 403);
+        }
+        
         $conference->load(['university', 'editors.university']);
+        
+        $conference->lock_status = $this->lockService->checkLock($conference->id);
 
         return $this->successResponse(
             new ConferenceResource($conference),
@@ -102,7 +138,45 @@ class ConferenceController extends Controller
 
     public function update(ConferenceUpdateRequest $request, Conference $conference): JsonResponse
     {
-        $conference->update($request->validated());
+        if (!Gate::allows('update', $conference)) {
+            return $this->errorResponse('You are not authorized to update this conference', 403);
+        }
+        
+        $lockInfo = $this->lockService->checkLock($conference->id);
+        if ($lockInfo && $lockInfo['user_id'] !== $request->user()->id) {
+            return $this->errorResponse(
+                'Conference is currently being edited by another user',
+                423,
+                ['lock_info' => $lockInfo]
+            );
+        }
+        
+        $validated = $request->validated();
+        
+        // Check if trying to update a conference to be set as latest
+        if (isset($validated['is_latest']) && $validated['is_latest'] && !$conference->is_latest) {
+            // Check if the current latest conference is locked by another user
+            $latestConference = Conference::where('is_latest', true)
+                ->where('id', '!=', $conference->id)
+                ->first();
+                
+            if ($latestConference) {
+                $latestLockInfo = $this->lockService->checkLock($latestConference->id);
+                if ($latestLockInfo && $latestLockInfo['user_id'] !== $request->user()->id) {
+                    return $this->errorResponse(
+                        'Cannot set as latest: Current latest conference is being edited by another user',
+                        423,
+                        ['lock_info' => $latestLockInfo]
+                    );
+                }
+            }
+        }
+        
+        $conference->update($validated);
+        
+        if ($lockInfo && $lockInfo['user_id'] === $request->user()->id) {
+            $this->lockService->refreshLock($conference->id, $request->user()->id);
+        }
 
         return $this->successResponse(
             new ConferenceResource($conference->fresh(['university', 'editors.university'])),
@@ -112,6 +186,12 @@ class ConferenceController extends Controller
 
     public function destroy(Conference $conference): JsonResponse
     {
+        if (!Gate::allows('delete', $conference)) {
+            return $this->errorResponse('You are not authorized to delete this conference', 403);
+        }
+        
+        $this->lockService->forceReleaseLock($conference->id);
+        
         $conference->delete();
 
         return $this->successResponse(null, 'Conference deleted successfully');
@@ -119,21 +199,62 @@ class ConferenceController extends Controller
 
     public function updateStatus(Request $request, Conference $conference): JsonResponse
     {
+        if (!Gate::allows('update', $conference)) {
+            return $this->errorResponse('You are not authorized to update this conference', 403);
+        }
+        
         $updates = [];
         $message = 'Conference status updated successfully';
 
+        if ($request->has('latest')) {
+            $isLatest = filter_var($request->latest, FILTER_VALIDATE_BOOLEAN);
+            
+            // If trying to set as latest, check if the conference is locked by another user
+            if ($isLatest) {
+                // Check if this conference is locked by another user
+                $lockInfo = $this->lockService->checkLock($conference->id);
+                if ($lockInfo && $lockInfo['user_id'] !== $request->user()->id) {
+                    return $this->errorResponse(
+                        'Cannot set as latest: Conference is currently being edited by another user',
+                        423,
+                        ['lock_info' => $lockInfo]
+                    );
+                }
+                
+                // Check if the current latest conference is locked by another user
+                $latestConference = Conference::where('is_latest', true)
+                    ->where('id', '!=', $conference->id)
+                    ->first();
+                    
+                if ($latestConference) {
+                    $latestLockInfo = $this->lockService->checkLock($latestConference->id);
+                    if ($latestLockInfo && $latestLockInfo['user_id'] !== $request->user()->id) {
+                        return $this->errorResponse(
+                            'Cannot set as latest: Current latest conference is being edited by another user',
+                            423,
+                            ['lock_info' => $latestLockInfo]
+                        );
+                    }
+                }
+            }
+            
+            $updates['is_latest'] = $isLatest;
+            $message = $isLatest ? 'Conference set as latest successfully' : 'Conference removed from latest status';
+        }
+        
         if ($request->has('published')) {
             $isPublished = filter_var($request->published, FILTER_VALIDATE_BOOLEAN);
             $updates['is_published'] = $isPublished;
             $message = $isPublished ? 'Conference published successfully' : 'Conference unpublished successfully';
         }
-        if ($request->has('latest')) {
-            $isLatest = filter_var($request->latest, FILTER_VALIDATE_BOOLEAN);
-            $updates['is_latest'] = $isLatest;
-            $message = $isLatest ? 'Conference set as latest successfully' : 'Conference removed from latest status';
-        }
+        
         if (!empty($updates)) {
             $conference->update($updates);
+        }
+
+        $lockInfo = $this->lockService->checkLock($conference->id);
+        if ($lockInfo && $lockInfo['user_id'] === $request->user()->id) {
+            $this->lockService->refreshLock($conference->id, $request->user()->id);
         }
 
         return $this->successResponse(
@@ -151,13 +272,14 @@ class ConferenceController extends Controller
         }
     
         $conference->load(['university', 'editors.university']);
+        
+        $conference->lock_status = $this->lockService->checkLock($conference->id);
     
         return $this->successResponse(
             new ConferenceResource($conference),
             'Latest conference retrieved successfully'
         );
     }
-
 
     public function myConferences(Request $request): JsonResponse
     {
@@ -193,6 +315,10 @@ class ConferenceController extends Controller
         $perPage = min(max(intval($request->per_page ?? 10), 1), 100);
         $conferences = $query->paginate($perPage)->withQueryString();
         $conferences->load(['university', 'editors.university']);
+        
+        $conferences->each(function ($conference) {
+            $conference->lock_status = $this->lockService->checkLock($conference->id);
+        });
 
         return $this->paginatedResponse(
             $conferences, 
@@ -200,5 +326,4 @@ class ConferenceController extends Controller
             'User conferences retrieved successfully'
         );
     }
-
 }

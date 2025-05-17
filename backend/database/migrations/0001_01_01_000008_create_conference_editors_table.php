@@ -17,7 +17,6 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('users', 'id')->cascadeOnDelete();
             $table->foreignId('assigned_by')->constrained('users', 'id')->cascadeOnDelete();
 
-            $table->timestamp('assigned_at')->useCurrent();
             $table->timestamps(); 
 
             $table->unique(['conference_id', 'user_id']);

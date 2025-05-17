@@ -15,7 +15,14 @@ import middleware from './middleware';
 import ChangePassword from '@/views/auth/ChangePassword.vue';
 import Login from '@/views/auth/Login.vue';
 
+import ConferenceEditorView from '@/views/dashboard/ConferenceEditorView.vue';
+
 const routes: Array<RouteRecordRaw> = [
+  {
+    path: '/editor',
+    name: 'Editor',
+    component: ConferenceEditorView,
+  },
   {
     path: '/',
     component: Site,

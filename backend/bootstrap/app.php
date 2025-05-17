@@ -19,6 +19,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
             'ensure.password.changed' => \App\Http\Middleware\EnsurePasswordChanged::class,
             'ensure.must_change_password' => \App\Http\Middleware\EnsureMustChangePassword::class,
+
+            'check.conference.lock' => \App\Http\Middleware\CheckConferenceLock::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

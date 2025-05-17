@@ -69,7 +69,13 @@
           
           <Column field="is_published" header="Status" sortable style="min-width: 10rem">
             <template #body="slotProps">
-              <Tag :value="slotProps.data.is_published ? 'Published' : 'Draft'" :severity="getStatusSeverity(slotProps.data.is_published)" />
+              <div class="flex items-center gap-2">
+                <Tag :value="slotProps.data.is_published ? 'Published' : 'Draft'" :severity="getStatusSeverity(slotProps.data.is_published)" />
+                <div v-if="slotProps.data.lock_status" class="inline-flex items-center">
+                  <i class="pi pi-lock text-amber-600 text-sm" />
+                  <span class="text-xs ml-1 text-amber-600">Locked</span>
+                </div>
+              </div>
             </template>
           </Column>
           
@@ -96,8 +102,8 @@
                 
                 <div v-if="authStore.hasAdminAccess" class="flex justify-center gap-2">
                   <Divider layout="vertical" />
-                  <Button icon="pi pi-cog" outlined rounded class="p-button-sm" @click="editConference(slotProps.data)" />
-                  <Button icon="pi pi-trash" outlined rounded severity="danger" class="p-button-sm" @click="confirmDeleteConference(slotProps.data)" />
+                  <Button icon="pi pi-cog" outlined rounded class="p-button-sm" @click="editConference(slotProps.data)" :disabled="isLocked(slotProps.data)" />
+                  <Button icon="pi pi-trash" outlined rounded severity="danger" class="p-button-sm" @click="confirmDeleteConference(slotProps.data)" :disabled="isLocked(slotProps.data)" />
                 </div>
               </div>
             </template>
@@ -115,7 +121,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted } from 'vue';
+import { defineComponent } from 'vue';
 import { useConferenceStore } from '@/stores/conferenceStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useToast } from 'primevue/usetoast';
@@ -147,78 +153,89 @@ export default defineComponent({
     Divider
   },
   emits: ['edit-conference'],
-  setup() {
-    const conferenceStore = useConferenceStore();
-    const authStore = useAuthStore();
-    const toast = useToast();
-    
-    const filters = ref<ConferenceFilters>({
-      search: '',
-      sort_field: 'created_at',
-      sort_order: 'desc',
-      page: 1,
-      per_page: 10
-    });
-    
-    const selectedConferences = ref<Conference[]>([]);
-    const dt = ref();
-
-    const loadConferences = async () => {
-      conferenceStore.loading = true;
+  
+  data() {
+    return {
+      conferenceStore: useConferenceStore(),
+      authStore: useAuthStore(),
+      toast: useToast(),
+      filters: {
+        search: '',
+        sort_field: 'created_at',
+        sort_order: 'desc',
+        page: 1,
+        per_page: 10
+      } as ConferenceFilters,
+      selectedConferences: [] as Conference[],
+      dt: null as any,
+      debouncedSearch: debounce(function(this: any) {
+        this.filters.page = 1; // Reset to first page on search
+        this.loadConferences();
+      }, 300)
+    };
+  },
+  
+  mounted() {
+    this.loadConferences();
+  },
+  methods: {
+    async loadConferences() {
+      this.conferenceStore.loading = true;
       try {
-        await conferenceStore.fetchConferences(filters.value);
+        await this.conferenceStore.fetchConferences(this.filters);
+        // No need to check lock status for each conference as it's included in the response
       } catch (error) {
-        toast.add({
+        this.toast.add({
           severity: 'error',
           summary: 'Error',
           detail: 'Failed to load conferences',
           life: 3000
         });
       } finally {
-        conferenceStore.loading = false;
+        this.conferenceStore.loading = false;
       }
-    };
+    },
+    
+    onPage(event: any) {
+      this.filters.page = event.page + 1; // PrimeVue uses 0-based indexing, API uses 1-based
+      this.filters.per_page = event.rows;
+      this.loadConferences();
+    },
 
-    const onPage = (event: any) => {
-      filters.value.page = event.page + 1; // PrimeVue uses 0-based indexing, API uses 1-based
-      filters.value.per_page = event.rows;
-      loadConferences();
-    };
+    onSort(event: any) {
+      this.filters.sort_field = event.sortField;
+      this.filters.sort_order = event.sortOrder === 1 ? 'asc' : 'desc';
+      this.loadConferences();
+    },
 
-    const onSort = (event: any) => {
-      filters.value.sort_field = event.sortField;
-      filters.value.sort_order = event.sortOrder === 1 ? 'asc' : 'desc';
-      loadConferences();
-    };
-
-    const debouncedSearch = debounce(() => {
-      filters.value.page = 1; // Reset to first page on search
-      loadConferences();
-    }, 300);
-
-    const clearSearch = () => {
-      filters.value.search = '';
-      filters.value.page = 1;
-      loadConferences();
-    };
-
-    return {
-      conferenceStore,
-      authStore,
-      toast,
-      filters,
-      selectedConferences,
-      dt,
-      loadConferences,
-      onPage,
-      onSort,
-      debouncedSearch,
-      clearSearch
-    };
-  },
-  methods: {
-    editConference(conference: Conference): void {
-      this.$emit('edit-conference', conference);
+    clearSearch() {
+      this.filters.search = '';
+      this.filters.page = 1;
+      this.loadConferences();
+    },
+    
+    isLocked(conference: Conference): boolean {
+      // Conference is locked, but not by current user
+      if (conference.lock_status && conference.lock_status.user_id !== this.authStore.user?.id) {
+        return true;
+      }
+      // Otherwise, it's either not locked or locked by current user
+      return false;
+    },
+    
+    async editConference(conference: Conference): Promise<void> {
+      // Allow editing if not locked or if locked by current user
+      if (!conference.lock_status || conference.lock_status.user_id === this.authStore.user?.id) {
+        this.$emit('edit-conference', conference);
+      } else {
+        // Conference is locked by someone else
+        this.toast.add({
+          severity: 'warn',
+          summary: 'Conference Locked',
+          detail: `This conference is currently being edited by ${conference.lock_status.user_name}. Please try again later.`,
+          life: 5000
+        });
+      }
     },
     
     openCreateConferenceDialog(): void {
@@ -262,9 +279,20 @@ export default defineComponent({
       });
     },
     
-    confirmDeleteConference(conference: Conference): void {
-      if (confirm(`Are you sure you want to delete "${conference.name}"?`)) {
-        this.deleteConference(conference.id);
+    async confirmDeleteConference(conference: Conference): Promise<void> {
+      // Allow deletion if not locked or if locked by current user
+      if (!conference.lock_status || conference.lock_status.user_id === this.authStore.user?.id) {
+        if (confirm(`Are you sure you want to delete "${conference.name}"?`)) {
+          await this.deleteConference(conference.id);
+        }
+      } else {
+        // Conference is locked by someone else
+        this.toast.add({
+          severity: 'warn',
+          summary: 'Cannot Delete',
+          detail: `This conference is currently being edited by ${conference.lock_status.user_name}. Cannot delete.`,
+          life: 5000
+        });
       }
     },
     
@@ -288,7 +316,7 @@ export default defineComponent({
       }
     },
     
-    confirmDeleteSelected(): void {
+    async confirmDeleteSelected(): Promise<void> {
       if (this.selectedConferences.length === 0) {
         this.toast.add({
           severity: 'info',
@@ -299,8 +327,23 @@ export default defineComponent({
         return;
       }
       
+      // Check if any selected conference is locked by someone else
+      const lockedConferences = this.selectedConferences.filter(
+        conf => conf.lock_status && conf.lock_status.user_id !== this.authStore.user?.id
+      ).map(conf => conf.name);
+      
+      if (lockedConferences.length > 0) {
+        this.toast.add({
+          severity: 'warn',
+          summary: 'Cannot Delete Some Conferences',
+          detail: `Some selected conferences are being edited by others and cannot be deleted: ${lockedConferences.join(', ')}`,
+          life: 5000
+        });
+        return;
+      }
+      
       if (confirm(`Are you sure you want to delete ${this.selectedConferences.length} selected conferences?`)) {
-        this.deleteSelectedConferences();
+        await this.deleteSelectedConferences();
       }
     },
     

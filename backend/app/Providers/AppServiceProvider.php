@@ -3,7 +3,16 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Gate;
+
+use App\Models\Conference;
+
+use App\Policies\ConferencePolicy;
+
 use App\Services\AuthService;
+use App\Services\ConferenceLockService;
+
+
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -15,6 +24,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(AuthService::class, function ($app) {
             return new AuthService();
         });
+
+        $this->app->singleton(ConferenceLockService::class, function ($app) {
+            return new ConferenceLockService();
+        });
     }
 
     /**
@@ -22,6 +35,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Gate::policy(Conference::class, ConferencePolicy::class);
     }
 }

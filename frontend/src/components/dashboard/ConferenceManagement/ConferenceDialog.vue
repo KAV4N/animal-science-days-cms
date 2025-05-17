@@ -4,15 +4,20 @@
     v-model:visible="visible"
     modal
     maximizable
-    @hide="resetForm"
-    @show="maximizeDialog"
+    :maximized="true"
+    @show="handleDialogShow"
+    @hide="handleDialogHide"
     class="p-fluid"
-    :style="{ width: '90vw' }" 
+    :style="{ width: '100vw', height: '100vh' }" 
   >
     <template #header>
       <div class="flex items-center">
         <i class="pi pi-calendar mr-2"></i>
         <span class="font-bold text-lg">{{ dialogHeader }}</span>
+        <div v-if="lockInfo" class="ml-auto flex items-center text-sm text-amber-600">
+          <i class="pi pi-lock mr-1"></i>
+          <span>You have an active lock on this conference</span>
+        </div>
       </div>
     </template>
     
@@ -65,8 +70,6 @@
             />
           </div>
         </TabPanel>
-
-
         <TabPanel value="3" v-if="isEditing">
           <div class="p-4">
             <EditorsTab 
@@ -74,7 +77,6 @@
             />
           </div>
         </TabPanel>
-
         <TabPanel value="4">
           <div class="p-4">
             <SettingsTab 
@@ -92,11 +94,20 @@
         <Divider class="w-full m-0" />
         <div class="flex flex-nowrap justify-end gap-2 my-4 w-full">
           <Button
+            v-if="isEditing"
             type="button"
-            :label="isEditing ? 'Apply' : 'Create'"
+            label="Apply"
             icon="pi pi-check"
             :loading="loading"
             @click="handleSubmit"
+          />
+          <Button
+           v-if="!isEditing"
+            type="button"
+            label="Create"
+            icon="pi pi-check"
+            :loading="loading"
+            @click="handleSubmitAndClose"
           />
           <Button
             type="button"
@@ -110,10 +121,12 @@
     </template>
   </Dialog>
 </template>
+
 <script lang="ts">
-import { defineComponent, ref } from 'vue';
+import { defineComponent } from 'vue';
 import { useConferenceStore } from '@/stores/conferenceStore';
 import { useUniversityStore } from '@/stores/universityStore';
+import { useAuthStore } from '@/stores/authStore';
 import { useToast } from 'primevue/usetoast';
 import useVuelidate from '@vuelidate/core';
 import { required, minLength, helpers } from '@vuelidate/validators';
@@ -125,6 +138,7 @@ import type {
   Editor,
   ConferenceStoreRequest,
   ConferenceUpdateRequest,
+  ConferenceLockInfo
 } from '@/types/conference';
 
 import BasicInfoTab from './tabs/BasicInfoTab.vue';
@@ -143,22 +157,7 @@ export default defineComponent({
     EditorsTab
   },
   emits: ['conference-updated', 'conference-created', 'conference-deleted'],
-  setup() {
-    const dialogRef = ref();
-    const v$ = useVuelidate();
-
-    const maximizeDialog = () => {
-      if (dialogRef.value && !dialogRef.value.maximized) {
-        dialogRef.value.maximize();
-      }
-    };
-
-    return {
-      dialogRef,
-      v$,
-      maximizeDialog,
-    };
-  },
+  
   data() {
     return {
       visible: false,
@@ -167,7 +166,10 @@ export default defineComponent({
       activeTabIndex: '0',
       conferenceStore: useConferenceStore(),
       universityStore: useUniversityStore(),
+      authStore: useAuthStore(),
       toast: useToast(),
+      v$: useVuelidate(),
+      dialogRef: null as any,
       currentConferenceId: null as number | null,
       universities: [] as University[],
       formData: {
@@ -185,9 +187,20 @@ export default defineComponent({
         secondary_color: '#10B981',
         is_latest: false,
         is_published: false,
-      }
+      },
     };
   },
+  
+  computed: {
+    dialogHeader(): string {
+      return this.isEditing ? 'Edit Conference' : 'Create New Conference';
+    },
+    
+    lockInfo(): ConferenceLockInfo | null {
+      return this.conferenceStore.getCurrentLock;
+    }
+  },
+  
   validations() {
     return {
       formData: {
@@ -247,15 +260,14 @@ export default defineComponent({
       }
     };
   },
-  computed: {
-    dialogHeader(): string {
-      return this.isEditing ? 'Edit Conference' : 'Create New Conference';
-    },
-  },
+  
   async mounted() {
     await this.loadUniversities();
   },
+  
   methods: {
+    // The maximizeDialog method is no longer needed since the dialog is always maximized
+    
     hideConferenceDialog() {
       this.visible = false;
     },
@@ -329,6 +341,54 @@ export default defineComponent({
       this.v$.$reset();
     },
 
+    async handleDialogShow() {
+      // Dialog is already maximized via :maximized="true" prop
+      if (this.isEditing && this.currentConferenceId) {
+        try {
+          // Check if this user already has a lock (e.g., from page refresh)
+          const conference = this.conferenceStore.conferences.find(c => c.id === this.currentConferenceId);
+          
+          // If there's no lock or the current user doesn't own the lock, try to acquire it
+          if (!conference?.lock_status || conference.lock_status.user_id !== this.authStore.user?.id) {
+            await this.conferenceStore.acquireLock(this.currentConferenceId);
+          }
+        } catch (error: any) {
+          if (error.response?.status === 423) {
+            // Conference is locked by another user
+            const lockInfo = error.response?.data?.lock_info;
+            const userName = lockInfo?.user_name || 'another user';
+            this.toast.add({
+              severity: 'warn',
+              summary: 'Conference Locked',
+              detail: `This conference is being edited by ${userName}. Try again later.`,
+              life: 5000,
+            });
+            this.visible = false;
+          } else {
+            this.toast.add({
+              severity: 'error',
+              summary: 'Error',
+              detail: 'Failed to acquire lock for editing',
+              life: 3000,
+            });
+          }
+        }
+      }
+    },
+
+    async handleDialogHide() {
+      // Release the lock when dialog is closed
+      if (this.isEditing && this.currentConferenceId) {
+        try {
+          await this.conferenceStore.releaseLock(this.currentConferenceId);
+        } catch (error) {
+          // Silently handle error, as backend will clean up expired locks
+          console.warn('Failed to release lock, but it will expire automatically');
+        }
+      }
+      this.resetForm();
+    },
+
     async handleSubmit() {
       const isFormValid = await this.v$.$validate();
 
@@ -351,6 +411,82 @@ export default defineComponent({
         if (this.isEditing && this.currentConferenceId) {
           const payload: ConferenceUpdateRequest = formattedData;
           const response = await this.conferenceStore.updateConference(this.currentConferenceId, payload);
+          
+          // Refresh the lock after update
+          await this.conferenceStore.refreshLock(this.currentConferenceId);
+          
+          this.$emit('conference-updated', response.payload);
+          this.toast.add({
+            severity: 'success',
+            summary: 'Success',
+            detail: 'Conference updated successfully',
+            life: 3000,
+          });
+          
+          // For "Apply", we want to keep the dialog open when editing (don't set visible to false)
+        } else {
+          const payload: ConferenceStoreRequest = formattedData;
+          const response = await this.conferenceStore.createConference(payload);
+          this.$emit('conference-created', response.payload);
+          this.toast.add({
+            severity: 'success',
+            summary: 'Success',
+            detail: 'Conference created successfully',
+            life: 3000,
+          });
+          
+          // For a new conference, close the dialog after creation
+          this.visible = false;
+          this.resetForm();
+        }
+      } catch (error: any) {
+        if (error.response?.status === 423) {
+          // Handle lock conflict
+          const lockInfo = error.response?.data?.lock_info;
+          const userName = lockInfo?.user_name || 'another user';
+          this.toast.add({
+            severity: 'error',
+            summary: 'Update Failed',
+            detail: `This conference is now being edited by ${userName}. Your changes could not be saved.`,
+            life: 5000,
+          });
+          this.visible = false;
+        } else {
+          this.toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: error instanceof Error ? error.message : 'Failed to save conference',
+            life: 3000,
+          });
+        }
+      } finally {
+        this.loading = false;
+      }
+    },
+    
+    async handleSubmitAndClose() {
+      const isFormValid = await this.v$.$validate();
+
+      if (!isFormValid) {
+        this.showTabWithErrors();
+        this.toast.add({
+          severity: 'warn',
+          summary: 'Validation Error',
+          detail: 'Please fill in all required fields correctly',
+          life: 3000,
+        });
+        return;
+      }
+
+      this.loading = true;
+
+      try {
+        const formattedData = this.formatDataForApi();
+
+        if (this.isEditing && this.currentConferenceId) {
+          const payload: ConferenceUpdateRequest = formattedData;
+          const response = await this.conferenceStore.updateConference(this.currentConferenceId, payload);
+          
           this.$emit('conference-updated', response.payload);
           this.toast.add({
             severity: 'success',
@@ -370,15 +506,29 @@ export default defineComponent({
           });
         }
 
+        // Always close dialog after "Save & Close" or "Create"
         this.visible = false;
         this.resetForm();
-      } catch (error) {
-        this.toast.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: error instanceof Error ? error.message : 'Failed to save conference',
-          life: 3000,
-        });
+      } catch (error: any) {
+        if (error.response?.status === 423) {
+          // Handle lock conflict
+          const lockInfo = error.response?.data?.lock_info;
+          const userName = lockInfo?.user_name || 'another user';
+          this.toast.add({
+            severity: 'error',
+            summary: 'Update Failed',
+            detail: `This conference is now being edited by ${userName}. Your changes could not be saved.`,
+            life: 5000,
+          });
+          this.visible = false;
+        } else {
+          this.toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: error instanceof Error ? error.message : 'Failed to save conference',
+            life: 3000,
+          });
+        }
       } finally {
         this.loading = false;
       }
@@ -446,3 +596,16 @@ export default defineComponent({
   },
 });
 </script>
+
+<style scoped>
+/* Optional: Add styling for lock indicator */
+.lock-indicator {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  color: #b45309;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+</style>

@@ -15,7 +15,7 @@ class ConferenceResource extends JsonResource
      */
     public function toArray($request)
     {
-        return [
+        $data = [
             'id' => $this->id,
             'name' => $this->name,
             'title' => $this->title,
@@ -33,9 +33,17 @@ class ConferenceResource extends JsonResource
             'university' => $this->whenLoaded('university'),
             'editors' => ConferenceEditorResource::collection($this->whenLoaded('editors')),
 
+            'lock_status' => $this->lock_status ?? null,
+
             'created_at' => $this->created_at->toIso8601String(),
             'updated_at' => $this->updated_at->toIso8601String(),
            
         ];
+
+
+        
+
+        return $data;
+
     }
 }

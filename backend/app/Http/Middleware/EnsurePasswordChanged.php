@@ -12,12 +12,16 @@ class EnsurePasswordChanged
 
     use ApiResponse; 
 
-    public function handle(Request $request, Closure $next): Response
+    public function handle(Request $request, Closure $next)
     {
-        if ($request->user()?->must_change_password) {
-            return $this->errorResponse('You must change your password before accessing this resource.', 403);
+        $user = $request->user();
+        
+        if ($user && $user->must_change_password) {
+            return $this->errorResponse('Password change required before accessing this resource', 403, [
+                'must_change_password' => true
+            ]);
         }
-
+        
         return $next($request);
     }
 }

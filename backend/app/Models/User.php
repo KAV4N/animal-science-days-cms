@@ -49,7 +49,7 @@ class User extends Authenticatable
     public function editedConferences(): BelongsToMany
     {
         return $this->belongsToMany(Conference::class)
-                    ->withPivot('assigned_by', 'assigned_at')
+                    ->withPivot('assigned_by')
                     ->withTimestamps();
     }
 

@@ -11,12 +11,14 @@ class EnsureMustChangePassword
 {
     use ApiResponse;
 
-    public function handle(Request $request, Closure $next): Response
+    public function handle(Request $request, Closure $next)
     {
-        if (!$request->user()?->must_change_password) {
-            return $this->errorResponse('You have already changed your password. This route is no longer accessible.', 403);
-        }
+        $user = $request->user();
 
+        if ($user && !$user->must_change_password) {
+            return $this->errorResponse('Password change not required for this user', 403);
+        }
+        
         return $next($request);
     }
 }

@@ -127,8 +127,7 @@ class ConferenceEditorController extends Controller
         }
         
         $conference->editors()->attach($userId, [
-            'assigned_by' => $request->user()->id,
-            'assigned_at' => now()
+            'assigned_by' => $request->user()->id
         ]);
 
         $editor = $conference->editors()

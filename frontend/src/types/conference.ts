@@ -14,6 +14,15 @@ export interface Editor extends User {
   pivot: EditorPivot;
 }
 
+export interface ConferenceLockInfo {
+  user_id: number;
+  user_name: string;
+  user_email: string;
+  locked_at: string;
+  expires_at: string;
+}
+
+
 export interface Conference {
   id: number;
   name: string;
@@ -30,6 +39,7 @@ export interface Conference {
   is_published: boolean;
   university?: University;
   editors?: Editor[];
+  lock_status?: ConferenceLockInfo;
   created_at: string;
   updated_at: string;
 }
@@ -48,6 +58,16 @@ export interface ConferenceStoreRequest {
   secondary_color: string;
   is_latest?: boolean;
   is_published?: boolean;
+}
+
+
+
+export interface ConferenceLockResponse {
+  payload: {
+    is_locked: boolean;
+    lock_info?: ConferenceLockInfo;
+  };
+  message: string;
 }
 
 export interface ConferenceUpdateRequest extends Partial<ConferenceStoreRequest> {}
