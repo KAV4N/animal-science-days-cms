@@ -62,9 +62,22 @@
               
               <!-- Component content (edit or view mode) -->
               <div class="component-content mt-3">
-                <!-- WYSIWYG Editor Component -->
+                <!-- TinyMCE Editor Component -->
                 <div v-if="component.type === 'Editor'" class="wysiwyg-component">
-                  <Editor v-model="component.content" editorStyle="height: 200px" />
+                  <client-only>
+                    <editor
+                      v-model="component.content"
+                      :init="{
+                        height: 300,
+                        menubar: true,
+                        plugins: 'accordion advlist anchor autolink autoresize autosave charmap code codesample directionality fullscreen image insertdatetime link lists media nonbreaking pagebreak preview quickbars save searchreplace table template visualblocks visualchars wordcount emoticons help',
+                        toolbar:
+                          'undo redo | formatselect | bold italic backcolor | \
+                          alignleft aligncenter alignright alignjustify | \
+                          bullist numlist outdent indent | removeformat | help'
+                      }"
+                    />
+                  </client-only>
                 </div>
                 
                 <!-- Banner Component -->
@@ -261,9 +274,16 @@
 <script lang="ts">
 import { defineComponent } from 'vue';
 import { useConferenceEditorStore } from '@/stores/conferenceEditorStore';
+// Import TinyMCE Vue component
+import Editor from '@hugerte/hugerte-vue';
+
 
 export default defineComponent({
   name: 'ConferenceEditor',
+  components: {
+    // Register TinyMCE editor component
+    'editor': Editor
+  },
   data() {
     return {
       selectedPageId: 0,
