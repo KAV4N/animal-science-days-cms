@@ -155,7 +155,8 @@ export default defineComponent({
         this.userData = { 
           ...newUser, 
           password: '',
-          role: newUser.roles ? newUser.roles[0] : 'editor'
+          role: newUser.roles ? newUser.roles[0] : 'editor',
+          university_id: newUser.university_id || (newUser.university ? newUser.university.id : null)
         };
         this.passwordOption = 'keep';
       } else {
@@ -169,11 +170,6 @@ export default defineComponent({
       try {
         const response = await apiService.get('/v1/universities');
         this.universities = response.data.payload;
-        
-        // Set default university if we have universities and creating a new user
-        if (this.universities.length > 0 && !this.user) {
-          this.userData.university_id = this.universities[0].id;
-        }
       } catch (error) {
         console.error('Failed to fetch universities:', error);
       }
@@ -190,8 +186,7 @@ export default defineComponent({
         }));
       } catch (error) {
         console.error('Failed to fetch roles:', error);
-        
-        // Fallback to static roles based on current user role
+
         if (this.currentUserRole === 'super_admin') {
           this.availableRoles = [
             { label: 'Editor', value: 'editor' },
@@ -217,8 +212,8 @@ export default defineComponent({
         name: '',
         email: '',
         password: '',
-        role: 'editor', // Always set editor as default role
-        university_id: this.universities.length > 0 ? this.universities[0].id : null,
+        role: 'editor',
+        university_id: null,
         roles: [],
         permissions: [],
         must_change_password: true
@@ -245,19 +240,19 @@ export default defineComponent({
         try {
           let payload = { ...this.userData };
           
-          // Handle password options
+         
           if (!this.userData.id) {
-            // New user
+          
             if (!this.userData.password && !this.autoGeneratePassword) {
               this.saving = false;
-              return; // Don't proceed if no password and auto-generate not selected
+              return; 
             }
             
             if (this.autoGeneratePassword) {
               payload.password = undefined;
             }
           } else {
-            // Existing user
+            
             if (this.passwordOption === 'keep') {
               payload.password = undefined;
             } else if (this.passwordOption === 'generate') {
@@ -266,7 +261,7 @@ export default defineComponent({
             }
           }
           
-          // Send data to parent component for saving
+          
           this.$emit('save', payload);
           this.hideDialog();
         } finally {
