@@ -64,14 +64,14 @@ Route::prefix('v1')->group(function () {
 
                 // Conference management
                 
-                
+                Route::get('/conferences/latest', [ConferenceController::class, 'latest']);
+                Route::apiResource('conferences', ConferenceController::class)->only(['index', 'show']);
 
                 Route::middleware('check.conference.lock')->group(function () {
-                    Route::get('/conferences/latest', [ConferenceController::class, 'latest']);
                     Route::apiResource('conferences', ConferenceController::class)->except(['index', 'show']);
                     Route::patch('/conferences/{conference}/status', [ConferenceController::class, 'updateStatus']);
                 });
-                Route::apiResource('conferences', ConferenceController::class)->only(['index', 'show']);
+
                 
                 // Conference editors management
                 Route::get('/conferences/{conference}/editors', [ConferenceEditorController::class, 'index']);

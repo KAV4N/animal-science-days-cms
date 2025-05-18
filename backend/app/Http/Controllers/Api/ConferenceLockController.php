@@ -10,22 +10,26 @@ use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Symfony\Component\HttpFoundation\Response;
 
 class ConferenceLockController extends Controller
 {
     use ApiResponse;
 
-    protected $lockService;
+    /**
+     * Create a new controller instance.
+     */
+    public function __construct(
+        protected ConferenceLockService $lockService
+    ) {}
 
-    public function __construct(ConferenceLockService $lockService)
-    {
-        $this->lockService = $lockService;
-    }
-
+    /**
+     * Acquire a lock on a conference.
+     */
     public function acquireLock(Request $request, Conference $conference): JsonResponse
     {
-        if (!Gate::allows('acquireLock', $conference)) {
-            return $this->errorResponse('You are not authorized to lock this conference', 403);
+        if (Gate::denies('acquireLock', $conference)) {
+            return $this->errorResponse('You are not authorized to lock this conference', Response::HTTP_FORBIDDEN);
         }
         
         $user = $request->user();
@@ -40,11 +44,14 @@ class ConferenceLockController extends Controller
         
         return $this->errorResponse(
             'Conference is currently being edited by another user',
-            423,
+            Response::HTTP_LOCKED,
             ['lock_info' => $result]
         );
     }
     
+    /**
+     * Release a lock on a conference.
+     */
     public function releaseLock(Request $request, Conference $conference): JsonResponse
     {
         $user = $request->user();
@@ -59,11 +66,14 @@ class ConferenceLockController extends Controller
         
         return $this->errorResponse(
             'You do not own the lock on this conference',
-            403
+            Response::HTTP_FORBIDDEN
         );
     }
     
-    public function checkLock(Request $request, Conference $conference): JsonResponse
+    /**
+     * Check if a conference is locked.
+     */
+    public function checkLock(Conference $conference): JsonResponse
     {
         $lockInfo = $this->lockService->checkLock($conference->id);
         
@@ -83,6 +93,9 @@ class ConferenceLockController extends Controller
         );
     }
     
+    /**
+     * Refresh a lock on a conference.
+     */
     public function refreshLock(Request $request, Conference $conference): JsonResponse
     {
         $user = $request->user();
@@ -97,14 +110,17 @@ class ConferenceLockController extends Controller
         
         return $this->errorResponse(
             'You do not own the lock on this conference',
-            403
+            Response::HTTP_FORBIDDEN
         );
     }
     
-    public function forceReleaseLock(Request $request, Conference $conference): JsonResponse
+    /**
+     * Force release a lock on a conference (admin only).
+     */
+    public function forceReleaseLock(Conference $conference): JsonResponse
     {
-        if (!Gate::allows('forceReleaseLock', $conference)) {
-            return $this->errorResponse('You are not authorized to force release this lock', 403);
+        if (Gate::denies('forceReleaseLock', $conference)) {
+            return $this->errorResponse('You are not authorized to force release this lock', Response::HTTP_FORBIDDEN);
         }
         
         $this->lockService->forceReleaseLock($conference->id);

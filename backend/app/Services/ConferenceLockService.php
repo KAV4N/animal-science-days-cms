@@ -29,24 +29,19 @@ class ConferenceLockService
     public function acquireLock(Conference $conference, User $user): bool|array
     {
         $cacheKey = $this->getCacheKey($conference->id);
-        
-        // Check if conference is locked
+
         $lockData = Cache::get($cacheKey);
         
         if ($lockData) {
-            // If locked by the same user, extend the lock and return true
             if ($lockData['user_id'] === $user->id) {
                 $this->refreshLock($conference->id, $user->id);
                 return true;
             }
             
-            // Check if lock has expired
             $lockTime = Carbon::parse($lockData['locked_at']);
             if ($lockTime->diffInMinutes(now()) >= $this->lockTimeout) {
-                // Lock expired, release it and create new lock
                 Cache::forget($cacheKey);
             } else {
-                // Return lock info to inform who has the lock
                 return $lockData;
             }
         }
