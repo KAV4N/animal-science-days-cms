@@ -11,11 +11,24 @@ import ConferenceManager from '@/views/dashboard/ConferenceManager.vue';
 import AdminUserManagement from '@/views/dashboard/AdminUserManagement.vue';
 
 import Site from '@/views/Site.vue';
+import PastConferences from '@/views/PastConferences.vue';
+import ConferenceDetail from '@/views/ConferenceDetail.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
     path: '/',
     component: Site,
+  },
+  {
+    path: '/conferences',
+    name: 'conferences',
+    component: PastConferences
+  },
+  {
+    path: '/conference/:slug',
+    name: 'conference-detail',
+    component: ConferenceDetail,
+    props: true
   },
   {
     path: '/dashboard',
@@ -46,7 +59,14 @@ const routes: Array<RouteRecordRaw> = [
 
 const router = createRouter({
   history: createWebHistory(),
-  routes
+  routes,
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) {
+      return savedPosition;
+    } else {
+      return { top: 0 };
+    }
+  }
 });
 
 router.beforeEach(async (to, from, next) => {
