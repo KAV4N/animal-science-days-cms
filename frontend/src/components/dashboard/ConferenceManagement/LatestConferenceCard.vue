@@ -149,7 +149,14 @@
             </div>
 
             <div class="flex flex-col gap-2">
-              <Button label="Edit Pages" icon="pi pi-pencil" class="p-button-sm w-full sm:w-auto" @click="onEditPagesClick" />
+              <Button 
+                label="Edit Pages" 
+                icon="pi pi-pencil" 
+                class="p-button-sm w-full sm:w-auto" 
+                @click="onEditPagesClick" 
+                :disabled="isLocked"
+                v-tooltip.top="isLocked ? 'Conference is locked by another user' : 'Edit conference pages'"
+              />
               
               <div v-if="authStore.hasAdminAccess" class="flex flex-col gap-2">
                 <Divider class="m-0" />
@@ -159,6 +166,7 @@
                   class="p-button-sm w-full sm:w-auto" 
                   @click="editConference" 
                   :disabled="isLocked"
+                  v-tooltip.top="isLocked ? 'Conference is locked by another user' : 'Edit conference settings'"
                 />
                 <Button 
                   label="Remove" 
@@ -167,6 +175,7 @@
                   class="p-button-sm w-full sm:w-auto" 
                   @click="confirmDeleteConference" 
                   :disabled="isLocked"
+                  v-tooltip.top="isLocked ? 'Conference is locked by another user' : 'Delete conference'"
                 />
                 <div v-if="isLocked" class="inline-flex items-center text-amber-600 text-xs mt-1">
                   <i class="pi pi-lock text-amber-600 mr-1"></i>
@@ -200,6 +209,7 @@ import Tag from 'primevue/tag';
 import Chip from 'primevue/chip';
 import Button from 'primevue/button';
 import Divider from 'primevue/divider';
+import Tooltip from 'primevue/tooltip';
 
 export default defineComponent({
   name: 'LatestConferenceCard',
@@ -210,6 +220,9 @@ export default defineComponent({
     Chip,
     Button,
     Divider
+  },
+  directives: {
+    tooltip: Tooltip
   },
   emits: ['edit-conference'],
   
@@ -276,54 +289,87 @@ export default defineComponent({
       const latestConference = this.conferenceStore.getLatestConference;
       if (!latestConference) return;
       
-      // Check if conference is locked by someone else
-      if (this.isLocked) {
-        this.toast.add({
-          severity: 'warn',
-          summary: 'Cannot Delete',
-          detail: `This conference is currently being edited by ${latestConference.lock_status?.user_name}. Cannot delete.`,
-          life: 5000
-        });
-        return;
-      }
-      
-      if (confirm(`Are you sure you want to delete "${latestConference.name}"?`)) {
-        try {
-          await this.conferenceStore.deleteConference(latestConference.id);
+      try {
+        // First acquire the lock
+        await this.conferenceStore.acquireLock(latestConference.id);
+        
+        // Then confirm deletion
+        if (confirm(`Are you sure you want to delete "${latestConference.name}"?`)) {
+          await this.deleteConference(latestConference.id);
+        } else {
+          // If user cancels, release the lock
+          await this.conferenceStore.releaseLock(latestConference.id);
+        }
+      } catch (error: any) {
+        if (error.response?.status === 423) {
+          const lockInfo = error.response?.data?.lock_info;
+          const userName = lockInfo?.user_name || 'another user';
+          
           this.toast.add({
-            severity: 'success',
-            summary: 'Success',
-            detail: 'Latest conference deleted successfully',
+            severity: 'warn',
+            summary: 'Cannot Delete',
+            detail: `This conference is currently being edited by ${userName}. Cannot delete.`,
+            life: 5000
+          });
+        } else {
+          this.toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: error.response?.message || 'Failed to prepare conference for deletion',
             life: 3000
           });
-        } catch (error: any) {
-          // If error occurs because conference is now locked
-          if (error.response?.status === 423) {
-            const lockInfo = error.response?.data?.lock_info;
-            const userName = lockInfo?.user_name || 'another user';
-            this.toast.add({
-              severity: 'error',
-              summary: 'Delete Failed',
-              detail: `This conference is now being edited by ${userName}. Cannot delete.`,
-              life: 5000
-            });
-          } else {
-            this.toast.add({
-              severity: 'error',
-              summary: 'Error',
-              detail: error instanceof Error ? error.message : 'Failed to delete latest conference',
-              life: 3000
-            });
-          }
+        }
+      }
+    },
+    
+    async deleteConference(id: number): Promise<void> {
+      try {
+        // Since we already acquired the lock in confirmDeleteConference, we can proceed with deletion
+        await this.conferenceStore.deleteConference(id);
+        this.toast.add({
+          severity: 'success',
+          summary: 'Success',
+          detail: 'Latest conference deleted successfully',
+          life: 3000
+        });
+      } catch (error: any) {
+        // Show the exact error message from the response if available
+        this.toast.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: error.response?.message || (error instanceof Error ? error.message : 'Failed to delete conference'),
+          life: 3000
+        });
+        
+        // If deletion failed, try to release the lock that was acquired during confirmation
+        try {
+          await this.conferenceStore.releaseLock(id);
+        } catch (lockError) {
+          // Silently handle lock release error
+          console.warn('Failed to release lock after deletion error');
         }
       }
     },
     
     onEditPagesClick() {
+      const latestConference = this.conferenceStore.getLatestConference;
+      if (!latestConference) return;
+      
+      // Check if conference is locked by someone else
+      if (this.isLocked) {
+        this.toast.add({
+          severity: 'warn',
+          summary: 'Conference Locked',
+          detail: `This conference is currently being edited by ${latestConference.lock_status?.user_name}. Cannot access pages editor.`,
+          life: 5000
+        });
+        return;
+      }
+      
       this.toast.add({
         severity: 'info',
         summary: 'Info',
-        detail: `Conference pages editor for "${this.conferenceStore.getLatestConference?.name}" will be implemented in future releases.`,
+        detail: `Conference pages editor for "${latestConference.name}" will be implemented in future releases.`,
         life: 3000
       });
     }

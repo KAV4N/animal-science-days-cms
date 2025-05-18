@@ -67,17 +67,17 @@ Route::prefix('v1')->group(function () {
                 Route::get('/conferences/latest', [ConferenceController::class, 'latest']);
                 Route::apiResource('conferences', ConferenceController::class)->only(['index', 'show']);
 
+                Route::get('/conferences/{conference}/editors', [ConferenceEditorController::class, 'index']);
+                Route::get('/conferences/{conference}/editors/unattached', [ConferenceEditorController::class, 'unattached']);
+
                 Route::middleware('check.conference.lock')->group(function () {
                     Route::apiResource('conferences', ConferenceController::class)->except(['index', 'show']);
                     Route::patch('/conferences/{conference}/status', [ConferenceController::class, 'updateStatus']);
-                });
 
-                
-                // Conference editors management
-                Route::get('/conferences/{conference}/editors', [ConferenceEditorController::class, 'index']);
-                Route::get('/conferences/{conference}/editors/unattached', [ConferenceEditorController::class, 'unattached']);
-                Route::post('/conferences/{conference}/editors', [ConferenceEditorController::class, 'store']);
-                Route::delete('/conferences/{conference}/editors/{editor}', [ConferenceEditorController::class, 'destroy']);
+                    // Conference editors management
+                    Route::post('/conferences/{conference}/editors', [ConferenceEditorController::class, 'store']);
+                    Route::delete('/conferences/{conference}/editors/{editor}', [ConferenceEditorController::class, 'destroy']);
+                });
 
                 //User management
                 Route::get('/users', [UserController::class, 'index']);

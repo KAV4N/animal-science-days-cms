@@ -276,11 +276,11 @@ export default defineComponent({
       try {
         await this.universityStore.fetchUniversities();
         this.universities = this.universityStore.universities;
-      } catch (error) {
+      } catch (error: any) {
         this.toast.add({
           severity: 'error',
           summary: 'Error',
-          detail: 'Failed to load universities',
+          detail: error.response?.message || 'Failed to load universities',
           life: 3000,
         });
       }
@@ -360,7 +360,7 @@ export default defineComponent({
             this.toast.add({
               severity: 'warn',
               summary: 'Conference Locked',
-              detail: `This conference is being edited by ${userName}. Try again later.`,
+              detail: error.response?.message || `This conference is being edited by ${userName}. Try again later.`,
               life: 5000,
             });
             this.visible = false;
@@ -368,7 +368,7 @@ export default defineComponent({
             this.toast.add({
               severity: 'error',
               summary: 'Error',
-              detail: 'Failed to acquire lock for editing',
+              detail: error.response?.message || 'Failed to acquire lock for editing',
               life: 3000,
             });
           }
@@ -419,7 +419,7 @@ export default defineComponent({
           this.toast.add({
             severity: 'success',
             summary: 'Success',
-            detail: 'Conference updated successfully',
+            detail: response.message || 'Conference updated successfully',
             life: 3000,
           });
           
@@ -431,7 +431,7 @@ export default defineComponent({
           this.toast.add({
             severity: 'success',
             summary: 'Success',
-            detail: 'Conference created successfully',
+            detail: response.message || 'Conference created successfully',
             life: 3000,
           });
           
@@ -447,7 +447,7 @@ export default defineComponent({
           this.toast.add({
             severity: 'error',
             summary: 'Update Failed',
-            detail: `This conference is now being edited by ${userName}. Your changes could not be saved.`,
+            detail: error.response?.message || `This conference is now being edited by ${userName}. Your changes could not be saved.`,
             life: 5000,
           });
           this.visible = false;
@@ -455,7 +455,7 @@ export default defineComponent({
           this.toast.add({
             severity: 'error',
             summary: 'Error',
-            detail: error instanceof Error ? error.message : 'Failed to save conference',
+            detail: error.response?.message || error instanceof Error ? error.message : 'Failed to save conference',
             life: 3000,
           });
         }
@@ -486,12 +486,11 @@ export default defineComponent({
         if (this.isEditing && this.currentConferenceId) {
           const payload: ConferenceUpdateRequest = formattedData;
           const response = await this.conferenceStore.updateConference(this.currentConferenceId, payload);
-          
           this.$emit('conference-updated', response.payload);
           this.toast.add({
             severity: 'success',
             summary: 'Success',
-            detail: 'Conference updated successfully',
+            detail: response.message || 'Conference updated successfully',
             life: 3000,
           });
         } else {
@@ -501,7 +500,7 @@ export default defineComponent({
           this.toast.add({
             severity: 'success',
             summary: 'Success',
-            detail: 'Conference created successfully',
+            detail: response.message || 'Conference created successfully',
             life: 3000,
           });
         }
@@ -517,7 +516,7 @@ export default defineComponent({
           this.toast.add({
             severity: 'error',
             summary: 'Update Failed',
-            detail: `This conference is now being edited by ${userName}. Your changes could not be saved.`,
+            detail: error.response?.message || `This conference is now being edited by ${userName}. Your changes could not be saved.`,
             life: 5000,
           });
           this.visible = false;
@@ -525,7 +524,7 @@ export default defineComponent({
           this.toast.add({
             severity: 'error',
             summary: 'Error',
-            detail: error instanceof Error ? error.message : 'Failed to save conference',
+            detail: error.response?.message || error instanceof Error ? error.message : 'Failed to save conference',
             life: 3000,
           });
         }

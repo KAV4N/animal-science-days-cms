@@ -98,12 +98,37 @@
             </template>
             <template #body="slotProps">
               <div class="flex justify-center gap-2">
-                <Button icon="pi pi-pencil" outlined rounded class="p-button-sm" @click="onEditPagesClick(slotProps.data)" />
+                <Button 
+                  icon="pi pi-pencil" 
+                  outlined 
+                  rounded 
+                  class="p-button-sm" 
+                  @click="onEditPagesClick(slotProps.data)" 
+                  :disabled="isLocked(slotProps.data)"
+                  v-tooltip.top="isLocked(slotProps.data) ? 'Conference is locked by another user' : 'Edit conference pages'"
+                />
                 
                 <div v-if="authStore.hasAdminAccess" class="flex justify-center gap-2">
                   <Divider layout="vertical" />
-                  <Button icon="pi pi-cog" outlined rounded class="p-button-sm" @click="editConference(slotProps.data)" :disabled="isLocked(slotProps.data)" />
-                  <Button icon="pi pi-trash" outlined rounded severity="danger" class="p-button-sm" @click="confirmDeleteConference(slotProps.data)" :disabled="isLocked(slotProps.data)" />
+                  <Button 
+                    icon="pi pi-cog" 
+                    outlined 
+                    rounded 
+                    class="p-button-sm" 
+                    @click="editConference(slotProps.data)" 
+                    :disabled="isLocked(slotProps.data)"
+                    v-tooltip.top="isLocked(slotProps.data) ? 'Conference is locked by another user' : 'Edit conference settings'"
+                  />
+                  <Button 
+                    icon="pi pi-trash" 
+                    outlined 
+                    rounded 
+                    severity="danger" 
+                    class="p-button-sm" 
+                    @click="confirmDeleteConference(slotProps.data)" 
+                    :disabled="isLocked(slotProps.data)"
+                    v-tooltip.top="isLocked(slotProps.data) ? 'Conference is locked by another user' : 'Delete conference'"
+                  />
                 </div>
               </div>
             </template>
@@ -136,6 +161,7 @@ import InputGroupAddon from 'primevue/inputgroupaddon';
 import InputText from 'primevue/inputtext';
 import Tag from 'primevue/tag';
 import Divider from 'primevue/divider';
+import Tooltip from 'primevue/tooltip';
 import debounce from 'lodash/debounce';
 
 export default defineComponent({
@@ -151,6 +177,9 @@ export default defineComponent({
     InputText,
     Tag,
     Divider
+  },
+  directives: {
+    tooltip: Tooltip
   },
   emits: ['edit-conference'],
   
@@ -182,13 +211,20 @@ export default defineComponent({
     async loadConferences() {
       this.conferenceStore.loading = true;
       try {
-        await this.conferenceStore.fetchConferences(this.filters);
-        // No need to check lock status for each conference as it's included in the response
-      } catch (error) {
+        const response = await this.conferenceStore.fetchConferences(this.filters);
+        if (response?.message) {
+          this.toast.add({
+            severity: 'success',
+            summary: 'Success',
+            detail: response.message,
+            life: 3000
+          });
+        }
+      } catch (error: any) {
         this.toast.add({
           severity: 'error',
           summary: 'Error',
-          detail: 'Failed to load conferences',
+          detail: error.response?.message || 'Failed to load conferences',
           life: 3000
         });
       } finally {
@@ -271,6 +307,17 @@ export default defineComponent({
     },
     
     onEditPagesClick(conference: Conference): void {
+      // Check if conference is locked by different user before allowing access
+      if (this.isLocked(conference)) {
+        this.toast.add({
+          severity: 'warn',
+          summary: 'Conference Locked',
+          detail: `This conference is currently being edited by ${conference.lock_status?.user_name || 'another user'}. Cannot access pages editor.`,
+          life: 5000
+        });
+        return;
+      }
+      
       this.toast.add({
         severity: 'info',
         summary: 'Info',
@@ -280,39 +327,62 @@ export default defineComponent({
     },
     
     async confirmDeleteConference(conference: Conference): Promise<void> {
-      // Allow deletion if not locked or if locked by current user
-      if (!conference.lock_status || conference.lock_status.user_id === this.authStore.user?.id) {
+      try {
+        await this.conferenceStore.acquireLock(conference.id);
         if (confirm(`Are you sure you want to delete "${conference.name}"?`)) {
           await this.deleteConference(conference.id);
+        } else {
+          await this.conferenceStore.releaseLock(conference.id);
         }
-      } else {
-        // Conference is locked by someone else
-        this.toast.add({
-          severity: 'warn',
-          summary: 'Cannot Delete',
-          detail: `This conference is currently being edited by ${conference.lock_status.user_name}. Cannot delete.`,
-          life: 5000
-        });
+      } catch (error: any) {
+        if (error.response?.status === 423) {
+          const lockInfo = error.response?.data?.lock_info;
+          const userName = lockInfo?.user_name || 'another user';
+          
+          this.toast.add({
+            severity: 'warn',
+            summary: 'Cannot Delete',
+            detail: error.response?.message || `This conference is currently being edited by ${userName}. Cannot delete.`,
+            life: 5000
+          });
+        } else {
+          this.toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: error.response?.message || 'Failed to prepare conference for deletion',
+            life: 3000
+          });
+        }
       }
     },
     
     async deleteConference(id: number): Promise<void> {
       try {
-        await this.conferenceStore.deleteConference(id);
+        // Since we already acquired the lock in confirmDeleteConference, we can proceed with deletion
+        const response = await this.conferenceStore.deleteConference(id);
         this.loadConferences();
         this.toast.add({
           severity: 'success',
           summary: 'Success',
-          detail: 'Conference deleted successfully',
+          detail: response?.message || 'Conference deleted successfully',
           life: 3000
         });
-      } catch (error) {
+      } catch (error: any) {
+        // Show the exact error message from the response if available
         this.toast.add({
           severity: 'error',
           summary: 'Error',
-          detail: error instanceof Error ? error.message : 'Failed to delete conference',
+          detail: error.response?.message || (error instanceof Error ? error.message : 'Failed to delete conference'),
           life: 3000
         });
+        
+        // If deletion failed, try to release the lock that was acquired during confirmation
+        try {
+          await this.conferenceStore.releaseLock(id);
+        } catch (lockError) {
+          // Silently handle lock release error
+          console.warn('Failed to release lock after deletion error');
+        }
       }
     },
     
@@ -327,54 +397,134 @@ export default defineComponent({
         return;
       }
       
-      // Check if any selected conference is locked by someone else
-      const lockedConferences = this.selectedConferences.filter(
-        conf => conf.lock_status && conf.lock_status.user_id !== this.authStore.user?.id
-      ).map(conf => conf.name);
+      // Try to acquire locks for all selected conferences first
+      const lockPromises = this.selectedConferences.map(async (conf) => {
+        try {
+          await this.conferenceStore.acquireLock(conf.id);
+          return { conference: conf, locked: true, error: null };
+        } catch (error: any) {
+          return { 
+            conference: conf, 
+            locked: false, 
+            error: error
+          };
+        }
+      });
       
-      if (lockedConferences.length > 0) {
-        this.toast.add({
-          severity: 'warn',
-          summary: 'Cannot Delete Some Conferences',
-          detail: `Some selected conferences are being edited by others and cannot be deleted: ${lockedConferences.join(', ')}`,
-          life: 5000
-        });
-        return;
+      const lockResults = await Promise.all(lockPromises);
+      const lockedConferences = lockResults.filter(result => result.locked).map(result => result.conference);
+      const failedToLock = lockResults.filter(result => !result.locked);
+      
+      // If some conferences couldn't be locked, show a warning
+      if (failedToLock.length > 0) {
+        const lockedByOthers = failedToLock
+          .filter(item => item.error.response?.status === 423)
+          .map(item => item.conference.name);
+          
+        if (lockedByOthers.length > 0) {
+          this.toast.add({
+            severity: 'warn',
+            summary: 'Cannot Delete Some Conferences',
+            detail: `Some selected conferences are being edited by others and cannot be deleted: ${lockedByOthers.join(', ')}`,
+            life: 5000
+          });
+        }
+        
+        // If there are other errors (not lock-related)
+        const otherErrors = failedToLock.filter(item => item.error.response?.status !== 423);
+        if (otherErrors.length > 0) {
+          this.toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to prepare some conferences for deletion',
+            life: 3000
+          });
+        }
+        
+        // If we couldn't lock any conferences, return early
+        if (lockedConferences.length === 0) {
+          return;
+        }
       }
       
-      if (confirm(`Are you sure you want to delete ${this.selectedConferences.length} selected conferences?`)) {
-        await this.deleteSelectedConferences();
+      // Prompt for deletion confirmation with only the conferences we could lock
+      if (confirm(`Are you sure you want to delete ${lockedConferences.length} selected conferences?`)) {
+        await this.deleteSelectedConferences(lockedConferences);
+      } else {
+        // If user cancels, release all acquired locks
+        await Promise.all(lockedConferences.map(conf => 
+          this.conferenceStore.releaseLock(conf.id).catch(err => console.warn(`Failed to release lock for conference ${conf.id}`, err))
+        ));
       }
     },
     
-    async deleteSelectedConferences(): Promise<void> {
-      if (this.selectedConferences.length === 0) {
+    async deleteSelectedConferences(conferencesToDelete = this.selectedConferences): Promise<void> {
+      if (conferencesToDelete.length === 0) {
         this.toast.add({
           severity: 'info',
           summary: 'Info',
-          detail: 'No conferences selected',
+          detail: 'No conferences selected for deletion',
           life: 3000
         });
         return;
       }
       
       try {
-        for (const conference of this.selectedConferences) {
-          await this.conferenceStore.deleteConference(conference.id);
+        let successCount = 0;
+        const errors = [];
+        
+        // Delete each conference
+        for (const conference of conferencesToDelete) {
+          try {
+            const response = await this.conferenceStore.deleteConference(conference.id);
+            successCount++;
+            
+            // Lock is automatically released by the deleteConference API
+          } catch (error: any) {
+            console.error(`Failed to delete conference ${conference.id}:`, error);
+            errors.push({
+              id: conference.id,
+              name: conference.name,
+              message: error.response?.message || 'Unknown error'
+            });
+            
+            // If deletion failed, try to release the lock
+            try {
+              await this.conferenceStore.releaseLock(conference.id);
+            } catch (lockError) {
+              // Silently handle lock release error
+              console.warn(`Failed to release lock for conference ${conference.id} after deletion error`);
+            }
+          }
         }
+        
+        // Refresh the conference list
         this.selectedConferences = [];
         this.loadConferences();
-        this.toast.add({
-          severity: 'success',
-          summary: 'Success',
-          detail: 'Selected conferences deleted successfully',
-          life: 3000
-        });
-      } catch (error) {
+        
+        // Show appropriate success/failure messages
+        if (successCount > 0) {
+          this.toast.add({
+            severity: 'success',
+            summary: 'Success',
+            detail: `Successfully deleted ${successCount} conferences`,
+            life: 3000
+          });
+        }
+        
+        if (errors.length > 0) {
+          this.toast.add({
+            severity: 'warn',
+            summary: 'Partial Success',
+            detail: `Deleted ${successCount} of ${conferencesToDelete.length} conferences. Some deletions failed.`,
+            life: 5000
+          });
+        }
+      } catch (error: any) {
         this.toast.add({
           severity: 'error',
           summary: 'Error',
-          detail: error instanceof Error ? error.message : 'Failed to delete selected conferences',
+          detail: error.response?.message || 'Failed to delete selected conferences',
           life: 3000
         });
       }
