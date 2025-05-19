@@ -1,4 +1,5 @@
 <?php
+// File: app/Http/Controllers/Api/ConferenceController.php
 
 namespace App\Http\Controllers\Api;
 
@@ -69,7 +70,7 @@ class ConferenceController extends Controller
         if ($request->has('page') || $request->has('per_page')) {
             $perPage = min(max(intval($request->per_page ?? 10), 1), 100);
             $conferences = $query->paginate($perPage)->withQueryString();
-            $conferences->load(['university', 'editors.university']);
+            $conferences->load(['university']);
             
             $conferences->each(function ($conference) {
                 $conference->lock_status = $this->lockService->checkLock($conference->id);
@@ -78,7 +79,7 @@ class ConferenceController extends Controller
             return $this->paginatedResponse($conferences, ConferenceResource::collection($conferences));
         } else {
             $conferences = $query->get();
-            $conferences->load(['university', 'editors.university']);
+            $conferences->load(['university']);
             
             $conferences->each(function ($conference) {
                 $conference->lock_status = $this->lockService->checkLock($conference->id);
@@ -115,7 +116,7 @@ class ConferenceController extends Controller
         $conference = Conference::create($validated);
 
         return $this->successResponse(
-            new ConferenceResource($conference->load(['university', 'editors.university'])),
+            new ConferenceResource($conference->load(['university'])),
             'Conference created successfully',
             201
         );
@@ -127,7 +128,7 @@ class ConferenceController extends Controller
             return $this->errorResponse('You are not authorized to view this conference', 403);
         }
         
-        $conference->load(['university', 'editors.university']);
+        $conference->load(['university']);
         
         $conference->lock_status = $this->lockService->checkLock($conference->id);
 
@@ -180,7 +181,7 @@ class ConferenceController extends Controller
         }
 
         return $this->successResponse(
-            new ConferenceResource($conference->fresh(['university', 'editors.university'])),
+            new ConferenceResource($conference->fresh(['university'])),
             'Conference updated successfully'
         );
     }
@@ -259,7 +260,7 @@ class ConferenceController extends Controller
         }
 
         return $this->successResponse(
-            new ConferenceResource($conference->fresh(['university', 'editors.university'])),
+            new ConferenceResource($conference->fresh(['university'])),
             $message
         );
     }
@@ -272,7 +273,7 @@ class ConferenceController extends Controller
             return $this->errorResponse('No latest conference found', 404);
         }
     
-        $conference->load(['university', 'editors.university']);
+        $conference->load(['university']);
         
         $conference->lock_status = $this->lockService->checkLock($conference->id);
     
@@ -315,7 +316,7 @@ class ConferenceController extends Controller
 
         $perPage = min(max(intval($request->per_page ?? 10), 1), 100);
         $conferences = $query->paginate($perPage)->withQueryString();
-        $conferences->load(['university', 'editors.university']);
+        $conferences->load(['university']);
         
         $conferences->each(function ($conference) {
             $conference->lock_status = $this->lockService->checkLock($conference->id);
@@ -327,15 +328,16 @@ class ConferenceController extends Controller
             'User conferences retrieved successfully'
         );
     }
-    public function getByDecade(Request $request, string $decade): JsonResponse
+    
+    public function getByDecade(Request $request, int $decade): JsonResponse
     {
         // Validate decade format (e.g., 1990, 2000)
-        if (!preg_match('/^\d{4}$/', $decade)) {
-            return $this->errorResponse('Invalid decade format. Use format like "1990"', 400);
+        if ($decade < 1900 || $decade > 2100) {
+            return $this->errorResponse('Invalid decade. Year must be between 1900 and 2100', 400);
         }
         
-        // Extract the start year from the decade string
-        $startYear = (int) substr($decade, 0, 4);
+        // Extract the start year from the decade parameter
+        $startYear = $decade;
         $endYear = $startYear + 9;
         
         // Create date range for the decade
@@ -375,6 +377,7 @@ class ConferenceController extends Controller
             "Conferences from {$decade}s retrieved successfully"
         );
     }
+    
     public function getDecades(): JsonResponse
     {
         // Get all published conferences
@@ -394,11 +397,11 @@ class ConferenceController extends Controller
             
             // Add all decades this conference spans to our collection
             for ($decade = $startDecade; $decade <= $endDecade; $decade += 10) {
-                $decadeKey = "{$decade}";
+                $decadeKey = $decade; // Using integer directly as key
                 
                 if (!isset($decadesData[$decadeKey])) {
                     $decadesData[$decadeKey] = [
-                        'decade' => $decadeKey,
+                        'decade' => $decade, // Store as integer
                         'count' => 0
                     ];
                 }

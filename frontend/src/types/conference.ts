@@ -38,7 +38,6 @@ export interface Conference {
   is_latest: boolean;
   is_published: boolean;
   university?: University;
-  editors?: Editor[];
   lock_status?: ConferenceLockInfo;
   created_at: string;
   updated_at: string;

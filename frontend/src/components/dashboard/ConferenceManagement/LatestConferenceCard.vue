@@ -133,12 +133,12 @@
                 </div>
               </div>
 
-              <div v-if="conferenceStore.getLatestConference.editors?.length">
+              <div v-if="conferenceEditors.length">
                 <div class="text-sm font-semibold mb-2">Editors:</div>
                 <div class="overflow-x-auto p-2 rounded border border-surface-200">
                   <div class="flex gap-1 flex-nowrap sm:flex-wrap">
                     <Chip
-                      v-for="editor in conferenceStore.getLatestConference.editors"
+                      v-for="editor in conferenceEditors"
                       :key="editor.id"
                       :label="editor.name"
                       class="text-xs text-blue-700 shrink-0"
@@ -210,6 +210,8 @@ import Chip from 'primevue/chip';
 import Button from 'primevue/button';
 import Divider from 'primevue/divider';
 import Tooltip from 'primevue/tooltip';
+import apiService from '@/services/apiService';
+import type { Editor } from '@/types';
 
 export default defineComponent({
   name: 'LatestConferenceCard',
@@ -231,7 +233,9 @@ export default defineComponent({
       isExpanded: false,
       conferenceStore: useConferenceStore(),
       authStore: useAuthStore(),
-      toast: useToast()
+      toast: useToast(),
+      conferenceEditors: [] as Editor[],
+      loadingEditors: false
     };
   },
   
@@ -249,6 +253,17 @@ export default defineComponent({
       return false;
     }
   },
+
+  watch: {
+    'conferenceStore.getLatestConference': {
+      immediate: true,
+      handler(newVal) {
+        if (newVal) {
+          this.loadConferenceEditors(newVal.id);
+        }
+      }
+    }
+  },
   
   methods: {
     formatDate(value: string): string {
@@ -264,6 +279,28 @@ export default defineComponent({
     
     getStatusSeverity(isPublished: boolean): string {
       return isPublished ? 'success' : 'warning';
+    },
+    
+    async loadConferenceEditors(conferenceId: number): Promise<void> {
+      if (!conferenceId) return;
+      
+      this.loadingEditors = true;
+      try {
+        const queryParams = new URLSearchParams();
+        queryParams.append('per_page', '50'); // Load a reasonable number of editors
+        
+        const url = `/v1/conferences/${conferenceId}/editors?${queryParams.toString()}`;
+        const response = await apiService.get(url);
+        
+        if (response.data.success) {
+          this.conferenceEditors = response.data.payload;
+        }
+      } catch (error: any) {
+        console.error('Failed to load conference editors:', error);
+        // Silent error handling - we don't want to show an error toast for this background operation
+      } finally {
+        this.loadingEditors = false;
+      }
     },
     
     async editConference() {

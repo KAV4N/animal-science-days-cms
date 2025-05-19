@@ -1,7 +1,9 @@
+// File: src/types/decade.ts
+
 import type { ApiResponse, ApiPaginatedResponse } from './common';
 
 export interface Decade {
-  decade: string;
+  decade: number;
   count: number;
 }
 

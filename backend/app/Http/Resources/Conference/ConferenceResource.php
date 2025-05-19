@@ -29,10 +29,8 @@ class ConferenceResource extends JsonResource
             'secondary_color' => $this->secondary_color,
             'is_latest' => (bool) $this->is_latest,
             'is_published' => (bool) $this->is_published,
-
             'university' => $this->whenLoaded('university'),
-            'editors' => ConferenceEditorResource::collection($this->whenLoaded('editors')),
-
+            
             'lock_status' => $this->lock_status ?? null,
 
             'created_at' => $this->created_at->toIso8601String(),

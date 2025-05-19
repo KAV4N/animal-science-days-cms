@@ -18,8 +18,8 @@ Route::prefix('v1')->group(function () {
     Route::apiResource('universities', UniversityController::class)->only(['index', 'show']);
     
     // Public routes for conferences by decade
-    Route::get('/conferences/decade/{decade}', [ConferenceController::class, 'getByDecade']);
-    Route::get('/conferences/decades', [ConferenceController::class, 'getDecades']);
+    Route::get('/conferences/decades/{decade}/public', [ConferenceController::class, 'getByDecade']);
+    Route::get('/decades/conferences', [ConferenceController::class, 'getDecades']);
 
     // Authentication routes
     Route::prefix('auth')->group(function () {

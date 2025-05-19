@@ -304,7 +304,6 @@ export default defineComponent({
           venue_details: conference.venue_details || null,
           start_date: startDate,
           end_date: endDate,
-          editors: conference.editors || [],
           primary_color: conference.primary_color || '#3B82F6',
           secondary_color: conference.secondary_color || '#10B981',
           is_latest: conference.is_latest || false,
