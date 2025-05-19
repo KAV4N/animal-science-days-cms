@@ -1,81 +1,94 @@
-import {api} from '@/plugins/axios';
+// src/services/apiService.ts
+import { api } from '@/plugins/axios';
+import type { LoginResponse, RegisterResponse, RefreshTokenResponse, ChangePasswordResponse } from '@/types/auth';
+import type {UserResponse} from '@/types/user'
+import type { AxiosRequestConfig, AxiosResponse } from 'axios';
 
-export const apiService = {
-  auth: {
-    getCsrfCookie() {
-      return api.get('/api/csrf-cookie');
-    },
-
-    login(email: string, password: string) {
-      return this.getCsrfCookie().then(() => {
-        return api.post('/api/auth/login', { email, password });
-      });
-    },
-
-    register(name: string, email: string, password: string, password_confirmation: string) {
-      return this.getCsrfCookie().then(() => {
-        return api.post('/api/auth/register', {
-          name,
-          email,
-          password,
-          password_confirmation
-        });
-      });
-    },
-
-    logout() {
-      return api.post('/api/auth/logout');
-    },
-
-    getCurrentUser() {
-      return api.get('/api/user');
-    },
-
-    changePassword(new_password: string) {
-      return this.getCsrfCookie().then(() => {
-        return api.post('/api/auth/change-password', {
-          new_password,
-          new_password_confirmation: new_password
-        });
-      });
-    }
+/**
+ * Authentication related API calls
+ */
+const authService = {
+  /**
+   * Login with email and password
+   */
+  login(email: string, password: string) {
+    return api.post<LoginResponse>('/v1/auth/login', { email, password });
   },
 
-  access: {
-    //TODO: test routes, remove in future or update NOT USED THIS WAS ONLY FOR TESTING
-    checkEditor() {
-      return api.get('/api/access/editor');
-    },
-
-    checkAdmin() {
-      return api.get('/api/access/admin');
-    },
-
-    checkSuperAdmin() {
-      return api.get('/api/access/super-admin');
-    },
-
-    check(type: string) {
-      return api.get(`/api/access/${type}`);
-    }
+  /**
+   * Register a new user
+   */
+  register(name: string, email: string, password: string, password_confirmation: string) {
+    return api.post<RegisterResponse>('/v1/auth/register', {
+      name,
+      email,
+      password,
+      password_confirmation
+    });
   },
 
-  get(url: string, config = {}) {
-    return api.get(url, config);
-  },
-  //TODO: maybe add automatic csrf token refresh??
-  post(url: string, data = {}, config = {}) {
-    return api.post(url, data, config);
-  },
-
-  put(url: string, data = {}, config = {}) {
-    return api.put(url, data, config);
+  /**
+   * Logout the current user
+   * No need to send refresh token in the payload since it's in the cookie
+   */
+  logout() {
+    return api.post('/v1/auth/logout');
   },
 
-  delete(url: string, config = {}) {
-    return api.delete(url, config);
+  /**
+   * Refresh authentication tokens
+   * Refresh token is now sent automatically via HTTP-only cookie
+   */
+  refresh() {
+    return api.post<RefreshTokenResponse>('/v1/auth/refresh');
+  },
+
+  /**
+   * Get current authenticated user
+   */
+  getCurrentUser() {
+    return api.get<UserResponse>('/v1/users/me');
+  },
+
+  /**
+   * Change user password
+   */
+  changePassword(new_password: string, new_password_confirmation: string) {
+    return api.post<ChangePasswordResponse>('/v1/auth/change-password', {
+      new_password,
+      new_password_confirmation
+    });
   }
 };
 
+/**
+ * General API methods
+ */
+const apiService = {
+  auth: authService,
+  
+  /**
+   * Generic GET request
+   */
+  get<T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+    return api.get<T>(url, config);
+  },
+  
+  post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+    return api.post<T>(url, data, config);
+  },
+  
+  put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+    return api.put<T>(url, data, config);
+  },
+
+  patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+    return api.patch<T>(url, data, config);
+  },
+  
+  delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+    return api.delete<T>(url, config);
+  }
+};
 
 export default apiService;

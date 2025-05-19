@@ -52,6 +52,28 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Access Token Expiration
+    |--------------------------------------------------------------------------
+    |
+    | This value controls the number of minutes until an access token will be
+    | considered expired. This is used by our custom implementation.
+    |
+    */
+    'access_token_expiration' => env('SANCTUM_ACCESS_TOKEN_EXPIRATION', 60),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Refresh Token Expiration
+    |--------------------------------------------------------------------------
+    |
+    | This value controls the number of days until a refresh token will be
+    | considered expired. This is used by our custom implementation.
+    |
+    */
+    'refresh_token_expiration' => env('SANCTUM_REFRESH_TOKEN_EXPIRATION', 30),
+
+    /*
+    |--------------------------------------------------------------------------
     | Token Prefix
     |--------------------------------------------------------------------------
     |

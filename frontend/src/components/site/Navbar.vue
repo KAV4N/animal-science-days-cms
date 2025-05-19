@@ -1,85 +1,130 @@
-<script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+<script lang="ts">
+import { defineComponent } from 'vue';
 import Badge from 'primevue/badge';
 import Button from 'primevue/button';
-import { usePastConferencesStore } from '@/stores/pastConferencesStore';
+import Select from 'primevue/select';
 import LoginCard from '../auth/LoginCard.vue';
-import { useRouter } from 'vue-router';
 
-// States
-const isScrolled = ref(false);
-const loginCardVisible = ref(false);
-const isMobileMenuOpen = ref(false);
-const navItems = ref([
-  {
-    label: 'Home',
-    icon: 'pi pi-home',
-    url: '/'
-  },
-  {
-    label: 'About',
-    icon: 'pi pi-info-circle',
-    url: '/about'
-  },
-  {
-    label: 'Schedule',
-    icon: 'pi pi-calendar',
-    url: '/schedule'
-  },
-]);
+interface Conference {
+  label: string;
+  url: string;
+}
 
-// Conference dropdown
-const conferenceDropdownOpen = ref(false);
-const pastConferencesStore = usePastConferencesStore();
-const router = useRouter();
+interface User {
+  id: string;
+  name: string;
+}
 
-const recentConferences = computed(() => {
-  return pastConferencesStore.recentConferences(3);
+export default defineComponent({
+  name: 'Navbar',
+  components: {
+    Badge,
+    Button,
+    Select,
+    LoginCard
+  },
+  data() {
+    const conferenceItems = [
+      {
+        label: '2002',
+        url: '/2002'
+      },
+      {
+        label: '2003',
+        url: '/2003'
+      },
+      {
+        label: '2004',
+        url: '/2004'
+      },
+      {
+        label: '2005',
+        url: '/2005'
+      },
+      {
+        label: '2006',
+        url: '/2006'
+      }
+    ];
+    
+    return {
+      user: null as User | null,
+      selectedConference: null,
+      conferenceOptions: conferenceItems,
+      isScrolled: false,
+      loginCardVisible: false,
+      regularItems: [
+        {
+          label: 'Home',
+          icon: 'pi pi-home',
+          url: '/'
+        },
+        {
+          label: 'About',
+          icon: 'pi pi-info-circle',
+          url: '/about'
+        },
+        {
+          label: 'Schedule',
+          icon: 'pi pi-calendar',
+          url: '/schedule'
+        }
+      ],
+      isMobileMenuOpen: false
+    };
+  },
+  computed: {
+    isAuthenticated(): boolean {
+      return !!this.user;
+    },
+    currentPath(): string {
+      return window.location.pathname;
+    }
+  },
+  methods: {
+    showLogin(): void {
+      this.loginCardVisible = true;
+    },
+    async handleLoginSubmit(): Promise<void> {
+      console.log('Login submitted');
+    },
+    handleScroll(): void {
+      this.isScrolled = window.scrollY > 50;
+    },
+    toggleMobileMenu(): void {
+      this.isMobileMenuOpen = !this.isMobileMenuOpen;
+    },
+    navigateToConference(): void {
+      if (this.selectedConference) {
+        window.location.href = this.selectedConference.url;
+      }
+    },
+    navigateTo(url: string): void {
+      window.location.href = url;
+    }
+  },
+  mounted() {
+    window.addEventListener('scroll', this.handleScroll);
+    this.handleScroll();
+    
+    // Check if current path matches any conference and set as selected
+    const currentConference = this.conferenceOptions.find(conf => conf.url === this.currentPath);
+    if (currentConference) {
+      this.selectedConference = currentConference;
+    }
+  },
+  beforeUnmount() {
+    window.removeEventListener('scroll', this.handleScroll);
+  }
 });
-
-onMounted(async () => {
-  // Handle scroll event
-  window.addEventListener('scroll', handleScroll);
-  handleScroll();
-  
-  // Fetch past conferences
-  await pastConferencesStore.fetchConferences();
-});
-
-// Methods
-function handleScroll() {
-  isScrolled.value = window.scrollY > 50;
-}
-
-function toggleMobileMenu() {
-  isMobileMenuOpen.value = !isMobileMenuOpen.value;
-}
-
-function toggleConferenceDropdown() {
-  conferenceDropdownOpen.value = !conferenceDropdownOpen.value;
-}
-
-function showAllConferences() {
-  conferenceDropdownOpen.value = false;
-  isMobileMenuOpen.value = false;
-  router.push('/conferences');
-}
-
-function showLogin() {
-  loginCardVisible.value = true;
-}
-
-function handleLoginSubmit() {
-  console.log('Login submitted');
-}
 </script>
 
 <template>
-  <nav class="landing-container fixed top-4 left-1/2 -translate-x-1/2 w-full z-[1000] transition-all duration-300 "
-    :class="{ 'lg:max-w-[1190px] backdrop-blur-[5px]': !isScrolled, 'md:max-w-[720px] lg:max-w-[900px] ': isScrolled }">
+  <nav class="landing-container fixed left-1/2 -translate-x-1/2 w-full z-[1000] transition-all duration-300 "
+    :class="{ 'lg:max-w-[1350px] backdrop-blur-[5px]': !isScrolled, 'md:max-w-[1050px] lg:max-w-[1050px] ': isScrolled }">
     <div
       class="py-2 pl-4 md:pl-4 pr-4 rounded-3xl md:rounded-full lg:rounded-full border border-transparent transition-all duration-300"
-      :class="{ 'bg-surface-200/60 shadow-lg backdrop-blur-[5px]': isScrolled }">
+      :class="{ ' shadow backdrop-blur-[5px]': isScrolled }">
       <div class="flex items-center justify-between">
 
         <div class="flex items-center min-w-0">
@@ -88,130 +133,104 @@ function handleLoginSubmit() {
           </a>
         </div>
 
-        <ul class="flex-none hidden md:flex items-center gap-2 mx-4">
-          <li v-for="item in navItems" :key="item.label" class="relative">
+        <ul class="flex-none hidden md:flex items-center gap-4 mx-4">
+          <li v-for="item in regularItems" :key="item.label" class="relative">
             <a :href="item.url"
-              class="hover:bg-white/20 rounded-full px-4 py-2 transition-all flex items-center whitespace-nowrap"
-              :class="{ 'text-white': !isScrolled, 'text-gray-800': isScrolled }">
+              class="hover-bg rounded-full px-5 py-2 transition-all duration-200 flex items-center whitespace-nowrap navbar-text font-medium text-sm"
+              :class="{ 'active-item shadow': currentPath === item.url }">
               <i v-if="item.icon" :class="[item.icon, 'mr-2']"></i>
               <span>{{ item.label }}</span>
+              <Badge v-if="(item as any).badge" class="ml-2 flex-shrink-0" :value="(item as any).badge"
+                severity="info" />
             </a>
           </li>
-
           <li class="relative">
-            <button @click="toggleConferenceDropdown"
-              class="hover:bg-white/20 rounded-full px-4 py-2 transition-all flex items-center whitespace-nowrap"
-              :class="[
-                { 'text-white': !isScrolled, 'text-gray-800': isScrolled },
-                { 'bg-white/20': conferenceDropdownOpen }
-              ]">
-              <i class="pi pi-bookmark mr-2"></i>
-              <span>Past Conferences</span>
-              <Badge v-if="recentConferences.length" class="ml-2 flex-shrink-0" :value="recentConferences.length"
-                severity="info" />
-              <i class="pi pi-angle-down ml-2"></i>
-            </button>
-
-            <div v-if="conferenceDropdownOpen"
-              class="absolute left-2 mt-2 w-64 rounded-md shadow-lg z-10 backdrop-blur-[5px]"
-              :class="{ 'bg-white/20 text-white': !isScrolled, 'bg-surface-200/60 text-gray-800': isScrolled }">
-              <div class="py-1">
-                <!-- Recent conferences -->
-                <div class="px-4 py-2 text-sm font-medium opacity-70">Recent Conferences</div>
-                <template v-if="recentConferences.length">
-                  <a v-for="conf in recentConferences" :key="conf.id" 
-                     :href="`/conference/${conf.slug}`"
-                     class="block px-4 py-2 text-sm hover:bg-white/20 transition-all flex items-center"
-                     :class="{ 'text-white': !isScrolled, 'text-gray-800': isScrolled }">
-                    <span class="mr-2">{{ conf.title }}</span>
-                    <span class="text-xs opacity-70">{{ new Date(conf.startDate).getFullYear() }}</span>
-                  </a>
-                </template>
-                <div v-else class="px-4 py-2 text-sm italic opacity-60">
-                  No recent conferences
+            <Select 
+              v-model="selectedConference" 
+              :options="conferenceOptions" 
+              optionLabel="label" 
+              placeholder="Conferences" 
+              class="conference-select rounded-lg"
+              style="border-width: 0px; box-shadow:none; background: transparent;"
+              appendTo="self"
+              @change="navigateToConference">
+              <template #value="slotProps">
+                <div class="flex items-center">
+                  <i class="pi pi-history mr-2"></i>
+                  <span v-if="slotProps.value">{{ slotProps.value.label }}</span>
+                  <span v-else>Conferences</span>
+                  <Badge v-if="conferenceOptions.length > 0" class="ml-2" :value="conferenceOptions.length.toString()" severity="info" />
                 </div>
-                
-                <div class="border-t border-white/10 mt-1">
-                  <button @click="showAllConferences"
-                    class="w-full text-left px-4 py-2 text-sm font-medium hover:bg-white/20 transition-all flex items-center"
-                    :class="{ 'text-white': !isScrolled, 'text-gray-800': isScrolled }">
-                    <i class="pi pi-arrow-right mr-2"></i>
-                    <span>Browse all past conferences</span>
-                  </button>
+              </template>
+              <template #option="slotProps">
+                <div class="flex items-center">
+                  <span class="w-2 h-2 rounded-full dropdown-bullet mr-2.5"></span>
+                  {{ slotProps.option.label }}
                 </div>
-              </div>
-            </div>
+              </template>
+            </Select>
           </li>
         </ul>
 
         <div class="md:flex hidden items-center justify-end gap-4 min-w-0">
           <Button @click="showLogin" variant="outlined"
             class="flex items-center rounded-full transition-all duration-200 flex-shrink-0"
-            :class="{ 'text-white border-none hover:bg-white/20': !isScrolled, 'bg-white/60 text-gray-800 hover:bg-gray-200': isScrolled }">
+            :class="{ 'border-none hover:bg-white/20': !isScrolled, 'bg-white/60 hover:bg-gray-200': isScrolled }">
             <i class="pi pi-key text-sm"></i>
           </Button>
         </div>
 
         <button @click="toggleMobileMenu"
           class="flex md:hidden items-center justify-center rounded-lg w-9 h-9 border transition-all flex-shrink-0"
-          :class="{ 'text-white border-white/30 hover:bg-white/20': !isScrolled, 'text-gray-800 border-gray-200 hover:bg-gray-100': isScrolled }">
+          :class="{ 'border-white/30 hover:bg-white/20': !isScrolled, 'border-gray-200 hover:bg-gray-100': isScrolled }">
           <i class="leading-none pi pi-bars"></i>
         </button>
       </div>
 
       <div class="md:hidden block transition-all duration-300 ease-out overflow-hidden"
-        :style="{ maxHeight: isMobileMenuOpen ? '500px' : '0px', opacity: isMobileMenuOpen ? '1' : '0' }">
-        <div class="flex flex-col gap-8 transition-all pt-4">
+        :style="{ maxHeight: isMobileMenuOpen ? '600px' : '0px', opacity: isMobileMenuOpen ? '1' : '0' }">
+        <div class="flex flex-col ga@p-8 transition-all pt-4">
+          <!-- Mobile navigation items -->
           <ul class="flex flex-col gap-2">
-            <li v-for="item in navItems" :key="item.label">
+            <li v-for="item in regularItems" :key="item.label">
               <a :href="item.url"
-                class="flex items-center py-2 px-4 w-full rounded-lg hover:bg-white/20 transition-all"
-                :class="{ 'text-white': !isScrolled, 'text-gray-800': isScrolled }">
-                <i v-if="item.icon" :class="[item.icon, 'mr-2']"></i>
+                class="flex items-center py-2.5 px-4 w-full rounded-xl hover-bg transition-all duration-200 navbar-text shadow"
+                :class="{ 'active-item': currentPath === item.url }">
+                <i v-if="item.icon" :class="[item.icon, 'mr-3']"></i>
                 {{ item.label }}
+                <Badge v-if="(item as any).badge" class="ml-2" :value="(item as any).badge" severity="info" />
               </a>
             </li>
-
-            <li>
-              <button @click="toggleConferenceDropdown"
-                class="flex items-center justify-between py-2 px-4 w-full rounded-full hover:bg-white/20 transition-all"
-                :class="{ 'text-white': !isScrolled, 'text-gray-800': isScrolled }">
-                <div class="flex items-center">
-                  <i class="pi pi-bookmark mr-2"></i>
-                  Past Conferences
-                  <Badge v-if="recentConferences.length" class="ml-2" :value="recentConferences.length" severity="info" />
-                </div>
-                <i class="pi pi-angle-down"></i>
-              </button>
-
-              <div v-if="conferenceDropdownOpen" class="pl-4 mt-1">
-                <div class="px-4 py-1 text-sm font-medium opacity-70">Recent Conferences</div>
-                <template v-if="recentConferences.length">
-                  <a v-for="conf in recentConferences" :key="conf.id" 
-                     :href="`/conference/${conf.slug}`"
-                     class="block py-2 px-4 rounded-lg hover:bg-white/20 transition-all"
-                     :class="{ 'text-white': !isScrolled, 'text-gray-800': isScrolled }">
-                    {{ conf.title }} ({{ new Date(conf.startDate).getFullYear() }})
-                  </a>
+            <li class="mobile-select-container">
+              <Select 
+                v-model="selectedConference" 
+                :options="conferenceOptions" 
+                optionLabel="label" 
+                placeholder="Conferences" 
+                class="w-full mobile-select rounded-lg shadow"
+                style="border-width: 0px; background: transparent;"
+                appendTo="self"
+                @change="navigateToConference">
+                <template #value="slotProps">
+                  <div class="flex items-center">
+                    <i class="pi pi-history mr-2"></i>
+                    <span v-if="slotProps.value">{{ slotProps.value.label }}</span>
+                    <span v-else>Conferences</span>
+                    <Badge v-if="conferenceOptions.length > 0" class="ml-2" :value="conferenceOptions.length.toString()" severity="info" />
+                  </div>
                 </template>
-                <div v-else class="px-4 py-2 text-sm italic opacity-60">
-                  No recent conferences
-                </div>
-                
-                <button @click="showAllConferences"
-                  class="w-full text-left py-2 px-4 rounded-lg hover:bg-white/20 transition-all flex items-center my-1"
-                  :class="{ 'text-white': !isScrolled, 'text-gray-800': isScrolled }">
-                  <i class="pi pi-arrow-right mr-2"></i>
-                  <span>Browse all past conferences</span>
-                </button>
-              </div>
+                <template #option="slotProps">
+                  <div class="flex items-center">
+                    <span class="w-2 h-2 rounded-full dropdown-bullet mr-2.5"></span>
+                    {{ slotProps.option.label }}
+                  </div>
+                </template>
+              </Select>
             </li>
           </ul>
-
           <div class="flex flex-col items-center gap-4 pb-4">
             <button @click="showLogin"
-              class="flex items-center py-2 px-4 w-full rounded-lg hover:bg-white/20 transition-all text-left"
-              :class="{ 'text-white': !isScrolled, 'text-gray-800': isScrolled }">
+              class="flex items-center py-2 px-4 w-full rounded-lg hover:bg-white/20 transition-all text-left">
               <i class="pi pi-key mr-2"></i>
               Login
             </button>
@@ -226,8 +245,3 @@ function handleLoginSubmit() {
   </nav>
 </template>
 
-<style scoped>
-.landing-container {
-  transform-origin: top center;
-}
-</style>

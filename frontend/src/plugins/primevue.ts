@@ -420,7 +420,7 @@ const defaultTheme = definePreset(Aura, {
             700: '#30333b',
             800: '#25282e',
             900: '#1b1d22',
-            950: '#111215',
+            950: '#ffffff',
           },
           primary: {
             color: '{primary.500}',
@@ -534,7 +534,7 @@ const defaultTheme = definePreset(Aura, {
         },
         dark: {
           surface: {
-            0: '#ffffff',
+            0: '#000000',
             50: '#f7f8f9',
             100: '#d7dce4',
             200: '#b7c1ce',
@@ -544,8 +544,8 @@ const defaultTheme = definePreset(Aura, {
             600: '#4a5e78',
             700: '#3d4d63',
             800: '#303d4e',
-            900: '#232c38',
-            950: '#161c23',
+            900: '#1f263c',
+            950: '#15192A',
           },
           primary: {
             color: '{primary.400}',
@@ -573,7 +573,7 @@ const defaultTheme = definePreset(Aura, {
             hoverBorderColor: '{surface.500}',
             focusBorderColor: '{primary.color}',
             invalidBorderColor: '{red.300}',
-            color: '{surface.0}',
+            color: '{surface.50}',
             disabledColor: '{surface.400}',
             placeholderColor: '{surface.400}',
             invalidPlaceholderColor: '{red.400}',
@@ -668,7 +668,7 @@ const defaultTheme = definePreset(Aura, {
       preset: defaultTheme,
       options: {
         prefix: 'p',
-        darkModeSelector: 'system',
+        darkModeSelector: 'none',
         cssLayer: {
           name: 'primevue',
           order: 'theme, base, primevue'

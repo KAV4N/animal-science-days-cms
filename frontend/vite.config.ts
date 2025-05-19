@@ -14,12 +14,12 @@ export default defineConfig({
     tailwindcss(),
     vue(),
     vueDevTools(),
-    
+    /*
     Components({
       resolvers: [
         PrimeVueResolver()
       ]
-    })
+    })*/
   ],
   resolve: {
     alias: {

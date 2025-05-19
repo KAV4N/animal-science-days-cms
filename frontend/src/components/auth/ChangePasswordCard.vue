@@ -3,7 +3,7 @@ import { defineComponent } from 'vue';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
-import { useAuthStore } from '@/stores/auth';
+import { useAuthStore } from '@/stores/authStore';
 import { useRouter } from 'vue-router';
 
 export default defineComponent({
@@ -17,31 +17,58 @@ export default defineComponent({
     return {
       newPassword: '',
       confirmPassword: '',
-      error: null as string | null,
-      success: null as string | null
+      errorMessage: null as string | null,
+      successMessage: null as string | null,
+      isLoading: false
     }
+  },
+  setup() {
+    const authStore = useAuthStore();
+    const router = useRouter();
+
+    return {
+      authStore,
+      router,
+      mustChange: authStore.user?.must_change_password
+    };
   },
   methods: {
     async handlePasswordChange() {
+      this.errorMessage = null;
+      this.successMessage = null;
+      this.isLoading = true;
+
       if (this.newPassword !== this.confirmPassword) {
-        this.error = 'Passwords do not match';
+        this.errorMessage = 'Passwords do not match';
+        this.isLoading = false;
         return;
       }
 
-      const authStore = useAuthStore();
-      const router = useRouter();
+      if (this.newPassword.length < 8) {
+        this.errorMessage = 'Password must be at least 8 characters long';
+        this.isLoading = false;
+        return;
+      }
 
       try {
-        // Call the password change API
-        await authStore.changePassword(this.newPassword);
-        this.success = 'Password changed successfully!';
+        const changeSuccessful = await this.authStore.changePassword({
+          new_password: this.newPassword,
+          new_password_confirmation: this.confirmPassword,
+        });
 
-        // Redirect to dashboard after 2 seconds
-        setTimeout(() => {
-          router.push({ name: 'dashboard' });
-        }, 2000);
+        if (changeSuccessful) {
+          this.successMessage = 'Password changed successfully!';
+
+          setTimeout(() => {
+            this.router.push({ name: 'Dashboard' });
+          }, 2000);
+        } else {
+          this.errorMessage = this.authStore.error || 'Password change failed';
+        }
       } catch (error: any) {
-        this.error = error.message || 'Password change failed';
+        this.errorMessage = error.message || 'An unexpected error occurred';
+      } finally {
+        this.isLoading = false;
       }
     }
   }
@@ -61,8 +88,20 @@ export default defineComponent({
         <img src="/school-logo.png" alt="School Logo" class="block mx-auto h-20 w-auto" />
         <h2 class="text-center text-primary-50 font-semibold">Change Password</h2>
 
-        <div v-if="error" class="text-red-400 text-sm">{{ error }}</div>
-        <div v-if="success" class="text-green-400 text-sm">{{ success }}</div>
+        <!-- Mandatory Change Password Message -->
+        <div v-if="mustChange" class="text-center text-primary-50">
+          <p>Since this is your first login, you need to change your password.</p>
+        </div>
+
+        <!-- Error Message Display -->
+        <div v-if="errorMessage" class="bg-red-500/20 border border-red-500 text-red-400 p-3 rounded-lg text-center">
+          {{ errorMessage }}
+        </div>
+
+        <!-- Success Message Display -->
+        <div v-if="successMessage" class="bg-green-500/20 border border-green-500 text-green-400 p-3 rounded-lg text-center">
+          {{ successMessage }}
+        </div>
 
         <div class="inline-flex flex-col gap-2">
           <label for="newPassword" class="text-primary-50 font-semibold">New Password</label>
@@ -90,9 +129,12 @@ export default defineComponent({
           <Button
             label="Change Password"
             @click="handlePasswordChange"
+            :disabled="isLoading"
             text
             class="!p-4 w-full !text-primary-50 !border !border-white/30 hover:!bg-white/10"
-          ></Button>
+          >
+            {{ isLoading ? 'Changing...' : 'Change Password' }}
+          </Button>
         </div>
       </div>
     </template>
