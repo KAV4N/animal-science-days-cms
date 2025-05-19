@@ -2,14 +2,11 @@ import { createRouter, createWebHistory, type RouteRecordRaw, type NavigationGua
 import { useAuthStore } from '@/stores/authStore';
 import middlewarePipeline from './middleware/middleware-pipeline';
 
-
-
 import Dashboard from '@/views/Dashboard.vue';
 import ConferenceManagement from '@/views/dashboard/ConferenceManagement.vue';
 import UserManagement from '@/views/dashboard/UserManagement.vue';
 import Site from '@/views/Site.vue';
-import PastConferences from '@/views/PastConferences.vue';
-import ConferenceDetail from '@/views/ConferenceDetail.vue';
+import Home from '@/views/site/Home.vue';
 
 import AuthGateway from '@/views/auth/Login.vue';
 
@@ -18,6 +15,7 @@ import ChangePassword from '@/views/auth/ChangePassword.vue';
 import Login from '@/views/auth/Login.vue';
 
 import ConferenceEditorView from '@/views/dashboard/ConferenceEditorView.vue';
+import ConferencesByDecade from '@/views/site/ConferencesByDecade.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -28,7 +26,18 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/',
     component: Site,
-    name: 'HomePage'
+    children: [
+      {
+        path: '',
+        name: 'HomePage',
+        component: Home
+      },
+      {
+        path: 'conferences',
+        name: 'conferences',
+        component: ConferencesByDecade
+      }
+    ]
   },
   {
     path: '/login',
@@ -45,17 +54,6 @@ const routes: Array<RouteRecordRaw> = [
     meta: {
       middleware: [middleware.requiresUnchangedPassword]
     }
-  },
-  {
-    path: '/conferences',
-    name: 'conferences',
-    component: PastConferences
-  },
-  {
-    path: '/conference/:slug',
-    name: 'conference-detail',
-    component: ConferenceDetail,
-    props: true
   },
   {
     path: '/dashboard',

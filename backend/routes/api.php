@@ -16,6 +16,10 @@ use App\Http\Controllers\Api\ConferenceLockController;
 Route::prefix('v1')->group(function () {
     // Public routes for universities and conferences
     Route::apiResource('universities', UniversityController::class)->only(['index', 'show']);
+    
+    // Public routes for conferences by decade
+    Route::get('/conferences/decade/{decade}', [ConferenceController::class, 'getByDecade']);
+    Route::get('/conferences/decades', [ConferenceController::class, 'getDecades']);
 
     // Authentication routes
     Route::prefix('auth')->group(function () {

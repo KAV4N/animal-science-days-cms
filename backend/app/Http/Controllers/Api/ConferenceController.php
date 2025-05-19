@@ -13,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use App\Http\Resources\Conference\DecadeResource;
 
 class ConferenceController extends Controller
 {
@@ -324,6 +325,94 @@ class ConferenceController extends Controller
             $conferences, 
             ConferenceResource::collection($conferences),
             'User conferences retrieved successfully'
+        );
+    }
+    public function getByDecade(Request $request, string $decade): JsonResponse
+    {
+        // Validate decade format (e.g., 1990, 2000)
+        if (!preg_match('/^\d{4}$/', $decade)) {
+            return $this->errorResponse('Invalid decade format. Use format like "1990"', 400);
+        }
+        
+        // Extract the start year from the decade string
+        $startYear = (int) substr($decade, 0, 4);
+        $endYear = $startYear + 9;
+        
+        // Create date range for the decade
+        $startDate = "{$startYear}-01-01";
+        $endDate = "{$endYear}-12-31";
+        
+        $query = Conference::query()
+            ->where('is_published', true)
+            ->where(function($q) use ($startDate, $endDate) {
+                // Conference dates that overlap with the decade range
+                $q->whereBetween('start_date', [$startDate, $endDate])
+                ->orWhereBetween('end_date', [$startDate, $endDate])
+                // Or where the conference spans the entire decade
+                ->orWhere(function($subQ) use ($startDate, $endDate) {
+                    $subQ->where('start_date', '<=', $startDate)
+                        ->where('end_date', '>=', $endDate);
+                });
+            });
+        
+        // Apply sorting, default to start_date desc
+        $sortField = in_array($request->sort_field, ['name', 'title', 'start_date', 'end_date', 'created_at']) 
+            ? $request->sort_field 
+            : 'start_date';
+        $sortOrder = in_array(strtolower($request->sort_order), ['asc', 'desc']) 
+            ? strtolower($request->sort_order) 
+            : 'desc';
+        $query->orderBy($sortField, $sortOrder);
+        
+        // Always load the university relationship
+        $query->with(['university']);
+        
+        // Get all conferences for the decade
+        $conferences = $query->get();
+        
+        return $this->successResponse(
+            ConferenceResource::collection($conferences),
+            "Conferences from {$decade}s retrieved successfully"
+        );
+    }
+    public function getDecades(): JsonResponse
+    {
+        // Get all published conferences
+        $conferences = Conference::where('is_published', true)
+            ->get(['start_date', 'end_date']);
+        
+        $decadesData = [];
+        
+        // Process each conference to determine which decades it belongs to
+        foreach ($conferences as $conference) {
+            $startYear = (int) $conference->start_date->format('Y');
+            $endYear = (int) $conference->end_date->format('Y');
+            
+            // Calculate the decades this conference spans
+            $startDecade = floor($startYear / 10) * 10;
+            $endDecade = floor($endYear / 10) * 10;
+            
+            // Add all decades this conference spans to our collection
+            for ($decade = $startDecade; $decade <= $endDecade; $decade += 10) {
+                $decadeKey = "{$decade}";
+                
+                if (!isset($decadesData[$decadeKey])) {
+                    $decadesData[$decadeKey] = [
+                        'decade' => $decadeKey,
+                        'count' => 0
+                    ];
+                }
+                
+                $decadesData[$decadeKey]['count']++;
+            }
+        }
+        
+        // Sort decades chronologically
+        ksort($decadesData);
+        
+        return $this->successResponse(
+            DecadeResource::collection(collect(array_values($decadesData))),
+            'Conference decades retrieved successfully'
         );
     }
 }

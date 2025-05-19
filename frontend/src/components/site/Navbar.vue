@@ -2,13 +2,7 @@
 import { defineComponent } from 'vue';
 import Badge from 'primevue/badge';
 import Button from 'primevue/button';
-import Select from 'primevue/select';
 import LoginCard from '../auth/LoginCard.vue';
-
-interface Conference {
-  label: string;
-  url: string;
-}
 
 interface User {
   id: string;
@@ -20,37 +14,11 @@ export default defineComponent({
   components: {
     Badge,
     Button,
-    Select,
     LoginCard
   },
   data() {
-    const conferenceItems = [
-      {
-        label: '2002',
-        url: '/2002'
-      },
-      {
-        label: '2003',
-        url: '/2003'
-      },
-      {
-        label: '2004',
-        url: '/2004'
-      },
-      {
-        label: '2005',
-        url: '/2005'
-      },
-      {
-        label: '2006',
-        url: '/2006'
-      }
-    ];
-    
     return {
       user: null as User | null,
-      selectedConference: null,
-      conferenceOptions: conferenceItems,
       isScrolled: false,
       loginCardVisible: false,
       regularItems: [
@@ -60,14 +28,9 @@ export default defineComponent({
           url: '/'
         },
         {
-          label: 'About',
-          icon: 'pi pi-info-circle',
-          url: '/about'
-        },
-        {
-          label: 'Schedule',
-          icon: 'pi pi-calendar',
-          url: '/schedule'
+          label: 'Conference Archive',
+          icon: 'pi pi-history',
+          url: '/conferences'
         }
       ],
       isMobileMenuOpen: false
@@ -94,11 +57,6 @@ export default defineComponent({
     toggleMobileMenu(): void {
       this.isMobileMenuOpen = !this.isMobileMenuOpen;
     },
-    navigateToConference(): void {
-      if (this.selectedConference) {
-        window.location.href = this.selectedConference.url;
-      }
-    },
     navigateTo(url: string): void {
       window.location.href = url;
     }
@@ -106,12 +64,6 @@ export default defineComponent({
   mounted() {
     window.addEventListener('scroll', this.handleScroll);
     this.handleScroll();
-    
-    // Check if current path matches any conference and set as selected
-    const currentConference = this.conferenceOptions.find(conf => conf.url === this.currentPath);
-    if (currentConference) {
-      this.selectedConference = currentConference;
-    }
   },
   beforeUnmount() {
     window.removeEventListener('scroll', this.handleScroll);
@@ -140,35 +92,9 @@ export default defineComponent({
               :class="{ 'active-item shadow': currentPath === item.url }">
               <i v-if="item.icon" :class="[item.icon, 'mr-2']"></i>
               <span>{{ item.label }}</span>
-              <Badge v-if="(item as any).badge" class="ml-2 flex-shrink-0" :value="(item as any).badge"
+              <Badge v-if="item.badge" class="ml-2 flex-shrink-0" :value="item.badge"
                 severity="info" />
             </a>
-          </li>
-          <li class="relative">
-            <Select 
-              v-model="selectedConference" 
-              :options="conferenceOptions" 
-              optionLabel="label" 
-              placeholder="Conferences" 
-              class="conference-select rounded-lg"
-              style="border-width: 0px; box-shadow:none; background: transparent;"
-              appendTo="self"
-              @change="navigateToConference">
-              <template #value="slotProps">
-                <div class="flex items-center">
-                  <i class="pi pi-history mr-2"></i>
-                  <span v-if="slotProps.value">{{ slotProps.value.label }}</span>
-                  <span v-else>Conferences</span>
-                  <Badge v-if="conferenceOptions.length > 0" class="ml-2" :value="conferenceOptions.length.toString()" severity="info" />
-                </div>
-              </template>
-              <template #option="slotProps">
-                <div class="flex items-center">
-                  <span class="w-2 h-2 rounded-full dropdown-bullet mr-2.5"></span>
-                  {{ slotProps.option.label }}
-                </div>
-              </template>
-            </Select>
           </li>
         </ul>
 
@@ -198,34 +124,8 @@ export default defineComponent({
                 :class="{ 'active-item': currentPath === item.url }">
                 <i v-if="item.icon" :class="[item.icon, 'mr-3']"></i>
                 {{ item.label }}
-                <Badge v-if="(item as any).badge" class="ml-2" :value="(item as any).badge" severity="info" />
+                <Badge v-if="item.badge" class="ml-2" :value="item.badge" severity="info" />
               </a>
-            </li>
-            <li class="mobile-select-container">
-              <Select 
-                v-model="selectedConference" 
-                :options="conferenceOptions" 
-                optionLabel="label" 
-                placeholder="Conferences" 
-                class="w-full mobile-select rounded-lg shadow"
-                style="border-width: 0px; background: transparent;"
-                appendTo="self"
-                @change="navigateToConference">
-                <template #value="slotProps">
-                  <div class="flex items-center">
-                    <i class="pi pi-history mr-2"></i>
-                    <span v-if="slotProps.value">{{ slotProps.value.label }}</span>
-                    <span v-else>Conferences</span>
-                    <Badge v-if="conferenceOptions.length > 0" class="ml-2" :value="conferenceOptions.length.toString()" severity="info" />
-                  </div>
-                </template>
-                <template #option="slotProps">
-                  <div class="flex items-center">
-                    <span class="w-2 h-2 rounded-full dropdown-bullet mr-2.5"></span>
-                    {{ slotProps.option.label }}
-                  </div>
-                </template>
-              </Select>
             </li>
           </ul>
           <div class="flex flex-col items-center gap-4 pb-4">
@@ -244,4 +144,3 @@ export default defineComponent({
     />
   </nav>
 </template>
-
