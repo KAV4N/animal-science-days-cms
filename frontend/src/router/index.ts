@@ -8,6 +8,8 @@ import Dashboard from '@/views/Dashboard.vue';
 import ConferenceManagement from '@/views/dashboard/ConferenceManagement.vue';
 import UserManagement from '@/views/dashboard/UserManagement.vue';
 import Site from '@/views/Site.vue';
+import PastConferences from '@/views/PastConferences.vue';
+import ConferenceDetail from '@/views/ConferenceDetail.vue';
 
 import AuthGateway from '@/views/auth/Login.vue';
 
@@ -45,6 +47,17 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
   {
+    path: '/conferences',
+    name: 'conferences',
+    component: PastConferences
+  },
+  {
+    path: '/conference/:slug',
+    name: 'conference-detail',
+    component: ConferenceDetail,
+    props: true
+  },
+  {
     path: '/dashboard',
     component: Dashboard,
     name: 'Dashboard',
@@ -75,7 +88,14 @@ const routes: Array<RouteRecordRaw> = [
 
 const router = createRouter({
   history: createWebHistory(),
-  routes
+  routes,
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) {
+      return savedPosition;
+    } else {
+      return { top: 0 };
+    }
+  }
 });
 
 router.beforeEach(async (to, from, next) => {
