@@ -10,6 +10,8 @@ use App\Http\Controllers\Api\ConferenceController;
 use App\Http\Controllers\Api\ConferenceEditorController;
 use App\Http\Controllers\Api\UniversityController;
 use App\Http\Controllers\Api\RoleController;
+use App\Http\Controllers\Api\PageMenuController;
+use App\Http\Controllers\Api\PageDataController;
 
 use App\Http\Controllers\Api\ConferenceLockController;
 
@@ -54,8 +56,15 @@ Route::prefix('v1')->group(function () {
                 Route::post('/refresh', [ConferenceLockController::class, 'refreshLock']);
                 //Route::delete('/force', [ConferenceLockController::class, 'forceReleaseLock']);
             });
-        
-
+            
+            // Page Menu & Page Data API routes
+            Route::middleware('check.conference.lock')->group(function () {
+                // Page Menu routes
+                Route::apiResource('conferences.menus', PageMenuController::class);
+                
+                // Page Data routes
+                Route::apiResource('conferences.menus.data', PageDataController::class);
+            });
 
             // Admin-only routes
             Route::middleware('permission:access.admin')->group(function () {
