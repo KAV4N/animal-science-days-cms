@@ -6,10 +6,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
-class PageData extends Model implements HasMedia
+class PageData extends Model
 {
 
-    use InteractsWithMedia;
 
     protected $fillable = [
         'menu_id',
