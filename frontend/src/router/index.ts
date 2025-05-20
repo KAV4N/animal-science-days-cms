@@ -16,13 +16,9 @@ import Login from '@/views/auth/Login.vue';
 
 import ConferenceEditorView from '@/views/dashboard/ConferenceEditorView.vue';
 import ConferencesByDecade from '@/views/site/ConferencesByDecade.vue';
+import ConferencePageView from '@/views/site/ConferencePageView.vue';
 
 const routes: Array<RouteRecordRaw> = [
-  {
-    path: '/editor',
-    name: 'Editor',
-    component: ConferenceEditorView,
-  },
   {
     path: '/',
     component: Site,
@@ -36,6 +32,13 @@ const routes: Array<RouteRecordRaw> = [
         path: 'conferences',
         name: 'conferences',
         component: ConferencesByDecade
+      },
+      // Public conference page view route
+      {
+        path: 'conferences/:conferenceSlug/pages/:pageSlug',
+        name: 'ConferencePageView',
+        component: ConferencePageView,
+        props: true
       }
     ]
   },
@@ -71,6 +74,13 @@ const routes: Array<RouteRecordRaw> = [
         path: 'conferences',
         name: 'ConferenceManagement',
         component: ConferenceManagement
+      },
+      // Conference editor route within dashboard
+      {
+        path: 'conferences/:id/editor',
+        name: 'ConferenceEditor',
+        component: ConferenceEditorView,
+        props: true
       },
       {
         path: 'users',

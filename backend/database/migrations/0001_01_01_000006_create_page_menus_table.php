@@ -20,6 +20,8 @@ return new class extends Migration
 
             $table->string('title');
             $table->string('slug');
+            
+            $table->integer('order')->default(0);
 
             $table->boolean('is_published')->default(false);
             $table->timestamps();

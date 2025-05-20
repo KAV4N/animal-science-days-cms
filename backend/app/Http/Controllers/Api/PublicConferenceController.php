@@ -76,15 +76,18 @@ class PublicConferenceController extends Controller
     }
 
     /**
-     * Get a specific published conference
+     * Get a specific published conference by slug
      */
-    public function show(Conference $conference): JsonResponse
+    public function show(string $slug): JsonResponse
     {
-        if (!$conference->is_published) {
+        $conference = Conference::where('slug', $slug)
+            ->where('is_published', true)
+            ->with(['university'])
+            ->first();
+
+        if (!$conference) {
             return $this->errorResponse('Conference not found', 404);
         }
-
-        $conference->load(['university']);
 
         return $this->successResponse(
             new ConferenceResource($conference),

@@ -5,12 +5,14 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PageData\StorePageDataRequest;
 use App\Http\Requests\PageData\UpdatePageDataRequest;
+use App\Http\Requests\PageData\UpdatePositionRequest;
 use App\Http\Resources\PageData\PageDataResource;
 use App\Models\Conference;
 use App\Models\PageMenu;
 use App\Models\PageData;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PageDataController extends Controller
 {
@@ -63,6 +65,10 @@ class PageDataController extends Controller
         $validated['menu_id'] = $menu->id;
         $validated['created_by'] = auth()->id();
         $validated['updated_by'] = auth()->id();
+
+        // Set the order to be the last in the list
+        $lastOrder = $menu->pageData()->max('order') ?? 0;
+        $validated['order'] = $lastOrder + 1;
 
         $pageData = PageData::create($validated);
 
@@ -138,5 +144,70 @@ class PageDataController extends Controller
             null,
             'Page data deleted successfully'
         );
+    }
+
+    /**
+     * Update the position of the specified resource.
+     *
+     * @param  \App\Http\Requests\PageData\UpdatePositionRequest  $request
+     * @param  \App\Models\Conference  $conference
+     * @param  \App\Models\PageMenu  $menu
+     * @param  \App\Models\PageData  $data
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updatePosition(UpdatePositionRequest $request, Conference $conference, PageMenu $menu, PageData $data)
+    {
+        if ($menu->conference_id !== $conference->id || $data->menu_id !== $menu->id) {
+            return $this->errorResponse('Resource not found', 404);
+        }
+
+        $newPosition = $request->position;
+        $currentPosition = $data->order;
+
+        // Begin a database transaction to ensure all operations complete successfully
+        DB::beginTransaction();
+        
+        try {
+            if ($newPosition < $currentPosition) {
+                // Moving up: increment positions of items between new and current positions
+                $menu->pageData()
+                    ->where('order', '>=', $newPosition)
+                    ->where('order', '<', $currentPosition)
+                    ->increment('order');
+            } else if ($newPosition > $currentPosition) {
+                // Moving down: decrement positions of items between current and new positions
+                $menu->pageData()
+                    ->where('order', '>', $currentPosition)
+                    ->where('order', '<=', $newPosition)
+                    ->decrement('order');
+            } else {
+                // No change needed
+                DB::commit();
+                return $this->successResponse(
+                    new PageDataResource($data),
+                    'Position unchanged'
+                );
+            }
+
+            // Update the position of the target item
+            $data->order = $newPosition;
+            $data->updated_by = auth()->id();
+            $data->save();
+
+            DB::commit();
+
+            // Fetch all items in their new order for the response
+            $orderedItems = $menu->pageData()
+                ->orderBy('order', 'asc')
+                ->get();
+
+            return $this->successResponse(
+                PageDataResource::collection($orderedItems),
+                'Position updated successfully'
+            );
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->errorResponse('Failed to update position: ' . $e->getMessage(), 500);
+        }
     }
 }

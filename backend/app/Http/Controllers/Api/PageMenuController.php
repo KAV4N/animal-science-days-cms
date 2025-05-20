@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PageMenu\StorePageMenuRequest;
 use App\Http\Requests\PageMenu\UpdatePageMenuRequest;
+use App\Http\Requests\PageMenu\UpdatePositionRequest;
 use App\Http\Resources\PageMenu\PageMenuResource;
 use App\Models\Conference;
 use App\Models\PageMenu;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PageMenuController extends Controller
 {
@@ -27,7 +29,7 @@ class PageMenuController extends Controller
             ->when(request()->has('is_published'), function ($query) {
                 return $query->where('is_published', request()->boolean('is_published'));
             })
-            ->orderBy('created_at', 'desc')
+            ->orderBy('order', 'asc')  // Changed from created_at to order
             ->paginate();
 
         return $this->paginatedResponse(
@@ -49,6 +51,10 @@ class PageMenuController extends Controller
         $validated['conference_id'] = $conference->id;
         $validated['created_by'] = auth()->id();
         $validated['updated_by'] = auth()->id();
+        
+        // Set the order to be the last in the list
+        $lastOrder = $conference->pageMenus()->max('order') ?? 0;
+        $validated['order'] = $lastOrder + 1;
 
         $menu = PageMenu::create($validated);
 
@@ -126,5 +132,69 @@ class PageMenuController extends Controller
             null,
             'Page menu deleted successfully'
         );
+    }
+    
+    /**
+     * Update the position of the specified resource.
+     *
+     * @param  \App\Http\Requests\PageMenu\UpdatePositionRequest  $request
+     * @param  \App\Models\Conference  $conference
+     * @param  \App\Models\PageMenu  $menu
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updatePosition(UpdatePositionRequest $request, Conference $conference, PageMenu $menu)
+    {
+        if ($menu->conference_id !== $conference->id) {
+            return $this->errorResponse('Menu does not belong to this conference', 404);
+        }
+
+        $newPosition = $request->position;
+        $currentPosition = $menu->order;
+
+        // Begin a database transaction to ensure all operations complete successfully
+        DB::beginTransaction();
+        
+        try {
+            if ($newPosition < $currentPosition) {
+                // Moving up: increment positions of items between new and current positions
+                $conference->pageMenus()
+                    ->where('order', '>=', $newPosition)
+                    ->where('order', '<', $currentPosition)
+                    ->increment('order');
+            } else if ($newPosition > $currentPosition) {
+                // Moving down: decrement positions of items between current and new positions
+                $conference->pageMenus()
+                    ->where('order', '>', $currentPosition)
+                    ->where('order', '<=', $newPosition)
+                    ->decrement('order');
+            } else {
+                // No change needed
+                DB::commit();
+                return $this->successResponse(
+                    new PageMenuResource($menu),
+                    'Position unchanged'
+                );
+            }
+
+            // Update the position of the target item
+            $menu->order = $newPosition;
+            $menu->updated_by = auth()->id();
+            $menu->save();
+
+            DB::commit();
+
+            // Fetch all items in their new order for the response
+            $orderedMenus = $conference->pageMenus()
+                ->orderBy('order', 'asc')
+                ->get();
+
+            return $this->successResponse(
+                PageMenuResource::collection($orderedMenus),
+                'Position updated successfully'
+            );
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->errorResponse('Failed to update position: ' . $e->getMessage(), 500);
+        }
     }
 }
