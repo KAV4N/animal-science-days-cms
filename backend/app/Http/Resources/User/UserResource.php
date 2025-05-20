@@ -19,11 +19,18 @@ class UserResource extends JsonResource
             'name' => $this->name,
             'email' => $this->email,
             'university' => $this->whenLoaded('university'),
-            'roles' => $this->whenLoaded('roles', function() {
-                return $this->roles->pluck('name');
+            'roles' =>  $this->roles->map(function($role) {
+                return [
+                    'id' => $role->id,
+                    'name' => $role->name
+                ];
             }),
-            'roles' => $this->roles->pluck('name'),
-            'permissions' => $this->getAllPermissions()->pluck('name'),
+            'permissions' => $this->getAllPermissions()->map(function($permission) {
+                return [
+                    'id' => $permission->id,
+                    'name' => $permission->name
+                ];
+            }),
             'must_change_password' => $this->must_change_password,
             'updated_at' => $this->when($this->updated_at, function() {
                 return $this->updated_at->toIso8601String();

@@ -5,23 +5,27 @@ use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\UserController;
-
 use App\Http\Controllers\Api\ConferenceController;
+use App\Http\Controllers\Api\PublicConferenceController;
 use App\Http\Controllers\Api\ConferenceEditorController;
 use App\Http\Controllers\Api\UniversityController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\PageMenuController;
 use App\Http\Controllers\Api\PageDataController;
-
 use App\Http\Controllers\Api\ConferenceLockController;
 
 Route::prefix('v1')->group(function () {
-    // Public routes for universities and conferences
+    // Public routes for universities
     Route::apiResource('universities', UniversityController::class)->only(['index', 'show']);
     
-    // Public routes for conferences by decade
-    Route::get('/conferences/decades/{decade}/public', [ConferenceController::class, 'getByDecade']);
-    Route::get('/decades/conferences', [ConferenceController::class, 'getDecades']);
+    // Public routes for conferences
+    Route::prefix('public')->group(function() {
+        Route::get('/conferences/decades', [PublicConferenceController::class, 'getDecades']);
+        Route::get('/conferences/decades/{decade}', [PublicConferenceController::class, 'getByDecade']);
+        Route::get('/conferences', [PublicConferenceController::class, 'index']);
+        Route::get('/conferences/{conference}', [PublicConferenceController::class, 'show']);
+       
+    });
 
     // Authentication routes
     Route::prefix('auth')->group(function () {
@@ -35,18 +39,19 @@ Route::prefix('v1')->group(function () {
         });
     });
 
-   
     // Routes for authenticated users
     Route::middleware('auth:sanctum')->group(function () {
         // User-specific route outside of password change middleware
         Route::get('/users/me', [UserController::class, 'current']);
         
-
         // Protected routes requiring password change
         Route::middleware('ensure.password.changed')->group(function () {
-
             // For retrieving attached conferences to a user
             Route::get('/conferences/my', [ConferenceController::class, 'myConferences'])->name('conferences.my');
+            Route::get('/conferences/latest', [ConferenceController::class, 'latest']);
+            Route::patch('/conferences/{conference}/status', [ConferenceController::class, 'updateStatus']);
+            Route::apiResource('conferences', ConferenceController::class);
+           
 
             // Conference lock management
             Route::prefix('conferences/{conference}/lock')->group(function () {
@@ -54,18 +59,8 @@ Route::prefix('v1')->group(function () {
                 Route::post('/', [ConferenceLockController::class, 'acquireLock']);
                 Route::delete('/', [ConferenceLockController::class, 'releaseLock']);
                 Route::post('/refresh', [ConferenceLockController::class, 'refreshLock']);
-                //Route::delete('/force', [ConferenceLockController::class, 'forceReleaseLock']);
             });
             
-            // Page Menu & Page Data API routes
-            Route::middleware('check.conference.lock')->group(function () {
-                // Page Menu routes
-                Route::apiResource('conferences.menus', PageMenuController::class);
-                
-                // Page Data routes
-                Route::apiResource('conferences.menus.data', PageDataController::class);
-            });
-
             // Admin-only routes
             Route::middleware('permission:access.admin')->group(function () {
                 Route::get('/users', [UserController::class, 'index']);
@@ -75,28 +70,31 @@ Route::prefix('v1')->group(function () {
                     Route::apiResource('universities', UniversityController::class)->except(['index', 'show']);
                 });
 
-                // Conference management
-                
-                Route::get('/conferences/latest', [ConferenceController::class, 'latest']);
-                Route::apiResource('conferences', ConferenceController::class)->only(['index', 'show']);
-
-                Route::get('/conferences/{conference}/editors', [ConferenceEditorController::class, 'index']);
-                Route::get('/conferences/{conference}/editors/unattached', [ConferenceEditorController::class, 'unattached']);
-
+                // Conference editors management
                 Route::middleware('check.conference.lock')->group(function () {
-                    Route::apiResource('conferences', ConferenceController::class)->except(['index', 'show']);
-                    Route::patch('/conferences/{conference}/status', [ConferenceController::class, 'updateStatus']);
 
-                    // Conference editors management
+                    Route::get('/conferences/{conference}/editors/unattached', [ConferenceEditorController::class, 'unattached']);
+
+                    Route::get('/conferences/{conference}/editors', [ConferenceEditorController::class, 'index']);
                     Route::post('/conferences/{conference}/editors', [ConferenceEditorController::class, 'store']);
                     Route::delete('/conferences/{conference}/editors/{editor}', [ConferenceEditorController::class, 'destroy']);
                 });
 
-                //User management
+                // Page Menu & Page Data API routes
+                Route::middleware('check.conference.lock')->group(function () {
+                    // Page Menu routes (expanded to standard REST format)
+                    Route::apiResource('conferences.menus', PageMenuController::class);
+
+                    // Page Data routes
+                    Route::apiResource('conferences.menus.data', PageDataController::class);
+                });
+
+                // User management
                 Route::get('/users', [UserController::class, 'index']);
                 Route::post('/users', [UserController::class, 'store']);
                 Route::put('/users/{user}', [UserController::class, 'update']);
                 Route::delete('/users/{user}', [UserController::class, 'destroy']);
+                
                 Route::get('/roles', [RoleController::class, 'index']);
                 Route::get('/roles/available', [RoleController::class, 'availableRoles']);
             });

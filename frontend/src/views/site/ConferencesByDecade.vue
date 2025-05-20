@@ -126,65 +126,61 @@
     </div>
   </div>
 </template>
-
 <script lang="ts">
 import { defineComponent } from 'vue';
 import { useRouter } from 'vue-router';
 import apiService from '@/services/apiService';
 import type { Conference } from '@/types/conference';
-import type { Decade, DecadeResponse } from '@/types/decade';
+import type { Decade } from '@/types/decade';
 import type { ApiResponse, ApiPaginatedResponse } from '@/types/common';
 
 export default defineComponent({
   name: 'ConferenceArchive',
-  
+
   data() {
     return {
       loading: false,
       error: null as string | null,
       decades: [] as Decade[],
       selectedDecade: null as number | null,
-      
+
       conferences: [] as Conference[],
       conferencesLoading: false,
     };
   },
-  
+
   computed: {
     sortedDecades() {
-      return [...this.decades].sort((a, b) => {
-        return b.decade - a.decade;
-      });
+      return [...this.decades].sort((a, b) => b.decade - a.decade);
     }
   },
-  
+
   created() {
     this.fetchDecades();
   },
-  
+
   methods: {
     truncateText(text: string, maxLength: number): string {
       if (!text) return '';
       return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
     },
-    
+
     async fetchDecades() {
       this.loading = true;
       this.error = null;
-      
+
       try {
-        const response = await apiService.get<ApiResponse<Decade[]>>('/v1/decades/conferences');
-        // Convert string decades to numbers if they come as strings from API
+        const response = await apiService.get<ApiResponse<Decade[]>>('/v1/public/conferences/decades');
         this.decades = response.data.payload.map(decade => ({
           ...decade,
           decade: typeof decade.decade === 'string' ? parseInt(decade.decade) : decade.decade
         }));
-        
+
         if (this.decades.length > 0) {
-          const latestDecade = this.decades.reduce((latest, current) => {
-            return latest.decade > current.decade ? latest : current;
-          }).decade;
-          
+          const latestDecade = this.decades.reduce((latest, current) =>
+            latest.decade > current.decade ? latest : current
+          ).decade;
+
           this.selectDecade(latestDecade);
         }
       } catch (err: any) {
@@ -194,20 +190,20 @@ export default defineComponent({
         this.loading = false;
       }
     },
-    
+
     selectDecade(decade: number) {
       this.selectedDecade = decade;
       this.fetchConferences();
     },
-    
+
     async fetchConferences() {
       if (!this.selectedDecade) return;
-      
+
       this.conferencesLoading = true;
-      
+
       try {
         const response = await apiService.get<ApiPaginatedResponse<Conference[]>>(
-          `/v1/conferences/decades/${this.selectedDecade}/public`, 
+          `/v1/public/conferences/decades/${this.selectedDecade}`,
           {
             params: {
               page: 1,
@@ -218,7 +214,7 @@ export default defineComponent({
             }
           }
         );
-        
+
         this.conferences = response.data.payload;
       } catch (err: any) {
         console.error('Error fetching conferences:', err);
@@ -227,20 +223,20 @@ export default defineComponent({
         this.conferencesLoading = false;
       }
     },
-    
+
     formatDate(dateString: string): string {
       const date = new Date(dateString);
       return new Intl.DateTimeFormat('en-US', {
         year: 'numeric',
-        month: 'short', 
+        month: 'short',
         day: 'numeric'
       }).format(date);
     },
-    
+
     goToConference(conference: Conference) {
       const router = useRouter();
-      router.push({ 
-        name: 'conference-detail', 
+      router.push({
+        name: 'conference-detail',
         params: { slug: conference.slug }
       });
     }

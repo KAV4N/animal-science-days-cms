@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import apiService from '@/services/apiService';
-import type { User } from '@/types/user';
+import type { User, Role, Permission } from '@/types/user';
 import router from '@/router';
 
 // Import the auth types
@@ -12,7 +12,7 @@ import type {
   RegisterResponse,
   RefreshTokenResponse,
   ChangePasswordResponse,
-  AuthResponse
+  AuthResponse,
 } from '@/types/auth';
 
 interface AuthState {
@@ -33,23 +33,25 @@ export const useAuthStore = defineStore('auth', {
   }),
 
   getters: {
-    isEditor: (state) => state.user?.roles.includes('editor') || false,
-    isAdmin: (state) => state.user?.permissions.includes('admin') || false,
-    isSuperAdmin: (state) => state.user?.roles.includes('super_admin') || false,
+    isEditor: (state) => state.user?.roles.some(role => role.name === 'editor') || false,
+    isAdmin: (state) => state.user?.permissions.some(permission => permission.name === 'access.admin') || false,
+    isSuperAdmin: (state) => state.user?.roles.some(role => role.name === 'super_admin') || false,
 
-    hasEditorAccess: (state) => state.user?.permissions.includes('access.editor') || false,
-    hasAdminAccess: (state) => state.user?.permissions.includes('access.admin') || false,
-    hasSuperAdminAccess: (state) => state.user?.permissions.includes('access.super_admin') || false,
+    hasEditorAccess: (state) => state.user?.permissions.some(permission => permission.name === 'access.editor') || false,
+    hasAdminAccess: (state) => state.user?.permissions.some(permission => permission.name === 'access.admin') || false,
+    hasSuperAdminAccess: (state) => state.user?.permissions.some(permission => permission.name === 'access.super_admin') || false,
 
-    hasRole: (state) => (role: string) => state.user?.roles.includes(role) || false,
-    hasPermission: (state) => (permission: string) => state.user?.permissions.includes(permission) || false,
+    hasRole: (state) => (roleName: string) => state.user?.roles.some(role => role.name === roleName) || false,
+    hasPermission: (state) => (permissionName: string) => state.user?.permissions.some(permission => permission.name === permissionName) || false,
 
     getToken: (state) => state.accessToken,
     getUser: (state) => state.user,
     getIsAuthenticated: (state) => state.isAuthenticated,
     getIsLoading: (state) => state.isLoading,
     getRoles: (state) => state.user?.roles || [],
+    getRoleNames: (state) => state.user?.roles.map(role => role.name) || [],
     getPermissions: (state) => state.user?.permissions || [],
+    getPermissionNames: (state) => state.user?.permissions.map(permission => permission.name) || [],
     getError: (state) => state.error,
   },
 
