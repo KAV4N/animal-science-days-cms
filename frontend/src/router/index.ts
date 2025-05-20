@@ -65,6 +65,7 @@ const routes: Array<RouteRecordRaw> = [
     children: [
       {
         path: '',
+        name: 'DashboardHome',
         redirect: { name: 'ConferenceManagement' }
       },
       {
@@ -101,8 +102,8 @@ router.beforeEach(async (to, from, next) => {
   if (!to.meta.middleware) {
     return next();
   }
-  const middleware = Array.isArray(to.meta.middleware) 
-    ? to.meta.middleware 
+  const middleware = Array.isArray(to.meta.middleware)
+    ? to.meta.middleware
     : [to.meta.middleware];
 
   const context = {

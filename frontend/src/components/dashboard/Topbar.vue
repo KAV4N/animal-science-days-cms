@@ -4,7 +4,22 @@
       <div class="flex items-center justify-between w-full">
         <Button icon="pi pi-bars" text @click="toggleMobileMenu" class="md:hidden p-button-rounded p-button-sm"></Button>
         <div class="flex items-center gap-2 ml-auto">
-          <Button @click="handleLogout" icon="pi pi-sign-out" text rounded size="small"></Button>
+          <Button
+            icon="pi pi-home"
+            text
+            rounded
+            size="small"
+            v-tooltip.bottom="{ value: 'Go to public home page', pt: { text: 'px-3 py-1 text-xs rounded-2xl bg-neutral-900 text-white shadow border-none' } }"
+            @click="$router.push({ name: 'HomePage' })"
+          />
+          <Button
+            @click="handleLogout"
+            icon="pi pi-sign-out"
+            text
+            rounded
+            size="small"
+            v-tooltip.bottom="{ value: 'Logout from your account', pt: { text: 'px-3 py-1 text-xs rounded-2xl bg-neutral-900 text-white shadow border-none' } }"
+          ></Button>
         </div>
       </div>
     </template>
@@ -14,12 +29,16 @@
 <script>
 import Button from 'primevue/button';
 import Card from 'primevue/card';
+import Tooltip from 'primevue/tooltip';
 
 export default {
   name: 'DashboardTopbar',
   components: {
     Button,
     Card
+  },
+  directives: {
+    Tooltip
   },
   props: {
     sidebarVisible: {

@@ -13,6 +13,7 @@ export default defineComponent({
     Button,
     InputText
   },
+  emits: ['password-changed'],
   data() {
     return {
       newPassword: '',
@@ -59,9 +60,16 @@ export default defineComponent({
         if (changeSuccessful) {
           this.successMessage = 'Password changed successfully!';
 
+          this.$emit('password-changed');
+
+          if (this.authStore.user) {
+            this.authStore.user.must_change_password = false;
+          }
+
           setTimeout(() => {
-            this.router.push({ name: 'Dashboard' });
+            this.router.push({ name: 'ConferenceManagement' });
           }, 2000);
+
         } else {
           this.errorMessage = this.authStore.error || 'Password change failed';
         }
@@ -84,22 +92,20 @@ export default defineComponent({
     modal
   >
     <template #container>
-      <div class="flex flex-col px-8 py-8 gap-6 rounded-2xl" style="background-image: radial-gradient(circle at left top, var(--p-surface-400), var(--p-surface-700))">
+      <div class="flex flex-col items-center px-8 py-8 gap-6 rounded-2xl" style="background-image: radial-gradient(circle at left top, var(--p-surface-400), var(--p-surface-700))">
         <img src="/school-logo.png" alt="School Logo" class="block mx-auto h-20 w-auto" />
-        <h2 class="text-center text-primary-50 font-semibold">Change Password</h2>
-
         <!-- Mandatory Change Password Message -->
-        <div v-if="mustChange" class="text-center text-primary-50">
+        <div v-if="mustChange" class="text-center text-primary-50 w-80">
           <p>Since this is your first login, you need to change your password.</p>
         </div>
 
         <!-- Error Message Display -->
-        <div v-if="errorMessage" class="bg-red-500/20 border border-red-500 text-red-400 p-3 rounded-lg text-center">
+        <div v-if="errorMessage" class="bg-red-500/20 border border-red-500 text-red-400 p-3 rounded-lg text-center w-80">
           {{ errorMessage }}
         </div>
 
         <!-- Success Message Display -->
-        <div v-if="successMessage" class="bg-green-500/20 border border-green-500 text-green-400 p-3 rounded-lg text-center">
+        <div v-if="successMessage" class="bg-green-500/20 border border-green-500 text-green-400 p-3 rounded-lg text-center w-80">
           {{ successMessage }}
         </div>
 

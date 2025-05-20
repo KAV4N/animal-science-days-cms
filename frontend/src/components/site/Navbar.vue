@@ -1,14 +1,13 @@
 <script lang="ts">
 import { defineComponent } from 'vue';
-import Badge from 'primevue/badge';
 import Button from 'primevue/button';
 import LoginCard from '../auth/LoginCard.vue';
-
+import Tooltip from 'primevue/tooltip';
+import { useAuthStore } from '@/stores/authStore';
 
 export default defineComponent({
   name: 'Navbar',
   components: {
-    Badge,
     Button,
     LoginCard
   },
@@ -34,11 +33,18 @@ export default defineComponent({
   computed: {
     currentPath(): string {
       return this.$route.path;
+    },
+    isAuthenticated(): boolean {
+      return this.authStore?.isAuthenticated;
     }
   },
   methods: {
     showLogin(): void {
       this.loginCardVisible = true;
+    },
+    async handleLogout(): Promise<void> {
+      await this.authStore.logout();
+      this.$router.push({ name: 'HomePage' });
     },
     async handleLoginSubmit(): Promise<void> {
       console.log('Login submitted');
@@ -59,6 +65,13 @@ export default defineComponent({
   },
   beforeUnmount() {
     window.removeEventListener('scroll', this.handleScroll);
+  },
+  directives: {
+    Tooltip
+  },
+  setup() {
+    const authStore = useAuthStore();
+    return { authStore };
   }
 });
 </script>
@@ -79,23 +92,33 @@ export default defineComponent({
 
         <ul class="flex-none hidden md:flex items-center gap-4 mx-4">
           <li v-for="item in regularItems" :key="item.label" class="relative">
-            <router-link
-              :to="item.route"
+            <router-link :to="item.route"
               class="hover-bg rounded-full px-5 py-2 transition-all duration-200 flex items-center whitespace-nowrap navbar-text font-medium text-sm"
-              :class="{ 'active-item shadow': currentPath === item.route }"
-            >
+              :class="{ 'active-item shadow': currentPath === item.route }">
               <i v-if="item.icon" :class="[item.icon, 'mr-2']"></i>
               <span>{{ item.label }}</span>
-              <Badge v-if="item.badge" class="ml-2 flex-shrink-0" :value="item.badge" severity="info" />
             </router-link>
           </li>
         </ul>
 
         <div class="md:flex hidden items-center justify-end gap-4 min-w-0">
-          <Button @click="showLogin" variant="outlined"
+          <Button v-if="isAuthenticated" variant="outlined"
+            class="flex items-center rounded-full transition-all duration-200 flex-shrink-0"
+            :class="{ 'border-none hover:bg-white/20': !isScrolled, 'bg-white/60 hover:bg-gray-200': isScrolled }"
+            v-tooltip.bottom="{ value: 'Go to dashboard', pt: { text: 'px-3 py-1 text-xs rounded-2xl bg-neutral-900 text-white shadow border-none' } }"
+            @click="$router.push({ name: 'ConferenceManagement' })">
+            <i class="pi pi-th-large text-sm"></i>
+          </Button>
+          <Button v-if="!isAuthenticated" @click="showLogin" variant="outlined"
             class="flex items-center rounded-full transition-all duration-200 flex-shrink-0"
             :class="{ 'border-none hover:bg-white/20': !isScrolled, 'bg-white/60 hover:bg-gray-200': isScrolled }">
             <i class="pi pi-key text-sm"></i>
+          </Button>
+          <Button v-else @click="handleLogout" variant="outlined"
+            class="flex items-center rounded-full transition-all duration-200 flex-shrink-0"
+            :class="{ 'border-none hover:bg-white/20': !isScrolled, 'bg-white/60 hover:bg-gray-200': isScrolled }"
+            v-tooltip.bottom="{ value: 'Logout from your account', pt: { text: 'px-3 py-1 text-xs rounded-2xl bg-neutral-900 text-white shadow border-none' } }">
+            <i class="pi pi-sign-out text-sm"></i>
           </Button>
         </div>
 
@@ -111,30 +134,34 @@ export default defineComponent({
         <div class="flex flex-col gap-8 transition-all pt-4">
           <ul class="flex flex-col gap-2">
             <li v-for="item in regularItems" :key="item.label">
-              <router-link
-                :to="item.route"
+              <router-link :to="item.route"
                 class="flex items-center py-2.5 px-4 w-full rounded-xl hover-bg transition-all duration-200 navbar-text shadow"
-                :class="{ 'active-item': currentPath === item.route }"
-              >
+                :class="{ 'active-item': currentPath === item.route }">
                 <i v-if="item.icon" :class="[item.icon, 'mr-3']"></i>
                 {{ item.label }}
-                <Badge v-if="item.badge" class="ml-2" :value="item.badge" severity="info" />
               </router-link>
             </li>
           </ul>
           <div class="flex flex-col items-center gap-4 pb-4">
-            <button @click="showLogin"
+            <button v-if="!isAuthenticated" @click="showLogin"
               class="flex items-center py-2 px-4 w-full rounded-lg hover:bg-white/20 transition-all text-left">
               <i class="pi pi-key mr-2"></i>
               Login
+            </button>
+            <button v-if="isAuthenticated" @click="$router.push({ name: 'ConferenceManagement' })"
+              class="flex items-center py-2 px-4 w-full rounded-lg hover:bg-white/20 transition-all text-left">
+              <i class="pi pi-th-large mr-2"></i>
+              Go to dashboard
+            </button>
+            <button v-if="isAuthenticated" @click="handleLogout"
+              class="flex items-center py-2 px-4 w-full rounded-lg hover:bg-white/20 transition-all text-left">
+              <i class="pi pi-sign-out mr-2"></i>
+              Logout
             </button>
           </div>
         </div>
       </div>
     </div>
-    <LoginCard
-      v-model:visible="loginCardVisible"
-      @login="handleLoginSubmit"
-    />
+    <LoginCard v-model:visible="loginCardVisible" @login="handleLoginSubmit" />
   </nav>
 </template>

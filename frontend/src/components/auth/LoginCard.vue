@@ -73,7 +73,7 @@ export default defineComponent({
     <template #container="{ closeCallback }">
       <div class="flex flex-col px-8 py-8 gap-6 rounded-2xl" style="background-image: radial-gradient(circle at left top, var(--p-surface-400), var(--p-surface-700))">
         <img src="/school-logo.png" alt="School Logo" class="block mx-auto h-20 w-auto" />
-        
+
         <!-- Error Message Display -->
         <div v-if="errorMessage" class="bg-red-500/20 border border-red-500 text-red-400 p-3 rounded-lg text-center">
           {{ errorMessage }}
@@ -97,17 +97,17 @@ export default defineComponent({
           ></InputText>
         </div>
         <div class="flex items-center gap-4">
-          <Button 
-            label="Cancel" 
-            @click="closeCallback" 
-            text 
+          <Button
+            label="Cancel"
+            @click="closeCallback"
+            text
             class="!p-4 w-full !text-primary-50 !border !border-white/30 hover:!bg-white/10"
           ></Button>
-          <Button 
-            label="Log in" 
-            @click="handleLogin" 
+          <Button
+            label="Log in"
+            @click="handleLogin"
             :disabled="isLoading"
-            text 
+            text
             class="!p-4 w-full !text-primary-50 !border !border-white/30 hover:!bg-white/10"
           >
             {{ isLoading ? 'Logging in...' : 'Log in' }}
