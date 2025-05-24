@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Conference\ConferenceResource;
 use App\Http\Resources\Conference\DecadeResource;
 use App\Models\Conference;
+use App\Models\PageMenu; // Add this import
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -81,7 +82,7 @@ class PublicConferenceController extends Controller
     }
   
     /**
-     * Get latest conference with its published pages and page data
+     * Get latest conference without pages (just basic conference info)
      */
     public function latest(): JsonResponse
     {
@@ -102,23 +103,9 @@ class PublicConferenceController extends Controller
             return $this->errorResponse('No published conferences found', 404);
         }
 
-        // Get published pages with their page data for this conference
-        $pages = $conference->pageMenus()
-            ->where('is_published', true)
-            ->with(['pageData' => function($query) {
-                $query->where('is_published', true)
-                    ->orderBy('order', 'asc');
-            }])
-            ->orderBy('order', 'asc')
-            ->get();
-
-        $conferenceData = new ConferenceResource($conference);
-        $conferenceArray = $conferenceData->toArray(request());
-        $conferenceArray['pages'] = PageMenuResource::collection($pages);
-
         return $this->successResponse(
-            $conferenceArray,
-            'Latest conference with pages and content retrieved successfully'
+            new ConferenceResource($conference),
+            'Latest conference retrieved successfully'
         );
     }
 
@@ -136,8 +123,7 @@ class PublicConferenceController extends Controller
             return $this->errorResponse('Conference not found', 404);
         }
 
-        // Get published pages with their page data for this conference
-        $pages = $conference->pageMenus()
+        $pages = PageMenu::where('conference_id', $conference->id)
             ->where('is_published', true)
             ->with(['pageData' => function($query) {
                 $query->where('is_published', true)

@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory, type RouteRecordRaw, type NavigationGuardNext, type RouteLocationNormalized } from 'vue-router';
+import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
 import { useAuthStore } from '@/stores/authStore';
 import middlewarePipeline from './middleware/middleware-pipeline';
 
@@ -6,15 +6,13 @@ import Dashboard from '@/views/Dashboard.vue';
 import ConferenceManagement from '@/views/dashboard/ConferenceManagement.vue';
 import UserManagement from '@/views/dashboard/UserManagement.vue';
 import Site from '@/views/Site.vue';
-
+import ConferenceView from '@/views/site/ConferenceView.vue'; // New import
 
 import middleware from './middleware';
 import ChangePassword from '@/views/auth/ChangePassword.vue';
 import Login from '@/views/auth/Login.vue';
-
 import ConferenceEditorView from '@/views/dashboard/ConferenceEditorView.vue';
 import ConferencesByDecade from '@/views/site/ConferencesByDecade.vue';
-
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -22,8 +20,25 @@ const routes: Array<RouteRecordRaw> = [
     component: Site,
     children: [
       {
+        path: '',
+        redirect: { name: 'conferences' }
+      },
+      {
         path: 'conferences',
         name: 'conferences',
+        component: ConferenceView,
+        props: { slug: '' } 
+      },
+      {
+        path: 'conferences/:slug',
+        name: 'conference-detail',
+        component: ConferenceView,
+        props: (route) => ({ slug: route.params.slug })
+      },
+
+      {
+        path: 'archive',
+        name: 'archive',
         component: ConferencesByDecade
       },
     ]
@@ -61,7 +76,6 @@ const routes: Array<RouteRecordRaw> = [
         name: 'ConferenceManagement',
         component: ConferenceManagement
       },
-      // Conference editor route within dashboard
       {
         path: 'conferences/:id/editor',
         name: 'ConferenceEditor',
