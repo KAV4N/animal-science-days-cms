@@ -10,6 +10,7 @@ use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Http\Resources\PageMenu\PageMenuResource;
+
 class PublicConferenceController extends Controller
 {
     use ApiResponse;
@@ -19,9 +20,13 @@ class PublicConferenceController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        
+        if ($request->has('latest')) {
+            return $this->latest();
+        }
+        
         $query = Conference::query()
             ->where('is_published', true);
-
         // Apply filters
         if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
@@ -74,39 +79,11 @@ class PublicConferenceController extends Controller
             );
         }
     }
-
-    /**
-     * Get the latest published conference
-     */
-    public function latest(): JsonResponse
-    {
-        $conference = Conference::where('is_published', true)
-            ->where('is_latest', true)
-            ->with(['university'])
-            ->first();
-
-        if (!$conference) {
-            // Fallback to most recent published conference if no latest is marked
-            $conference = Conference::where('is_published', true)
-                ->with(['university'])
-                ->orderBy('start_date', 'desc')
-                ->first();
-        }
-
-        if (!$conference) {
-            return $this->errorResponse('No published conferences found', 404);
-        }
-
-        return $this->successResponse(
-            new ConferenceResource($conference),
-            'Latest conference retrieved successfully'
-        );
-    }
-
+  
     /**
      * Get latest conference with its published pages and page data
      */
-    public function latestWithPages(): JsonResponse
+    public function latest(): JsonResponse
     {
         $conference = Conference::where('is_published', true)
             ->where('is_latest', true)
@@ -146,7 +123,7 @@ class PublicConferenceController extends Controller
     }
 
     /**
-     * Get a specific published conference by slug
+     * Get a specific published conference by slug with its published pages and page data
      */
     public function show(string $slug): JsonResponse
     {
@@ -159,9 +136,23 @@ class PublicConferenceController extends Controller
             return $this->errorResponse('Conference not found', 404);
         }
 
+        // Get published pages with their page data for this conference
+        $pages = $conference->pageMenus()
+            ->where('is_published', true)
+            ->with(['pageData' => function($query) {
+                $query->where('is_published', true)
+                    ->orderBy('order', 'asc');
+            }])
+            ->orderBy('order', 'asc')
+            ->get();
+
+        $conferenceData = new ConferenceResource($conference);
+        $conferenceArray = $conferenceData->toArray(request());
+        $conferenceArray['pages'] = PageMenuResource::collection($pages);
+
         return $this->successResponse(
-            new ConferenceResource($conference),
-            'Conference retrieved successfully'
+            $conferenceArray,
+            'Conference with pages and content retrieved successfully'
         );
     }
 

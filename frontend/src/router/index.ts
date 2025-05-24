@@ -6,9 +6,7 @@ import Dashboard from '@/views/Dashboard.vue';
 import ConferenceManagement from '@/views/dashboard/ConferenceManagement.vue';
 import UserManagement from '@/views/dashboard/UserManagement.vue';
 import Site from '@/views/Site.vue';
-import Home from '@/views/site/Home.vue';
 
-import AuthGateway from '@/views/auth/Login.vue';
 
 import middleware from './middleware';
 import ChangePassword from '@/views/auth/ChangePassword.vue';
@@ -16,8 +14,7 @@ import Login from '@/views/auth/Login.vue';
 
 import ConferenceEditorView from '@/views/dashboard/ConferenceEditorView.vue';
 import ConferencesByDecade from '@/views/site/ConferencesByDecade.vue';
-import ConferencePageView from '@/views/site/ConferencePageView.vue';
-import ConferenceDetail from '@/views/site/ConferenceDetail.vue';
+
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -25,29 +22,10 @@ const routes: Array<RouteRecordRaw> = [
     component: Site,
     children: [
       {
-        path: '',
-        name: 'HomePage',
-        component: Home
-      },
-      {
         path: 'conferences',
         name: 'conferences',
         component: ConferencesByDecade
       },
-      // Individual conference detail page
-      {
-        path: 'conferences/:conferenceSlug',
-        name: 'ConferenceDetail',
-        component: ConferenceDetail,
-        props: true
-      },
-      // Public conference page view route
-      {
-        path: 'conferences/:conferenceSlug/pages/:pageSlug',
-        name: 'ConferencePageView',
-        component: ConferencePageView,
-        props: true
-      }
     ]
   },
   {

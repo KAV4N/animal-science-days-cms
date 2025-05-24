@@ -25,11 +25,9 @@ Route::prefix('v1')->group(function () {
         Route::get('/conferences/decades/{decade}', [PublicConferenceController::class, 'getByDecade']);
         
         // New routes for latest conference
-        Route::get('/conferences/latest', [PublicConferenceController::class, 'latest']);
-        Route::get('/conferences/latest/with-pages', [PublicConferenceController::class, 'latestWithPages']);
-        
-        Route::get('/conferences/{conferenceSlug}', [PublicConferenceController::class, 'show']);
         Route::get('/conferences', [PublicConferenceController::class, 'index']);
+        Route::get('/conferences/{conferenceSlug}', [PublicConferenceController::class, 'show']);
+
     
         
         // Public routes for page menus
