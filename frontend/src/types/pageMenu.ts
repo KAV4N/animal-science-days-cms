@@ -1,4 +1,3 @@
-// src/types/pageMenu.ts
 import type { ApiResponse, ApiPaginatedResponse } from './common';
 
 export interface PageData {
@@ -7,6 +6,7 @@ export interface PageData {
   component_type: string;
   order: number;
   data: any;
+  tag: string;
   is_published: boolean;
   created_at: string;
   updated_at: string;
@@ -28,7 +28,6 @@ export interface PageMenu {
   updated_by: number;
 }
 
-// Request types
 export interface PageMenuStoreRequest {
   title: string;
   slug: string;
@@ -47,6 +46,7 @@ export interface PageDataStoreRequest {
   component_type: string;
   order: number;
   data: any;
+  tag: string;
   is_published?: boolean;
 }
 
@@ -54,6 +54,7 @@ export interface PageDataUpdateRequest {
   component_type?: string;
   order?: number;
   data?: any;
+  tag?: string;
   is_published?: boolean;
 }
 
@@ -65,7 +66,6 @@ export interface PageDataPositionRequest {
   order: number;
 }
 
-// Response types
 export type PageMenuResponse = ApiResponse<PageMenu>;
 export type PageMenuListResponse = ApiPaginatedResponse<PageMenu[]>;
 export type PageDataResponse = ApiResponse<PageData>;

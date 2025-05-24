@@ -2,24 +2,7 @@
   <div class="conference-editor flex flex-row h-screen">
     <!-- Main Editor Area -->
     <div class="editor-main flex-1 p-4 border-r border-gray-300 flex flex-col h-full overflow-hidden">
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-2xl font-bold">Page Editor</h2>
-        <div class="editor-actions flex gap-2">
-          <Button 
-            label="Save" 
-            icon="pi pi-save" 
-            @click="saveCurrentMenu"
-            :disabled="!pageMenuStore.isLocked"
-            class="p-button-success p-button-sm"
-          />
-          <Button 
-            label="Exit" 
-            icon="pi pi-sign-out" 
-            @click="handleExit"
-            class="p-button-danger p-button-sm"
-          />
-        </div>
-      </div>
+      <h2 class="text-2xl font-bold mb-4">Page Editor</h2>
       
       <!-- Lock status message -->
       <div 
@@ -69,9 +52,9 @@
         />
       </div>
       
-      <!-- No menu selected message (when menus exist but none selected) -->
+      <!-- No menu selected message -->
       <div v-else-if="!pageMenuStore.selectedMenu && !pageMenuStore.loading" class="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
-        <p class="text-gray-500">Please select a page from the right panel</p>
+        <p class="text-gray-500">Please select a page to start editing</p>
       </div>
 
       <!-- Loading state for selected menu only -->
@@ -104,10 +87,9 @@
               :key="component.id"
               class="component-item p-4 mb-4 border border-gray-300 rounded-lg bg-white"
             >
-              <!-- Component header with actions -->
-              <div class="component-header flex justify-between items-center mb-2">
+              <div class="component-header flex justify-between items-center">
                 <div class="flex items-center">
-                  <span class="font-bold">{{ component.component_type }}</span>
+                  <span class="font-bold">{{ component.component_type }}: {{ component.tag || 'Unnamed' }}</span>
                   <Badge v-if="component.is_published" value="Published" severity="success" class="ml-2" />
                   <Badge v-else value="Draft" severity="warning" class="ml-2" />
                 </div>
@@ -129,6 +111,14 @@
                     class="p-button-sm p-button-outlined"
                   />
                   <Button 
+                    icon="pi pi-pencil" 
+                    severity="secondary" 
+                    size="small"
+                    :disabled="!pageMenuStore.isLocked"
+                    @click="editComponent(component.id)"
+                    class="p-button-sm p-button-outlined"
+                  />
+                  <Button 
                     icon="pi pi-trash" 
                     severity="danger" 
                     size="small"
@@ -138,46 +128,6 @@
                   />
                 </div>
               </div>
-              
-              <!-- Component content -->
-              <div class="component-content mt-3">
-                <!-- TinyMCE Editor Component -->
-                <div v-if="component.component_type === 'Editor'" class="wysiwyg-component">
-                  <client-only>
-                    <editor
-                      v-model="component.data.content"
-                      :init="{
-                        height: 300,
-                        menubar: true,
-                        plugins: 'accordion advlist anchor autolink autoresize autosave charmap code codesample directionality fullscreen image insertdatetime link lists media nonbreaking pagebreak preview quickbars save searchreplace table template visualblocks visualchars wordcount emoticons help',
-                        toolbar:
-                          'undo redo | formatselect | bold italic backcolor | \
-                          alignleft aligncenter alignright alignjustify | \
-                          bullist numlist outdent indent | removeformat | help',
-                        readonly: !pageMenuStore.isLocked
-                      }"
-                    />
-                  </client-only>
-                </div>
-                
-                <!-- Other component types can be added here -->
-                <div v-else>
-                  <pre class="bg-gray-100 p-3 rounded">{{ JSON.stringify(component.data, null, 2) }}</pre>
-                </div>
-              </div>
-              
-              <!-- Publishing toggle -->
-              <div class="publish-toggle mt-3 flex justify-end">
-                <ToggleButton
-                  v-model="component.is_published"
-                  onLabel="Published"
-                  offLabel="Draft"
-                  onIcon="pi pi-check"
-                  offIcon="pi pi-times"
-                  :disabled="!pageMenuStore.isLocked"
-                  @change="toggleComponentPublished(component.id, $event)"
-                />
-              </div>
             </div>
           </TransitionGroup>
         </div>
@@ -186,7 +136,6 @@
     
     <!-- Pages Sidebar -->
     <div class="pages-sidebar w-80 p-4 bg-gray-50 flex flex-col h-full overflow-hidden">
-      <!-- Fixed section at the top with title and controls -->
       <div class="pages-sidebar-header flex-none">
         <div class="flex justify-between items-center mb-4">
           <h3 class="text-xl font-bold">Pages</h3>
@@ -200,8 +149,6 @@
             v-tooltip="'Add new page'"
           />
         </div>
-
-        <!-- Component type dropdown fixed at top of pages sidebar -->
         <div class="add-component-top mb-4">
           <Dropdown
             v-model="newComponentType"
@@ -213,20 +160,13 @@
           />
         </div>
       </div>
-
-      <!-- Scrollable pages list -->
       <div class="pages-list-container flex-1 overflow-y-auto pr-1">
-        <!-- Loading state -->
         <div v-if="pageMenuStore.loading && !loadingSelectedMenu" class="flex items-center justify-center h-32">
           <i class="pi pi-spin pi-spinner text-xl"></i>
         </div>
-        
-        <!-- Empty state for menus -->
         <div v-else-if="pageMenuStore.menus.length === 0" class="flex items-center justify-center h-32 bg-gray-100 rounded-lg">
           <p class="text-gray-500">No pages yet</p>
         </div>
-        
-        <!-- Menu list -->
         <div v-else class="page-list">
           <TransitionGroup name="page-list" tag="div">
             <div 
@@ -346,6 +286,10 @@
     <Dialog v-model:visible="showAddComponentDialog" header="Add Component" :style="{ width: '35rem' }" :modal="true">
       <div class="p-fluid">
         <div class="field mb-3">
+          <label for="componentName" class="block mb-1">Component Name</label>
+          <InputText id="componentName" v-model="newComponentName" class="w-full" />
+        </div>
+        <div class="field mb-3">
           <label for="componentType" class="block mb-1">Component Type</label>
           <Dropdown
             id="componentType"
@@ -355,8 +299,6 @@
             class="w-full"
           />
         </div>
-        
-        <!-- Editor component settings -->
         <div v-if="newComponentType === 'Editor'" class="field">
           <label for="initialContent" class="block mb-1">Initial Content</label>
           <Textarea
@@ -367,9 +309,6 @@
             placeholder="Enter initial content..."
           />
         </div>
-        
-        <!-- Can add more component type settings here -->
-        
         <div class="field mt-3">
           <div class="flex items-center">
             <Checkbox v-model="newComponentPublished" inputId="newComponentPublished" binary />
@@ -380,6 +319,43 @@
       <template #footer>
         <Button label="Cancel" icon="pi pi-times" @click="cancelAddComponent" text />
         <Button label="Add" icon="pi pi-check" @click="handleAddComponent" autofocus />
+      </template>
+    </Dialog>
+    
+    <!-- Edit Component Dialog -->
+    <Dialog v-model:visible="showEditComponentDialog" header="Edit Component" :style="{ width: '35rem' }" :modal="true">
+      <div class="p-fluid">
+        <div class="field mb-3">
+          <label for="editComponentName" class="block mb-1">Component Name</label>
+          <InputText id="editComponentName" v-model="editComponentName" class="w-full" />
+        </div>
+        <div v-if="editComponentType === 'Editor'" class="field">
+          <label for="editContent" class="block mb-1">Content</label>
+          <client-only>
+            <editor
+              v-model="editComponentData.content"
+              :init="{
+                height: 300,
+                menubar: true,
+                plugins: 'accordion advlist anchor autolink autoresize autosave charmap code codesample directionality fullscreen image insertdatetime link lists media nonbreaking pagebreak preview quickbars save searchreplace table template visualblocks visualchars wordcount emoticons help',
+                toolbar:
+                  'undo redo | formatselect | bold italic backcolor | \
+                  alignleft aligncenter alignright alignjustify | \
+                  bullist numlist outdent indent | removeformat | help',
+              }"
+            />
+          </client-only>
+        </div>
+        <div class="field mt-3">
+          <div class="flex items-center">
+            <Checkbox v-model="editComponentPublished" inputId="editComponentPublished" binary />
+            <label for="editComponentPublished" class="ml-2">Published</label>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <Button label="Cancel" icon="pi pi-times" @click="cancelEditComponent" text />
+        <Button label="Save" icon="pi pi-check" @click="saveEditComponent" autofocus />
       </template>
     </Dialog>
     
@@ -394,24 +370,13 @@
         <Button label="Yes" icon="pi pi-check" @click="confirmDelete" autofocus />
       </template>
     </Dialog>
-
-    <!-- Save Changes Dialog for Page Orders -->
-    <Dialog v-model:visible="showSaveChangesDialog" header="Save Changes" :style="{ width: '30rem' }" :modal="true">
-      <div class="confirmation-content">
-        <p>You have unsaved page order changes. Would you like to save them now?</p>
-      </div>
-      <template #footer>
-        <Button label="No" icon="pi pi-times" @click="cancelSaveChanges" text />
-        <Button label="Yes" icon="pi pi-check" @click="saveChanges" autofocus class="p-button-success" />
-      </template>
-    </Dialog>
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent } from 'vue';
 import { usePageMenuStore } from '@/stores/pageMenuStore';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute } from 'vue-router';
 import Editor from '@hugerte/hugerte-vue';
 import apiService from '@/services/apiService';
 
@@ -422,49 +387,42 @@ export default defineComponent({
   },
   data() {
     return {
-      // Component selectors
-      availableComponentTypes: ['Editor', 'Image', 'Table', 'Video', 'Gallery'],
+      availableComponentTypes: ['Editor'],
       
-      // Menu dialog
       showAddMenuDialog: false,
       newMenuTitle: '',
       newMenuSlug: '',
       newMenuPublished: false,
       
-      // Edit menu dialog
       showEditMenuDialog: false,
       editMenuId: 0,
       editMenuTitle: '',
       editMenuSlug: '',
       editMenuPublished: false,
       
-      // Component dialog
       showAddComponentDialog: false,
       newComponentType: '',
+      newComponentName: '',
       newComponentData: {
         content: '<p>Enter content here...</p>'
       },
       newComponentPublished: false,
       
-      // Validation errors
+      showEditComponentDialog: false,
+      editComponentId: 0,
+      editComponentType: '',
+      editComponentName: '',
+      editComponentData: {} as any,
+      editComponentPublished: false,
+      
       titleError: '',
       slugError: '',
       
-      // Delete confirmation
       showConfirmDeleteDialog: false,
-      deleteType: '', // 'menu' or 'component'
+      deleteType: '',
       deleteId: 0,
       confirmDeleteMessage: '',
       
-      // Helper properties
-      orderChanges: {
-        menus: [] as number[],
-        components: [] as number[]
-      },
-      showSaveChangesDialog: false,
-      hasUnsavedChanges: false,
-      
-      // Loading state for selected menu
       loadingSelectedMenu: false,
     };
   },
@@ -472,106 +430,67 @@ export default defineComponent({
     pageMenuStore() {
       return usePageMenuStore();
     },
-    
     conferenceId(): number {
       return Number(this.$route.params.id);
     },
   },
   created() {
-    // Set conference ID from route
     this.pageMenuStore.setConferenceId(this.conferenceId);
-    
-    // Load page menus
     this.fetchMenus();
   },
   mounted() {
-    // Setup beforeunload event to prevent accidental navigations
     window.addEventListener('beforeunload', this.handleBeforeUnload);
   },
   beforeUnmount() {
-    // Clean up
     window.removeEventListener('beforeunload', this.handleBeforeUnload);
-    
-    // Release lock if we have one
     if (this.pageMenuStore.isLocked) {
       this.pageMenuStore.releaseLock();
     }
   },
   methods: {
-    // Page load and setup
     async fetchMenus() {
       await this.pageMenuStore.fetchMenus();
-      
-      // Check if we have a lock already
       if (!this.pageMenuStore.isLocked) {
-        // If we don't have a lock, check if someone else has it
         await this.checkLock();
       }
+      if (this.pageMenuStore.menus.length > 0 && !this.pageMenuStore.selectedMenu) {
+        await this.selectMenu(this.pageMenuStore.menus[0].id);
+      }
     },
-    
     async checkLock() {
       try {
         const response = await apiService.get(`/v1/conferences/${this.conferenceId}/lock`);
         if (response.data.payload.is_locked) {
-          // Check if the current user owns the lock
           const currentUser = await apiService.get('/v1/users/me');
           const userId = currentUser.data.payload.id;
-          
-          if (response.data.payload.lock_info.user_id === userId) {
-            // Current user owns the lock
-            this.pageMenuStore.lockStatus = {
-              isLocked: true,
-              lockInfo: response.data.payload.lock_info
-            };
-          } else {
-            // Someone else has the lock
-            this.pageMenuStore.lockStatus = {
-              isLocked: false,
-              lockInfo: response.data.payload.lock_info
-            };
-          }
+          this.pageMenuStore.lockStatus = {
+            isLocked: response.data.payload.lock_info.user_id === userId,
+            lockInfo: response.data.payload.lock_info
+          };
         }
       } catch (error) {
         console.error('Error checking lock:', error);
       }
     },
-    
     async acquireLock() {
       await this.pageMenuStore.acquireLock();
     },
-    
     handleBeforeUnload(event: BeforeUnloadEvent) {
-      if (this.pageMenuStore.isLocked || this.hasUnsavedChanges) {
-        // Prevent accidental navigation while we have a lock or unsaved changes
+      if (this.pageMenuStore.isLocked) {
         event.preventDefault();
-        event.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        event.returnValue = 'You are currently editing this conference. Are you sure you want to leave?';
         return event.returnValue;
       }
     },
-    
-    // Lock and Exit
     async handleExit() {
-      // Check for unsaved changes
-      if (this.hasUnsavedChanges) {
-        this.showSaveChangesDialog = true;
-        return;
-      }
-      
-      // If we have a lock, release it
       if (this.pageMenuStore.isLocked) {
         await this.pageMenuStore.releaseLock();
       }
-      
-      // Navigate back to conferences
       this.$router.push('/conferences');
     },
-    
-    // Save current menu
     async saveCurrentMenu() {
       if (!this.pageMenuStore.selectedMenu) return;
-      
       try {
-        // Save all component changes if they've been modified
         const components = this.pageMenuStore.selectedMenu.page_data;
         if (components && components.length > 0) {
           for (const component of components) {
@@ -579,36 +498,26 @@ export default defineComponent({
               this.pageMenuStore.selectedMenu.id,
               component.id,
               {
+                tag: component.tag,
                 data: component.data,
                 is_published: component.is_published
               }
             );
           }
         }
-        
-        // Save any pending order changes
-        if (this.hasUnsavedChanges) {
-          await this.saveChanges();
-        }
-        
-        // Refresh lock after save
         await this.pageMenuStore.refreshLock();
       } catch (error) {
         console.error('Error saving page:', error);
       }
     },
-    
-    // Generate a URL slug from a title
     generateSlug(title: string): string {
       return title
         .toLowerCase()
-        .replace(/[^\w\s-]/g, '') // Remove special characters
-        .replace(/\s+/g, '-') // Replace spaces with hyphens
-        .replace(/--+/g, '-') // Replace multiple hyphens with a single one
+        .replace(/[^\w\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/--+/g, '-')
         .trim();
     },
-    
-    // Menu operations
     openAddMenuDialog() {
       this.newMenuTitle = '';
       this.newMenuSlug = '';
@@ -617,57 +526,40 @@ export default defineComponent({
       this.slugError = '';
       this.showAddMenuDialog = true;
     },
-    
     cancelAddMenu() {
       this.showAddMenuDialog = false;
     },
-    
     async handleAddMenu() {
       this.titleError = '';
       this.slugError = '';
-      
-      // Validate input
       if (!this.newMenuTitle.trim()) {
         this.titleError = 'Title is required';
         return;
       }
-      
-      // Generate slug if not provided
       const slug = this.newMenuSlug.trim() || this.generateSlug(this.newMenuTitle);
-      
       try {
-        // Get highest order value to place new menu at the end
         const currentMenus = this.pageMenuStore.menus;
         const maxOrder = currentMenus.length > 0
           ? Math.max(...currentMenus.map(m => m.order))
           : -1;
-          
         await this.pageMenuStore.createMenu({
           title: this.newMenuTitle.trim(),
           slug: slug,
           is_published: this.newMenuPublished,
           order: maxOrder + 1
         });
-        
         this.showAddMenuDialog = false;
       } catch (error: any) {
-        // Handle validation errors
         if (error.response && error.response.data && error.response.data.errors) {
           const errors = error.response.data.errors;
-          if (errors.title) {
-            this.titleError = errors.title[0];
-          }
-          if (errors.slug) {
-            this.slugError = errors.slug[0];
-          }
+          if (errors.title) this.titleError = errors.title[0];
+          if (errors.slug) this.slugError = errors.slug[0];
         }
       }
     },
-    
     handleEditMenuTitle(menuId: number) {
       const menu = this.pageMenuStore.getMenuById(menuId);
       if (!menu) return;
-      
       this.editMenuId = menuId;
       this.editMenuTitle = menu.title;
       this.editMenuSlug = menu.slug;
@@ -676,137 +568,124 @@ export default defineComponent({
       this.slugError = '';
       this.showEditMenuDialog = true;
     },
-    
     cancelEditMenu() {
       this.showEditMenuDialog = false;
     },
-    
     async saveEditMenu() {
       this.titleError = '';
       this.slugError = '';
-      
-      // Validate input
       if (!this.editMenuTitle.trim()) {
         this.titleError = 'Title is required';
         return;
       }
-      
       try {
         await this.pageMenuStore.updateMenu(this.editMenuId, {
           title: this.editMenuTitle.trim(),
           slug: this.editMenuSlug.trim(),
           is_published: this.editMenuPublished
         });
-        
         this.showEditMenuDialog = false;
       } catch (error: any) {
-        // Handle validation errors
         if (error.response && error.response.data && error.response.data.errors) {
           const errors = error.response.data.errors;
-          if (errors.title) {
-            this.titleError = errors.title[0];
-          }
-          if (errors.slug) {
-            this.slugError = errors.slug[0];
-          }
+          if (errors.title) this.titleError = errors.title[0];
+          if (errors.slug) this.slugError = errors.slug[0];
         }
       }
     },
-    
     async selectMenu(menuId: number) {
-      // Check for unsaved changes first
-      if (this.hasUnsavedChanges) {
-        this.showSaveChangesDialog = true;
-        return;
-      }
-      
-      // Set loading state for selected menu
       this.loadingSelectedMenu = true;
-      
       try {
-        // Load the menu with its page data
         await this.pageMenuStore.fetchMenu(menuId);
       } catch (error) {
         console.error('Error loading menu data:', error);
       } finally {
-        // Clear loading state
         this.loadingSelectedMenu = false;
       }
     },
-    
     confirmDeleteMenu(menuId: number) {
       this.deleteType = 'menu';
       this.deleteId = menuId;
       this.confirmDeleteMessage = 'Are you sure you want to delete this page? This action cannot be undone.';
       this.showConfirmDeleteDialog = true;
     },
-    
-    // Component operations
     openAddComponentDialog() {
       if (!this.pageMenuStore.selectedMenu) return;
-      
-      // Reset component data based on type
-      if (this.newComponentType === 'Editor') {
-        this.newComponentData = { content: '<p>Enter content here...</p>' };
-      } else if (this.newComponentType === 'Image') {
-        this.newComponentData = { url: '', alt: '', caption: '' };
-      } else if (this.newComponentType === 'Table') {
-        this.newComponentData = { rows: [['', '', ''], ['', '', ''], ['', '', '']] };
-      } else if (this.newComponentType === 'Video') {
-        this.newComponentData = { url: '', caption: '' };
-      } else if (this.newComponentType === 'Gallery') {
-        this.newComponentData = { images: [] };
-      } else {
-        this.newComponentData = {};
-      }
-      
+      this.newComponentType = 'Editor';
+      this.newComponentName = '';
+      this.newComponentData = { content: '<p>Enter content here...</p>' };
       this.newComponentPublished = false;
       this.showAddComponentDialog = true;
     },
-    
     cancelAddComponent() {
       this.showAddComponentDialog = false;
+      this.newComponentType = '';
     },
-    
     async handleAddComponent() {
       if (!this.pageMenuStore.selectedMenu || !this.newComponentType) return;
-      
       try {
-        // Get highest order value to place new component at the end
         const currentComponents = this.pageMenuStore.selectedMenu.page_data || [];
         const maxOrder = currentComponents.length > 0
           ? Math.max(...currentComponents.map(c => c.order))
           : -1;
-        
         await this.pageMenuStore.createPageData(
           this.pageMenuStore.selectedMenu.id,
           {
             component_type: this.newComponentType,
             order: maxOrder + 1,
-            data: this.newComponentData,
+            tag: this.newComponentName,
+            data: { content: this.newComponentData.content },
             is_published: this.newComponentPublished
           }
         );
-        
         this.showAddComponentDialog = false;
-      } catch (error: any) {
+        this.newComponentType = '';
+      } catch (error) {
         console.error('Error adding component:', error);
       }
     },
-    
+    editComponent(componentId: number) {
+      const component = this.pageMenuStore.selectedMenu?.page_data.find(c => c.id === componentId);
+      if (component) {
+        this.editComponentId = componentId;
+        this.editComponentType = component.component_type;
+        this.editComponentName = component.tag || '';
+        this.editComponentData = { ...component.data };
+        this.editComponentPublished = component.is_published;
+        this.showEditComponentDialog = true;
+      }
+    },
+    cancelEditComponent() {
+      this.showEditComponentDialog = false;
+    },
+    async saveEditComponent() {
+      if (!this.pageMenuStore.selectedMenu) return;
+      try {
+        await this.pageMenuStore.updatePageData(
+          this.pageMenuStore.selectedMenu.id,
+          this.editComponentId,
+          {
+            tag: this.editComponentName,
+            data: { content: this.editComponentData.content },
+            is_published: this.editComponentPublished
+          }
+        );
+        this.showEditComponentDialog = false;
+      } catch (error) {
+        console.error('Error updating component:', error);
+      }
+    },
     confirmDeleteComponent(componentId: number) {
       this.deleteType = 'component';
       this.deleteId = componentId;
       this.confirmDeleteMessage = 'Are you sure you want to delete this component? This action cannot be undone.';
       this.showConfirmDeleteDialog = true;
     },
-    
     cancelDelete() {
       this.showConfirmDeleteDialog = false;
       this.deleteType = '';
       this.deleteId = 0;
     },
-    
     async confirmDelete() {
       if (this.deleteType === 'menu') {
         await this.pageMenuStore.deleteMenu(this.deleteId);
@@ -816,229 +695,61 @@ export default defineComponent({
           this.deleteId
         );
       }
-      
       this.showConfirmDeleteDialog = false;
       this.deleteType = '';
       this.deleteId = 0;
     },
-    
-    // Component order operations
-    async moveComponentUp(componentId: number) {
-      if (!this.pageMenuStore.selectedMenu) return;
-      
-      const components = this.pageMenuStore.selectedMenu.page_data;
-      if (!components) return;
-      
-      const index = components.findIndex(c => c.id === componentId);
-      if (index <= 0) return;
-      
-      // Swap orders with the component above
-      const currentComponent = components[index];
-      const prevComponent = components[index - 1];
-      
-      // Swap display positions locally first
-      const tempOrder = currentComponent.order;
-      currentComponent.order = prevComponent.order;
-      prevComponent.order = tempOrder;
-      
-      // Add to order changes to be saved later
-      this.orderChanges.components.push(currentComponent.id);
-      this.orderChanges.components.push(prevComponent.id);
-      this.hasUnsavedChanges = true;
-      
-      // Sort components by order to update the display
-      this.pageMenuStore.selectedMenu.page_data.sort((a, b) => a.order - b.order);
-    },
-    
-    async moveComponentDown(componentId: number) {
-      if (!this.pageMenuStore.selectedMenu) return;
-      
-      const components = this.pageMenuStore.selectedMenu.page_data;
-      if (!components) return;
-      
-      const index = components.findIndex(c => c.id === componentId);
-      if (index === -1 || index >= components.length - 1) return;
-      
-      // Swap orders with the component below
-      const currentComponent = components[index];
-      const nextComponent = components[index + 1];
-      
-      // Swap display positions locally first
-      const tempOrder = currentComponent.order;
-      currentComponent.order = nextComponent.order;
-      nextComponent.order = tempOrder;
-      
-      // Add to order changes to be saved later
-      this.orderChanges.components.push(currentComponent.id);
-      this.orderChanges.components.push(nextComponent.id);
-      this.hasUnsavedChanges = true;
-      
-      // Sort components by order to update the display
-      this.pageMenuStore.selectedMenu.page_data.sort((a, b) => a.order - b.order);
-    },
-    
-    isFirstComponent(componentId: number): boolean {
-      if (!this.pageMenuStore.selectedMenu || !this.pageMenuStore.selectedMenu.page_data) return false;
-      
-      const components = this.pageMenuStore.selectedMenu.page_data;
-      if (components.length === 0) return false;
-      
-      // Sort components by order
-      const sortedComponents = [...components].sort((a, b) => a.order - b.order);
-      return componentId === sortedComponents[0].id;
-    },
-    
-    isLastComponent(componentId: number): boolean {
-      if (!this.pageMenuStore.selectedMenu || !this.pageMenuStore.selectedMenu.page_data) return false;
-      
-      const components = this.pageMenuStore.selectedMenu.page_data;
-      if (components.length === 0) return false;
-      
-      // Sort components by order
-      const sortedComponents = [...components].sort((a, b) => a.order - b.order);
-      return componentId === sortedComponents[sortedComponents.length - 1].id;
-    },
-    
-    async toggleComponentPublished(componentId: number, isPublished: boolean) {
-      if (!this.pageMenuStore.selectedMenu) return;
-      
+    async moveMenuUp(menuId: number) {
       try {
-        await this.pageMenuStore.updatePageData(
-          this.pageMenuStore.selectedMenu.id,
-          componentId,
-          { is_published: isPublished }
-        );
+        await this.pageMenuStore.moveMenuUp(menuId);
       } catch (error) {
-        console.error('Error toggling component published state:', error);
+        console.error('Error moving menu up:', error);
       }
     },
-    
-    // Menu order operations
-    async moveMenuUp(menuId: number) {
-      const menus = this.pageMenuStore.menus;
-      if (!menus) return;
-      
-      // Sort by order first
-      const sortedMenus = [...menus].sort((a, b) => a.order - b.order);
-      const index = sortedMenus.findIndex(m => m.id === menuId);
-      if (index <= 0) return;
-      
-      // Swap orders with the menu above
-      const currentMenu = sortedMenus[index];
-      const prevMenu = sortedMenus[index - 1];
-      
-      // Swap display positions locally first
-      const tempOrder = currentMenu.order;
-      currentMenu.order = prevMenu.order;
-      prevMenu.order = tempOrder;
-      
-      // Add to order changes to be saved later
-      this.orderChanges.menus.push(currentMenu.id);
-      this.orderChanges.menus.push(prevMenu.id);
-      this.hasUnsavedChanges = true;
-      
-      // Re-sort menus to update the display
-      this.pageMenuStore.sortMenusByOrder();
-    },
-    
     async moveMenuDown(menuId: number) {
-      const menus = this.pageMenuStore.menus;
-      if (!menus) return;
-      
-      // Sort by order first
-      const sortedMenus = [...menus].sort((a, b) => a.order - b.order);
-      const index = sortedMenus.findIndex(m => m.id === menuId);
-      if (index === -1 || index >= sortedMenus.length - 1) return;
-      
-      // Swap orders with the menu below
-      const currentMenu = sortedMenus[index];
-      const nextMenu = sortedMenus[index + 1];
-      
-      // Swap display positions locally first
-      const tempOrder = currentMenu.order;
-      currentMenu.order = nextMenu.order;
-      nextMenu.order = tempOrder;
-      
-      // Add to order changes to be saved later
-      this.orderChanges.menus.push(currentMenu.id);
-      this.orderChanges.menus.push(nextMenu.id);
-      this.hasUnsavedChanges = true;
-      
-      // Re-sort menus to update the display
-      this.pageMenuStore.sortMenusByOrder();
+      try {
+        await this.pageMenuStore.moveMenuDown(menuId);
+      } catch (error) {
+        console.error('Error moving menu down:', error);
+      }
     },
-    
+    async moveComponentUp(componentId: number) {
+      if (!this.pageMenuStore.selectedMenu) return;
+      try {
+        await this.pageMenuStore.movePageDataUp(this.pageMenuStore.selectedMenu.id, componentId);
+      } catch (error) {
+        console.error('Error moving component up:', error);
+      }
+    },
+    async moveComponentDown(componentId: number) {
+      if (!this.pageMenuStore.selectedMenu) return;
+      try {
+        await this.pageMenuStore.movePageDataDown(this.pageMenuStore.selectedMenu.id, componentId);
+      } catch (error) {
+        console.error('Error moving component down:', error);
+      }
+    },
+    isFirstComponent(componentId: number): boolean {
+      if (!this.pageMenuStore.selectedMenu || !this.pageMenuStore.selectedMenu.page_data) return false;
+      const components = this.pageMenuStore.selectedMenu.page_data;
+      if (components.length === 0) return false;
+      return componentId === components[0].id;
+    },
+    isLastComponent(componentId: number): boolean {
+      if (!this.pageMenuStore.selectedMenu || !this.pageMenuStore.selectedMenu.page_data) return false;
+      const components = this.pageMenuStore.selectedMenu.page_data;
+      if (components.length === 0) return false;
+      return componentId === components[components.length - 1].id;
+    },
     isFirstMenu(menuId: number): boolean {
       const menus = this.pageMenuStore.menus;
       if (menus.length === 0) return false;
-      
-      // Sort menus by order
-      const sortedMenus = [...menus].sort((a, b) => a.order - b.order);
-      return menuId === sortedMenus[0].id;
+      return menuId === menus[0].id;
     },
-    
     isLastMenu(menuId: number): boolean {
       const menus = this.pageMenuStore.menus;
       if (menus.length === 0) return false;
-      
-      // Sort menus by order
-      const sortedMenus = [...menus].sort((a, b) => a.order - b.order);
-      return menuId === sortedMenus[sortedMenus.length - 1].id;
-    },
-    
-    // Save all pending changes
-    async saveChanges() {
-      if (!this.hasUnsavedChanges) return;
-      
-      try {
-        // Save menu order changes
-        for (const menuId of this.orderChanges.menus) {
-          const menu = this.pageMenuStore.getMenuById(menuId);
-          if (menu) {
-            await this.pageMenuStore.updateMenuPosition(menuId, menu.order);
-          }
-        }
-        
-        // Save component order changes
-        if (this.pageMenuStore.selectedMenu) {
-          for (const componentId of this.orderChanges.components) {
-            const component = this.pageMenuStore.selectedMenu.page_data?.find(c => c.id === componentId);
-            if (component) {
-              await this.pageMenuStore.updatePageDataPosition(
-                this.pageMenuStore.selectedMenu.id,
-                componentId,
-                component.order
-              );
-            }
-          }
-        }
-        
-        // Reset changes tracker
-        this.orderChanges.menus = [];
-        this.orderChanges.components = [];
-        this.hasUnsavedChanges = false;
-        this.showSaveChangesDialog = false;
-        
-        // Refresh the lock
-        await this.pageMenuStore.refreshLock();
-      } catch (error) {
-        console.error('Error saving order changes:', error);
-      }
-    },
-    
-    cancelSaveChanges() {
-      this.showSaveChangesDialog = false;
-      
-      // Revert the local order changes by reloading data
-      this.fetchMenus();
-      if (this.pageMenuStore.selectedMenu) {
-        this.pageMenuStore.fetchMenu(this.pageMenuStore.selectedMenu.id);
-      }
-      
-      // Reset changes tracker
-      this.orderChanges.menus = [];
-      this.orderChanges.components = [];
-      this.hasUnsavedChanges = false;
+      return menuId === menus[menus.length - 1].id;
     }
   }
 });

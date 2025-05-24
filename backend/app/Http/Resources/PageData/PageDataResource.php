@@ -20,6 +20,7 @@ class PageDataResource extends JsonResource
             'component_type' => $this->component_type,
             'order' => $this->order,
             'data' => $this->data,
+            'tag' => $this->tag,
             'is_published' => (bool) $this->is_published,
             'created_at' => $this->created_at->toIso8601String(),
             'updated_at' => $this->updated_at->toIso8601String(),

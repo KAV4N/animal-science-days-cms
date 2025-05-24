@@ -25,9 +25,9 @@ class StorePageDataRequest extends FormRequest
     {
         return [
             'component_type' => ['required', 'string', 'max:100'],
-            'order' => ['required', 'integer', 'min:0'],
+            'tag' => ['nullable', 'string', 'max:255'],
             'data' => ['required', 'array'],
-            'is_published' => ['boolean'],
+            'is_published' => ['required', 'boolean'],
         ];
     }
 }

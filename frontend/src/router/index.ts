@@ -17,6 +17,7 @@ import Login from '@/views/auth/Login.vue';
 import ConferenceEditorView from '@/views/dashboard/ConferenceEditorView.vue';
 import ConferencesByDecade from '@/views/site/ConferencesByDecade.vue';
 import ConferencePageView from '@/views/site/ConferencePageView.vue';
+import ConferenceDetail from '@/views/site/ConferenceDetail.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -32,6 +33,13 @@ const routes: Array<RouteRecordRaw> = [
         path: 'conferences',
         name: 'conferences',
         component: ConferencesByDecade
+      },
+      // Individual conference detail page
+      {
+        path: 'conferences/:conferenceSlug',
+        name: 'ConferenceDetail',
+        component: ConferenceDetail,
+        props: true
       },
       // Public conference page view route
       {

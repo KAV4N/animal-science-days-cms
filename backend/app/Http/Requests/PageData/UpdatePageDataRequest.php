@@ -25,6 +25,7 @@ class UpdatePageDataRequest extends FormRequest
     {
         return [
             'component_type' => ['sometimes', 'string', 'max:100'],
+            'tag' => ['sometimes', 'nullable', 'string', 'max:255'],
             'order' => ['sometimes', 'integer', 'min:0'],
             'data' => ['sometimes', 'array'],
             'is_published' => ['sometimes', 'boolean'],

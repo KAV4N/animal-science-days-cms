@@ -20,28 +20,10 @@ class UpdatePositionRequest extends FormRequest
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
-    public function rules(): array
-    {
-        $menu = $this->route('menu');
-        $maxPosition = $menu->pageData()->count() - 1; // Zero-based indexing
-
-        return [
-            'position' => ['required', 'integer', 'min:0', "max:{$maxPosition}"],
-        ];
-    }
-
-    /**
-     * Get custom error messages
-     *
-     * @return array<string, string>
-     */
-    public function messages(): array
+       public function rules(): array
     {
         return [
-            'position.required' => 'A position value is required.',
-            'position.integer' => 'Position must be an integer.',
-            'position.min' => 'Position cannot be negative.',
-            'position.max' => 'Position cannot exceed the maximum available position.',
+            'direction' => ['required', 'string', 'in:up,down']
         ];
     }
 }

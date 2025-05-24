@@ -22,26 +22,10 @@ class UpdatePositionRequest extends FormRequest
      */
     public function rules(): array
     {
-        $conference = $this->route('conference');
-        $maxPosition = $conference->pageMenus()->count() - 1; // Zero-based indexing
-
         return [
-            'position' => ['required', 'integer', 'min:0', "max:{$maxPosition}"],
+            'direction' => ['required', 'string', 'in:up,down']
         ];
     }
 
-    /**
-     * Get custom error messages
-     *
-     * @return array<string, string>
-     */
-    public function messages(): array
-    {
-        return [
-            'position.required' => 'A position value is required.',
-            'position.integer' => 'Position must be an integer.',
-            'position.min' => 'Position cannot be negative.',
-            'position.max' => 'Position cannot exceed the maximum available position.',
-        ];
-    }
+    
 }

@@ -24,6 +24,10 @@ Route::prefix('v1')->group(function () {
         Route::get('/conferences/decades', [PublicConferenceController::class, 'getDecades']);
         Route::get('/conferences/decades/{decade}', [PublicConferenceController::class, 'getByDecade']);
         
+        // New routes for latest conference
+        Route::get('/conferences/latest', [PublicConferenceController::class, 'latest']);
+        Route::get('/conferences/latest/with-pages', [PublicConferenceController::class, 'latestWithPages']);
+        
         Route::get('/conferences/{conferenceSlug}', [PublicConferenceController::class, 'show']);
         Route::get('/conferences', [PublicConferenceController::class, 'index']);
     
@@ -89,13 +93,21 @@ Route::prefix('v1')->group(function () {
                     // Page Menu routes 
                     Route::apiResource('conferences.menus', PageMenuController::class);
                     
-                    // Page Menu position update route
+                    // Page Menu ordering routes (new arrow-based approach)
+                    Route::patch('conferences/{conference}/menus/{menu}/move-up', [PageMenuController::class, 'moveUp']);
+                    Route::patch('conferences/{conference}/menus/{menu}/move-down', [PageMenuController::class, 'moveDown']);
+                    
+                    // Page Menu position update route (legacy - kept for compatibility)
                     Route::patch('conferences/{conference}/menus/{menu}/position', [PageMenuController::class, 'updatePosition']);
 
                     // Page Data routes
                     Route::apiResource('conferences.menus.data', PageDataController::class);
                     
-                    // Page Data position update route
+                    // Page Data ordering routes (new arrow-based approach)
+                    Route::patch('conferences/{conference}/menus/{menu}/data/{data}/move-up', [PageDataController::class, 'moveUp']);
+                    Route::patch('conferences/{conference}/menus/{menu}/data/{data}/move-down', [PageDataController::class, 'moveDown']);
+                    
+                    // Page Data position update route (legacy - kept for compatibility)
                     Route::patch('conferences/{conference}/menus/{menu}/data/{data}/position', [PageDataController::class, 'updatePosition']);
                 });
 

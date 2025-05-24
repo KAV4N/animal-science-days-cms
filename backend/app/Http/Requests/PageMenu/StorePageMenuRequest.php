@@ -34,7 +34,7 @@ class StorePageMenuRequest extends FormRequest
                     return $query->where('conference_id', $this->route('conference')->id);
                 }),
             ],
-            'is_published' => ['boolean'],
+            'is_published' => ['required','boolean'],
         ];
     }
 }

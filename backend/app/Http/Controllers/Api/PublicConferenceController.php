@@ -9,7 +9,7 @@ use App\Models\Conference;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-
+use App\Http\Resources\PageMenu\PageMenuResource;
 class PublicConferenceController extends Controller
 {
     use ApiResponse;
@@ -73,6 +73,76 @@ class PublicConferenceController extends Controller
                 'Published conferences retrieved successfully'
             );
         }
+    }
+
+    /**
+     * Get the latest published conference
+     */
+    public function latest(): JsonResponse
+    {
+        $conference = Conference::where('is_published', true)
+            ->where('is_latest', true)
+            ->with(['university'])
+            ->first();
+
+        if (!$conference) {
+            // Fallback to most recent published conference if no latest is marked
+            $conference = Conference::where('is_published', true)
+                ->with(['university'])
+                ->orderBy('start_date', 'desc')
+                ->first();
+        }
+
+        if (!$conference) {
+            return $this->errorResponse('No published conferences found', 404);
+        }
+
+        return $this->successResponse(
+            new ConferenceResource($conference),
+            'Latest conference retrieved successfully'
+        );
+    }
+
+    /**
+     * Get latest conference with its published pages and page data
+     */
+    public function latestWithPages(): JsonResponse
+    {
+        $conference = Conference::where('is_published', true)
+            ->where('is_latest', true)
+            ->with(['university'])
+            ->first();
+
+        if (!$conference) {
+            // Fallback to most recent published conference if no latest is marked
+            $conference = Conference::where('is_published', true)
+                ->with(['university'])
+                ->orderBy('start_date', 'desc')
+                ->first();
+        }
+
+        if (!$conference) {
+            return $this->errorResponse('No published conferences found', 404);
+        }
+
+        // Get published pages with their page data for this conference
+        $pages = $conference->pageMenus()
+            ->where('is_published', true)
+            ->with(['pageData' => function($query) {
+                $query->where('is_published', true)
+                    ->orderBy('order', 'asc');
+            }])
+            ->orderBy('order', 'asc')
+            ->get();
+
+        $conferenceData = new ConferenceResource($conference);
+        $conferenceArray = $conferenceData->toArray(request());
+        $conferenceArray['pages'] = PageMenuResource::collection($pages);
+
+        return $this->successResponse(
+            $conferenceArray,
+            'Latest conference with pages and content retrieved successfully'
+        );
     }
 
     /**
