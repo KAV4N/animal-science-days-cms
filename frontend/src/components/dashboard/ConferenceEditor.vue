@@ -340,7 +340,7 @@
                       <div class="flex items-start justify-between gap-4">
                         <div class="flex items-start gap-4 min-w-0 flex-1">
                           <div class="rounded-lg p-2 flex-shrink-0">
-                            <i class="pi pi-code text-lg"></i>
+                            <i :class="getComponentIcon(component.component_type)" class="text-lg"></i>
                           </div>
                           <div class="min-w-0 flex-1">
                             <h4 class="font-semibold text-base truncate">
@@ -408,6 +408,13 @@
                       <div 
                         class="prose prose-sm max-w-none line-clamp-3 text-sm p-4 rounded" 
                         v-html="component.data?.content || 'No content'"
+                      ></div>
+                    </div>
+                    <div v-else-if="component.component_type === 'Contact'" class="p-0">
+                      <div class="text-sm mb-3">Contact Information Preview:</div>
+                      <div 
+                        class="prose prose-sm max-w-none line-clamp-3 text-sm p-4 rounded" 
+                        v-html="component.data?.content || 'No contact information'"
                       ></div>
                     </div>
                     <div v-else class="p-0">
@@ -791,98 +798,6 @@
       </Card>
     </Dialog>
     
-    <!-- Edit Component Dialog -->
-    <Dialog 
-      v-model:visible="showEditComponentDialog" 
-      header="Edit Component" 
-      :style="{ width: '95vw', maxWidth: '1200px', height: '90vh' }" 
-      :modal="true"
-      :maximizable="false"
-      :closable="true"
-      :breakpoints="{ '640px': '95vw' }"
-      :contentStyle="{ height: 'calc(90vh - 100px)', padding: '1rem' }"
-    >
-      <Card class="h-full">
-        <template #content>
-          <div class="h-full flex flex-col p-0">
-            <div class="text-center mb-4 flex-none">
-              <div class="rounded-full p-4 w-12 h-12 mx-auto mb-4 flex items-center justify-center">
-                <i class="pi pi-pencil text-lg"></i>
-              </div>
-              <h2 class="text-2xl font-bold mb-2">Edit Component</h2>
-              <p class="text-sm">Modify your component settings and content</p>
-            </div>
-            
-            <div class="flex-1 flex flex-col overflow-hidden min-h-0">
-              <!-- Component Name Input -->
-              <div class="mb-4 max-w-md mx-auto w-full flex-none">
-                <label for="editComponentName" class="block text-sm font-medium mb-2 text-center">Component Name</label>
-                <InputText 
-                  id="editComponentName" 
-                  v-model="editComponentName" 
-                  class="w-full text-center" 
-                />
-              </div>
-              
-              <!-- Content Editor -->
-              <div v-if="editComponentType === 'Editor'" class="flex-1 flex flex-col overflow-hidden mb-4 min-h-0">
-                <label for="editContent" class="block text-sm font-medium mb-2 text-center flex-none">Content Editor</label>
-                <Card class="flex-1 overflow-hidden min-h-0">
-                  <template #content>
-                    <div class="h-full p-0">
-                      <editor
-                        v-model="editComponentData.content"
-                        :init="{
-                          height: '100%',
-                          menubar: true,
-                          plugins: 'accordion advlist anchor autolink autoresize autosave charmap code codesample directionality fullscreen image insertdatetime link lists media nonbreaking pagebreak preview quickbars save searchreplace table template visualblocks visualchars wordcount emoticons help',
-                          toolbar: 'undo redo | formatselect | bold italic backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | help',
-                          mobile: {
-                            menubar: false,
-                            toolbar: 'undo redo | bold italic | bullist numlist'
-                          }
-                        }"
-                      />
-                    </div>
-                  </template>
-                </Card>
-              </div>
-              
-              <!-- Published Checkbox -->
-              <Card class="max-w-md mx-auto w-full mb-4 flex-none">
-                <template #content>
-                  <div class="flex items-center justify-center p-0">
-                    <Checkbox v-model="editComponentPublished" inputId="editComponentPublished" binary />
-                    <label for="editComponentPublished" class="ml-4 text-sm font-medium">
-                      Published
-                    </label>
-                  </div>
-                  <p class="text-sm mt-3 text-center">Controls component visibility</p>
-                </template>
-              </Card>
-            </div>
-            
-            <div class="flex flex-col sm:flex-row justify-center gap-4 pt-4 flex-none">
-              <Button 
-                label="Cancel" 
-                icon="pi pi-times" 
-                @click="cancelEditComponent" 
-                outlined
-                class="w-full sm:w-auto"
-              />
-              <Button 
-                label="Save Changes" 
-                icon="pi pi-check" 
-                @click="saveEditComponent" 
-                autofocus
-                class="w-full sm:w-auto"
-              />
-            </div>
-          </div>
-        </template>
-      </Card>
-    </Dialog>
-    
     <!-- Confirm Delete Dialog -->
     <Dialog 
       v-model:visible="showConfirmDeleteDialog" 
@@ -930,6 +845,26 @@
         </template>
       </Card>
     </Dialog>
+
+    <!-- Editor Component Dialog -->
+    <EditorComponent
+      v-model:visible="showEditorComponentDialog"
+      :component-name="editComponentName"
+      :component-data="editComponentData"
+      :is-published="editComponentPublished"
+      @save="handleSaveEditorComponent"
+      @cancel="handleCancelEditorComponent"
+    />
+
+    <!-- Contact Component Dialog -->
+    <ContactComponent
+      v-model:visible="showContactComponentDialog"
+      :component-name="editComponentName"
+      :component-data="editComponentData.rawData || editComponentData"
+      :is-published="editComponentPublished"
+      @save="handleSaveContactComponent"
+      @cancel="handleCancelContactComponent"
+    />
   </div>
 </template>
 
@@ -937,17 +872,19 @@
 import { defineComponent } from 'vue';
 import { usePageMenuStore } from '@/stores/pageMenuStore';
 import { useRoute } from 'vue-router';
-import Editor from '@hugerte/hugerte-vue';
 import apiService from '@/services/apiService';
+import EditorComponent from '@/components/dashboard/ConferenceManagement/EditorComponents/EditorComponent.vue';
+import ContactComponent from '@/components/dashboard/ConferenceManagement/EditorComponents/ContactComponent.vue';
 
 export default defineComponent({
   name: 'ConferenceEditor',
   components: {
-    'editor': Editor
+    EditorComponent,
+    ContactComponent
   },
   data() {
     return {
-      availableComponentTypes: ['Editor'],
+      availableComponentTypes: ['Editor', 'Contact'],
       
       showAddMenuDialog: false,
       newMenuTitle: '',
@@ -968,7 +905,9 @@ export default defineComponent({
       },
       newComponentPublished: false,
       
-      showEditComponentDialog: false,
+      // Component editing dialogs
+      showEditorComponentDialog: false,
+      showContactComponentDialog: false,
       editComponentId: 0,
       editComponentType: '',
       editComponentName: '',
@@ -1067,6 +1006,16 @@ export default defineComponent({
         .replace(/\s+/g, '-')
         .replace(/--+/g, '-')
         .trim();
+    },
+    getComponentIcon(componentType: string): string {
+      switch (componentType) {
+        case 'Editor':
+          return 'pi pi-file-edit';
+        case 'Contact':
+          return 'pi pi-phone';
+        default:
+          return 'pi pi-code';
+      }
     },
     openAddMenuDialog() {
       this.newMenuTitle = '';
@@ -1189,13 +1138,44 @@ export default defineComponent({
         const maxOrder = currentComponents.length > 0
           ? Math.max(...currentComponents.map(c => c.order))
           : -1;
+
+        let componentData;
+        if (this.newComponentType === 'Contact') {
+          // Create default contact data and convert to HTML
+          const defaultContactData = {
+            title: 'Contact Us',
+            description: '',
+            email: '',
+            phone: '',
+            website: '',
+            hours: '',
+            address: '',
+            city: '',
+            state: '',
+            zip: '',
+            country: '',
+            social: {
+              facebook: '',
+              twitter: '',
+              linkedin: '',
+              instagram: ''
+            }
+          };
+          componentData = {
+            content: this.generateContactHTML(defaultContactData),
+            rawData: defaultContactData
+          };
+        } else {
+          componentData = { content: this.newComponentData.content };
+        }
+
         await this.pageMenuStore.createPageData(
           this.pageMenuStore.selectedMenu.id,
           {
             component_type: this.newComponentType,
             order: maxOrder + 1,
             tag: this.newComponentName,
-            data: { content: this.newComponentData.content },
+            data: componentData,
             is_published: this.newComponentPublished
           }
         );
@@ -1208,30 +1188,52 @@ export default defineComponent({
     editComponent(componentId: number) {
       const component = this.pageMenuStore.selectedMenu?.page_data.find(c => c.id === componentId);
       if (component) {
+        console.log('Editing component:', component); // Debug log
         this.editComponentId = componentId;
         this.editComponentType = component.component_type;
         this.editComponentName = component.tag || '';
         this.editComponentData = { ...component.data };
         this.editComponentPublished = component.is_published;
-        this.showEditComponentDialog = true;
+        
+        // Open the appropriate dialog based on component type
+        if (component.component_type === 'Editor') {
+          this.showEditorComponentDialog = true;
+        } else if (component.component_type === 'Contact') {
+          console.log('Opening contact dialog with data:', this.editComponentData); // Debug log
+          this.showContactComponentDialog = true;
+        }
       }
     },
-    cancelEditComponent() {
-      this.showEditComponentDialog = false;
+    handleSaveEditorComponent(componentData: any) {
+      this.saveComponent({
+        tag: componentData.name,
+        data: { content: componentData.data.content },
+        is_published: componentData.isPublished
+      });
+      this.showEditorComponentDialog = false;
     },
-    async saveEditComponent() {
+    handleCancelEditorComponent() {
+      this.showEditorComponentDialog = false;
+    },
+    handleSaveContactComponent(componentData: any) {
+      this.saveComponent({
+        tag: componentData.name,
+        data: componentData.data,
+        is_published: componentData.isPublished
+      });
+      this.showContactComponentDialog = false;
+    },
+    handleCancelContactComponent() {
+      this.showContactComponentDialog = false;
+    },
+    async saveComponent(updateData: any) {
       if (!this.pageMenuStore.selectedMenu) return;
       try {
         await this.pageMenuStore.updatePageData(
           this.pageMenuStore.selectedMenu.id,
           this.editComponentId,
-          {
-            tag: this.editComponentName,
-            data: { content: this.editComponentData.content },
-            is_published: this.editComponentPublished
-          }
+          updateData
         );
-        this.showEditComponentDialog = false;
       } catch (error) {
         console.error('Error updating component:', error);
       }
@@ -1311,6 +1313,112 @@ export default defineComponent({
       const menus = this.pageMenuStore.menus;
       if (menus.length === 0) return false;
       return menuId === menus[menus.length - 1].id;
+    },
+    generateContactHTML(data: any): string {
+      let html = `<div class="contact-section">`;
+      
+      if (data.title) {
+        html += `<h2 class="text-2xl font-bold mb-4">${data.title}</h2>`;
+      }
+      
+      if (data.description) {
+        html += `<p class="mb-6">${data.description}</p>`;
+      }
+      
+      html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-6">`;
+      
+      // Contact Information
+      html += `<div class="space-y-4">`;
+      html += `<h3 class="text-lg font-semibold mb-4">Contact Information</h3>`;
+      
+      if (data.email) {
+        html += `<div class="flex items-center gap-3">
+          <i class="pi pi-envelope"></i>
+          <a href="mailto:${data.email}" class="text-blue-600 hover:underline">${data.email}</a>
+        </div>`;
+      }
+      
+      if (data.phone) {
+        html += `<div class="flex items-center gap-3">
+          <i class="pi pi-phone"></i>
+          <a href="tel:${data.phone}" class="text-blue-600 hover:underline">${data.phone}</a>
+        </div>`;
+      }
+      
+      if (data.website) {
+        html += `<div class="flex items-center gap-3">
+          <i class="pi pi-globe"></i>
+          <a href="${data.website}" target="_blank" class="text-blue-600 hover:underline">${data.website}</a>
+        </div>`;
+      }
+      
+      if (data.hours) {
+        html += `<div class="flex items-center gap-3">
+          <i class="pi pi-clock"></i>
+          <span>${data.hours}</span>
+        </div>`;
+      }
+      
+      html += `</div>`;
+      
+      // Address Information
+      const hasAddress = data.address || data.city || data.state || data.zip || data.country;
+      if (hasAddress) {
+        html += `<div class="space-y-4">`;
+        html += `<h3 class="text-lg font-semibold mb-4">Address</h3>`;
+        html += `<div class="flex items-start gap-3">`;
+        html += `<i class="pi pi-map-marker mt-1"></i>`;
+        html += `<div>`;
+        
+        if (data.address) html += `<div>${data.address}</div>`;
+        
+        const cityStateZip = [data.city, data.state, data.zip].filter(Boolean).join(', ');
+        if (cityStateZip) html += `<div>${cityStateZip}</div>`;
+        
+        if (data.country) html += `<div>${data.country}</div>`;
+        
+        html += `</div></div></div>`;
+      }
+      
+      html += `</div>`;
+      
+      // Social Media
+      const hasSocial = Object.values(data.social).some((url: any) => url);
+      if (hasSocial) {
+        html += `<div class="mt-8">`;
+        html += `<h3 class="text-lg font-semibold mb-4">Follow Us</h3>`;
+        html += `<div class="flex gap-4">`;
+        
+        if (data.social.facebook) {
+          html += `<a href="${data.social.facebook}" target="_blank" class="text-blue-600 hover:text-blue-800">
+            <i class="pi pi-facebook text-xl"></i>
+          </a>`;
+        }
+        
+        if (data.social.twitter) {
+          html += `<a href="${data.social.twitter}" target="_blank" class="text-blue-400 hover:text-blue-600">
+            <i class="pi pi-twitter text-xl"></i>
+          </a>`;
+        }
+        
+        if (data.social.linkedin) {
+          html += `<a href="${data.social.linkedin}" target="_blank" class="text-blue-700 hover:text-blue-900">
+            <i class="pi pi-linkedin text-xl"></i>
+          </a>`;
+        }
+        
+        if (data.social.instagram) {
+          html += `<a href="${data.social.instagram}" target="_blank" class="text-pink-600 hover:text-pink-800">
+            <i class="pi pi-instagram text-xl"></i>
+          </a>`;
+        }
+        
+        html += `</div></div>`;
+      }
+      
+      html += `</div>`;
+      
+      return html;
     }
   }
 });
