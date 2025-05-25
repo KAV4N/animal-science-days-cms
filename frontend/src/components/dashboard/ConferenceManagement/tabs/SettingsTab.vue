@@ -46,7 +46,6 @@
       </div>
     </div>
 
-    
     <!-- Advanced Settings -->
     <div v-if="currentConferenceId">
       <h3 class="text-xl font-semibold mb-3">Advanced Settings</h3>
@@ -57,7 +56,13 @@
             <h4 class="font-medium">Edit Conference Pages</h4>
             <p class="text-sm">Modify pages and content for this conference</p>
           </div>
-          <Button label="Manage Pages" icon="pi pi-file-edit" severity="secondary" class="w-full md:w-auto" @click="$emit('manage-pages')" />
+          <Button 
+            label="Manage Pages" 
+            icon="pi pi-file-edit" 
+            severity="secondary" 
+            class="w-full md:w-auto" 
+            @click="goToConferenceEdit"
+          />
         </div>
         <div class="p-4 rounded-lg border border-red-700 flex flex-column md:flex-row md:items-center md:justify-between gap-3">
           <div>
@@ -97,6 +102,7 @@
 <script>
 import { useConferenceStore } from '@/stores/conferenceStore';
 import { useToast } from 'primevue/usetoast';
+import { useRouter } from 'vue-router';
 import ToggleSwitch from 'primevue/toggleswitch';
 import Divider from 'primevue/divider';
 import Button from 'primevue/button';
@@ -120,13 +126,17 @@ export default {
       default: null
     }
   },
-  emits: ['conference-deleted', 'manage-pages', 'configure-registration'],
+  emits: ['conference-deleted', 'configure-registration'],
   data() {
     return {
       deleteDialogVisible: false,
       conferenceStore: useConferenceStore(),
       toast: useToast()
     };
+  },
+  setup() {
+    const router = useRouter();
+    return { router };
   },
   methods: {
     formatDate(value) {
@@ -147,6 +157,11 @@ export default {
         });
       }
       return '';
+    },
+    goToConferenceEdit() {
+      if (this.currentConferenceId) {
+        this.router.push({ name: 'ConferenceEdit', params: { id: this.currentConferenceId } });
+      }
     },
     confirmDelete() {
       this.deleteDialogVisible = true;

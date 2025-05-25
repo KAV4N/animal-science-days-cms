@@ -6,7 +6,7 @@ import Dashboard from '@/views/Dashboard.vue';
 import ConferenceManagement from '@/views/dashboard/ConferenceManagement.vue';
 import UserManagement from '@/views/dashboard/UserManagement.vue';
 import Site from '@/views/Site.vue';
-import ConferenceView from '@/views/site/ConferenceView.vue'; // New import
+import ConferenceView from '@/views/site/ConferenceView.vue';
 
 import middleware from './middleware';
 import ChangePassword from '@/views/auth/ChangePassword.vue';
@@ -21,21 +21,16 @@ const routes: Array<RouteRecordRaw> = [
     children: [
       {
         path: '',
-        redirect: { name: 'conferences' }
-      },
-      {
-        path: 'conferences',
-        name: 'conferences',
+        name: 'latest',
         component: ConferenceView,
         props: { slug: '' } 
       },
       {
         path: 'conferences/:slug',
-        name: 'conference-detail',
+        name: 'conference',
         component: ConferenceView,
         props: (route) => ({ slug: route.params.slug })
       },
-
       {
         path: 'archive',
         name: 'archive',
@@ -77,8 +72,8 @@ const routes: Array<RouteRecordRaw> = [
         component: ConferenceManagement
       },
       {
-        path: 'conferences/:id/editor',
-        name: 'ConferenceEditor',
+        path: 'conferences/:id/edit',
+        name: 'ConferenceEdit',
         component: ConferenceEditorView,
         props: true
       },

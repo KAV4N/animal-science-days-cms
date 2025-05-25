@@ -14,6 +14,8 @@ use App\Http\Controllers\Api\PageMenuController;
 use App\Http\Controllers\Api\PageDataController;
 use App\Http\Controllers\Api\ConferenceLockController;
 use App\Http\Controllers\Api\PublicPageMenuController;
+use App\Http\Controllers\Api\MediaController;
+use App\Http\Controllers\Api\PublicMediaController;
 
 Route::prefix('v1')->group(function () {
     // Public routes for universities
@@ -28,11 +30,18 @@ Route::prefix('v1')->group(function () {
         Route::get('/conferences', [PublicConferenceController::class, 'index']);
         Route::get('/conferences/{conferenceSlug}', [PublicConferenceController::class, 'show']);
 
-    
-        
         // Public routes for page menus
         Route::get('/conferences/{conferenceSlug}/pages', [PublicPageMenuController::class, 'index']);
         Route::get('/conferences/{conferenceSlug}/pages/{pageSlug}', [PublicPageMenuController::class, 'show']);
+        
+        // Public routes for media
+        Route::prefix('conferences/{conferenceSlug}/media')->group(function () {
+            Route::get('/', [PublicMediaController::class, 'index']);
+            Route::get('/{mediaUuid}', [PublicMediaController::class, 'show']);
+            Route::get('/{mediaUuid}/download', [PublicMediaController::class, 'download']);
+            Route::get('/{mediaUuid}/serve', [PublicMediaController::class, 'serve']);
+            Route::get('/{mediaUuid}/conversions/{conversion}', [PublicMediaController::class, 'serveConversion']);
+        });
     });
 
     // Authentication routes
@@ -60,13 +69,25 @@ Route::prefix('v1')->group(function () {
             Route::patch('/conferences/{conference}/status', [ConferenceController::class, 'updateStatus']);
             Route::apiResource('conferences', ConferenceController::class);
            
-
             // Conference lock management
             Route::prefix('conferences/{conference}/lock')->group(function () {
                 Route::get('/', [ConferenceLockController::class, 'checkLock']);
                 Route::post('/', [ConferenceLockController::class, 'acquireLock']);
                 Route::delete('/', [ConferenceLockController::class, 'releaseLock']);
                 Route::post('/refresh', [ConferenceLockController::class, 'refreshLock']);
+            });
+            
+            // Media management routes (protected)
+            Route::middleware('check.conference.lock')->group(function () {
+                Route::prefix('conferences/{conference}/media')->group(function () {
+                    Route::get('/', [MediaController::class, 'index']);
+                    Route::post('/', [MediaController::class, 'store']);
+                    Route::get('/{media}', [MediaController::class, 'show']);
+                    Route::put('/{media}', [MediaController::class, 'update']);
+                    Route::patch('/{media}', [MediaController::class, 'update']);
+                    Route::delete('/{media}', [MediaController::class, 'destroy']);
+                    Route::get('/{media}/download', [MediaController::class, 'download']);
+                });
             });
             
             // Admin-only routes
@@ -78,34 +99,19 @@ Route::prefix('v1')->group(function () {
                     Route::apiResource('universities', UniversityController::class)->except(['index', 'show']);
                 });
 
-                // Conference editors management
-                Route::middleware('check.conference.lock')->group(function () {
-                    Route::get('/conferences/{conference}/editors/unattached', [ConferenceEditorController::class, 'unattached']);
-                    Route::get('/conferences/{conference}/editors', [ConferenceEditorController::class, 'index']);
-                    Route::post('/conferences/{conference}/editors', [ConferenceEditorController::class, 'store']);
-                    Route::delete('/conferences/{conference}/editors/{editor}', [ConferenceEditorController::class, 'destroy']);
-                });
 
-                // Page Menu & Page Data API routes
+                Route::get('/conferences/{conference}/editors/unattached', [ConferenceEditorController::class, 'unattached']);
+                Route::get('/conferences/{conference}/editors', [ConferenceEditorController::class, 'index']);
+                Route::post('/conferences/{conference}/editors', [ConferenceEditorController::class, 'store']);
+                Route::delete('/conferences/{conference}/editors/{editor}', [ConferenceEditorController::class, 'destroy']);
+                
                 Route::middleware('check.conference.lock')->group(function () {
-                    // Page Menu routes 
+                // Page Menu routes 
                     Route::apiResource('conferences.menus', PageMenuController::class);
-                    
-                    // Page Menu ordering routes (new arrow-based approach)
-                    Route::patch('conferences/{conference}/menus/{menu}/move-up', [PageMenuController::class, 'moveUp']);
-                    Route::patch('conferences/{conference}/menus/{menu}/move-down', [PageMenuController::class, 'moveDown']);
-                    
-                    // Page Menu position update route (legacy - kept for compatibility)
                     Route::patch('conferences/{conference}/menus/{menu}/position', [PageMenuController::class, 'updatePosition']);
 
                     // Page Data routes
                     Route::apiResource('conferences.menus.data', PageDataController::class);
-                    
-                    // Page Data ordering routes (new arrow-based approach)
-                    Route::patch('conferences/{conference}/menus/{menu}/data/{data}/move-up', [PageDataController::class, 'moveUp']);
-                    Route::patch('conferences/{conference}/menus/{menu}/data/{data}/move-down', [PageDataController::class, 'moveDown']);
-                    
-                    // Page Data position update route (legacy - kept for compatibility)
                     Route::patch('conferences/{conference}/menus/{menu}/data/{data}/position', [PageDataController::class, 'updatePosition']);
                 });
 
@@ -115,7 +121,6 @@ Route::prefix('v1')->group(function () {
                 Route::put('/users/{user}', [UserController::class, 'update']);
                 Route::delete('/users/{user}', [UserController::class, 'destroy']);
 
-                Route::get('/roles', [RoleController::class, 'index']);
                 Route::get('/roles/available', [RoleController::class, 'availableRoles']);
             });
         });

@@ -14,10 +14,6 @@
       <div class="flex items-center">
         <i class="pi pi-calendar mr-2"></i>
         <span class="font-bold text-lg">{{ dialogHeader }}</span>
-        <div v-if="lockInfo" class="ml-auto flex items-center text-sm text-amber-600">
-          <i class="pi pi-lock mr-1"></i>
-          <span>You have an active lock on this conference</span>
-        </div>
       </div>
     </template>
     
@@ -102,7 +98,7 @@
             @click="handleSubmit"
           />
           <Button
-           v-if="!isEditing"
+            v-if="!isEditing"
             type="button"
             label="Create"
             icon="pi pi-check"
@@ -126,20 +122,12 @@
 import { defineComponent } from 'vue';
 import { useConferenceStore } from '@/stores/conferenceStore';
 import { useUniversityStore } from '@/stores/universityStore';
-import { useAuthStore } from '@/stores/authStore';
 import { useToast } from 'primevue/usetoast';
 import useVuelidate from '@vuelidate/core';
 import { required, minLength, helpers } from '@vuelidate/validators';
 
 import type { University } from '@/types/university';
-import type { User } from '@/types/user';
-import type {
-  Conference,
-  Editor,
-  ConferenceStoreRequest,
-  ConferenceUpdateRequest,
-  ConferenceLockInfo
-} from '@/types/conference';
+import type { Conference, Editor, ConferenceStoreRequest, ConferenceUpdateRequest } from '@/types/conference';
 
 import BasicInfoTab from './tabs/BasicInfoTab.vue';
 import LocationDatesTab from './tabs/LocationDatesTab.vue';
@@ -166,7 +154,6 @@ export default defineComponent({
       activeTabIndex: '0',
       conferenceStore: useConferenceStore(),
       universityStore: useUniversityStore(),
-      authStore: useAuthStore(),
       toast: useToast(),
       v$: useVuelidate(),
       dialogRef: null as any,
@@ -194,10 +181,6 @@ export default defineComponent({
   computed: {
     dialogHeader(): string {
       return this.isEditing ? 'Edit Conference' : 'Create New Conference';
-    },
-    
-    lockInfo(): ConferenceLockInfo | null {
-      return this.conferenceStore.getCurrentLock;
     }
   },
   
@@ -266,8 +249,6 @@ export default defineComponent({
   },
   
   methods: {
-    // The maximizeDialog method is no longer needed since the dialog is always maximized
-    
     hideConferenceDialog() {
       this.visible = false;
     },
@@ -341,50 +322,10 @@ export default defineComponent({
     },
 
     async handleDialogShow() {
-      // Dialog is already maximized via :maximized="true" prop
-      if (this.isEditing && this.currentConferenceId) {
-        try {
-          // Check if this user already has a lock (e.g., from page refresh)
-          const conference = this.conferenceStore.conferences.find(c => c.id === this.currentConferenceId);
-          
-          // If there's no lock or the current user doesn't own the lock, try to acquire it
-          if (!conference?.lock_status || conference.lock_status.user_id !== this.authStore.user?.id) {
-            await this.conferenceStore.acquireLock(this.currentConferenceId);
-          }
-        } catch (error: any) {
-          if (error.response?.status === 423) {
-            // Conference is locked by another user
-            const lockInfo = error.response?.data?.lock_info;
-            const userName = lockInfo?.user_name || 'another user';
-            this.toast.add({
-              severity: 'warn',
-              summary: 'Conference Locked',
-              detail: error.response?.message || `This conference is being edited by ${userName}. Try again later.`,
-              life: 5000,
-            });
-            this.visible = false;
-          } else {
-            this.toast.add({
-              severity: 'error',
-              summary: 'Error',
-              detail: error.response?.message || 'Failed to acquire lock for editing',
-              life: 3000,
-            });
-          }
-        }
-      }
+      // No lock-related logic needed
     },
 
     async handleDialogHide() {
-      // Release the lock when dialog is closed
-      if (this.isEditing && this.currentConferenceId) {
-        try {
-          await this.conferenceStore.releaseLock(this.currentConferenceId);
-        } catch (error) {
-          // Silently handle error, as backend will clean up expired locks
-          console.warn('Failed to release lock, but it will expire automatically');
-        }
-      }
       this.resetForm();
     },
 
@@ -411,9 +352,6 @@ export default defineComponent({
           const payload: ConferenceUpdateRequest = formattedData;
           const response = await this.conferenceStore.updateConference(this.currentConferenceId, payload);
           
-          // Refresh the lock after update
-          await this.conferenceStore.refreshLock(this.currentConferenceId);
-          
           this.$emit('conference-updated', response.payload);
           this.toast.add({
             severity: 'success',
@@ -421,8 +359,6 @@ export default defineComponent({
             detail: response.message || 'Conference updated successfully',
             life: 3000,
           });
-          
-          // For "Apply", we want to keep the dialog open when editing (don't set visible to false)
         } else {
           const payload: ConferenceStoreRequest = formattedData;
           const response = await this.conferenceStore.createConference(payload);
@@ -434,30 +370,16 @@ export default defineComponent({
             life: 3000,
           });
           
-          // For a new conference, close the dialog after creation
           this.visible = false;
           this.resetForm();
         }
       } catch (error: any) {
-        if (error.response?.status === 423) {
-          // Handle lock conflict
-          const lockInfo = error.response?.data?.lock_info;
-          const userName = lockInfo?.user_name || 'another user';
-          this.toast.add({
-            severity: 'error',
-            summary: 'Update Failed',
-            detail: error.response?.message || `This conference is now being edited by ${userName}. Your changes could not be saved.`,
-            life: 5000,
-          });
-          this.visible = false;
-        } else {
-          this.toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: error.response?.message || error instanceof Error ? error.message : 'Failed to save conference',
-            life: 3000,
-          });
-        }
+        this.toast.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: error.response?.message || error instanceof Error ? error.message : 'Failed to save conference',
+          life: 3000,
+        });
       } finally {
         this.loading = false;
       }
@@ -504,29 +426,15 @@ export default defineComponent({
           });
         }
 
-        // Always close dialog after "Save & Close" or "Create"
         this.visible = false;
         this.resetForm();
       } catch (error: any) {
-        if (error.response?.status === 423) {
-          // Handle lock conflict
-          const lockInfo = error.response?.data?.lock_info;
-          const userName = lockInfo?.user_name || 'another user';
-          this.toast.add({
-            severity: 'error',
-            summary: 'Update Failed',
-            detail: error.response?.message || `This conference is now being edited by ${userName}. Your changes could not be saved.`,
-            life: 5000,
-          });
-          this.visible = false;
-        } else {
-          this.toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: error.response?.message || error instanceof Error ? error.message : 'Failed to save conference',
-            life: 3000,
-          });
-        }
+        this.toast.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: error.response?.message || error instanceof Error ? error.message : 'Failed to save conference',
+          life: 3000,
+        });
       } finally {
         this.loading = false;
       }
@@ -596,14 +504,5 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* Optional: Add styling for lock indicator */
-.lock-indicator {
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-  font-size: 0.875rem;
-  color: #b45309;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
+/* No lock indicator styling needed */
 </style>

@@ -8,6 +8,7 @@ use App\Http\Resources\Conference\ConferenceEditorResource;
 use App\Http\Resources\User\UserResource;
 use App\Models\Conference;
 use App\Models\User;
+use App\Services\ConferenceLockService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,6 +16,16 @@ use Illuminate\Http\Request;
 class ConferenceEditorController extends Controller
 {
     use ApiResponse;
+
+    protected $lockService;
+
+    /**
+     * Constructor to inject ConferenceLockService
+     */
+    public function __construct(ConferenceLockService $lockService)
+    {
+        $this->lockService = $lockService;
+    }
 
     /**
      * Display a listing of editors attached to the conference.
@@ -117,7 +128,9 @@ class ConferenceEditorController extends Controller
         );
     }
 
-
+    /**
+     * Attach an editor to the conference.
+     */
     public function store(ConferenceEditorStoreRequest $request, Conference $conference): JsonResponse
     {
         $userId = $request->user_id;
@@ -142,7 +155,9 @@ class ConferenceEditorController extends Controller
         );
     }
 
-
+    /**
+     * Detach an editor from the conference and release their lock if held.
+     */
     public function destroy(Conference $conference, User $editor): JsonResponse
     {
         if (!$conference->editors()->where('user_id', $editor->id)->exists()) {
@@ -150,6 +165,8 @@ class ConferenceEditorController extends Controller
         }
 
         $conference->editors()->detach($editor->id);
+        
+        $this->lockService->releaseLock($conference->id, $editor->id);
     
         return $this->successResponse(null, 'Editor removed successfully');
     }

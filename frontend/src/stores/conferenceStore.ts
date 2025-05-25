@@ -7,9 +7,7 @@ import type {
   ConferenceStoreRequest, 
   ConferenceUpdateRequest, 
   ConferenceResponse, 
-  ConferencePaginatedResponse,
-  ConferenceLockResponse,
-  ConferenceLockInfo
+  ConferencePaginatedResponse
 } from '@/types/conference';
 import type { PaginationMeta } from '@/types/common';
 import type { AxiosError } from 'axios';
@@ -21,7 +19,6 @@ interface ConferenceState {
   loading: boolean;
   error: string | null;
   meta: PaginationMeta | null;
-  currentLock: ConferenceLockInfo | null;
 }
 
 export const useConferenceStore = defineStore('conference', {
@@ -30,8 +27,7 @@ export const useConferenceStore = defineStore('conference', {
     latestConference: null,
     loading: false,
     error: null,
-    meta: null,
-    currentLock: null
+    meta: null
   }),
 
   getters: {
@@ -39,7 +35,6 @@ export const useConferenceStore = defineStore('conference', {
     isLoading: (state) => state.loading,
     getError: (state) => state.error,
     getPaginationMeta: (state) => state.meta,
-    getCurrentLock: (state) => state.currentLock,
 
     getPublishedConferences: (state) => state.conferences.filter(c => c.is_published),
 
@@ -247,11 +242,6 @@ export const useConferenceStore = defineStore('conference', {
           this.latestConference = null;
         }
 
-        // If there's a lock for this conference, clear it
-        if (this.currentLock && this.currentLock.conferenceId === id) {
-          this.currentLock = null;
-        }
-
         return response.data;
       } catch (error) {
         const axiosError = error as AxiosError<ApiErrorResponse>;
@@ -262,88 +252,12 @@ export const useConferenceStore = defineStore('conference', {
       }
     },
 
-    async acquireLock(conferenceId: number) {
-      try {
-        const response = await apiService.post<ConferenceResponse>(`/v1/conferences/${conferenceId}/lock`);
-        // Store the lock information for the current user session
-        this.currentLock = response.data.payload.lock_status || null;
-        
-        // Update the conference in the store with lock info
-        const index = this.conferences.findIndex(c => c.id === conferenceId);
-        if (index !== -1 && response.data.payload.lock_status) {
-          this.conferences[index].lock_status = response.data.payload.lock_status;
-        }
-        
-        return response.data;
-      } catch (error) {
-        // Pass through the error to be handled by the component
-        throw error;
-      }
-    },
-
-    async releaseLock(conferenceId: number) {
-      try {
-        const response = await apiService.delete(`/v1/conferences/${conferenceId}/lock`);
-        // Clear the current lock
-        this.currentLock = null;
-        
-        // Update the conference in the store to remove lock info
-        const index = this.conferences.findIndex(c => c.id === conferenceId);
-        if (index !== -1) {
-          this.conferences[index].lock_status = undefined;
-        }
-        
-        return response.data;
-      } catch (error) {
-        // Clear the lock even if the API call fails
-        this.currentLock = null;
-        throw error;
-      }
-    },
-
-    async refreshLock(conferenceId: number) {
-      try {
-        const response = await apiService.post(`/v1/conferences/${conferenceId}/lock/refresh`);
-        return response.data;
-      } catch (error) {
-        // If refresh fails, throw the error but don't clear the lock
-        // as the component will handle this appropriately
-        throw error;
-      }
-    },
-
-    // Only use this when needed - conferences should already include lock_status from API
-    async checkLock(conferenceId: number) {
-      try {
-        const response = await apiService.get<ConferenceLockResponse>(`/v1/conferences/${conferenceId}/lock`);
-        const authStore = useAuthStore();
-        
-        if (response.data.payload.is_locked) {
-          // Only set current lock if it's our lock
-          if (response.data.payload.lock_info?.user_id === authStore.user?.id) {
-            this.currentLock = response.data.payload.lock_info;
-          }
-          
-          // Update the conference in the store with lock info
-          const index = this.conferences.findIndex(c => c.id === conferenceId);
-          if (index !== -1) {
-            this.conferences[index].lock_status = response.data.payload.lock_info;
-          }
-        }
-        
-        return response.data;
-      } catch (error) {
-        throw error;
-      }
-    },
-
     resetState() {
       this.conferences = [];
       this.latestConference = null;
       this.loading = false;
       this.error = null;
       this.meta = null;
-      this.currentLock = null;
     }
   }
 });
