@@ -341,7 +341,6 @@
                               @click="moveComponentUp(component.id)"
                               outlined
                               class="p-1"
-                              v-tooltip="'Move Up'"
                             />
                             <Button 
                               icon="pi pi-arrow-down" 
@@ -351,7 +350,6 @@
                               @click="moveComponentDown(component.id)"
                               outlined
                               class="p-1"
-                              v-tooltip="'Move Down'"
                             />
                           </div>
                           <div class="flex gap-1">
@@ -363,7 +361,6 @@
                               @click="editComponent(component.id)"
                               outlined
                               class="p-1"
-                              v-tooltip="'Edit Component'"
                             />
                             <Button 
                               icon="pi pi-trash" 
@@ -373,7 +370,6 @@
                               @click="confirmDeleteComponent(component.id)"
                               outlined
                               class="p-1"
-                              v-tooltip="'Delete Component'"
                             />
                           </div>
                         </div>
@@ -419,7 +415,6 @@
               @click="openAddMenuDialog"
               :disabled="!pageMenuStore.isLocked"
               class="rounded-full"
-              v-tooltip="'Add new page'"
             />
           </div>
           <p class="text-xs sm:text-sm text-gray-600 mt-1">Manage your conference pages</p>
@@ -792,7 +787,6 @@
           <div v-if="editComponentType === 'Editor'" class="flex-1 flex flex-col overflow-hidden mb-4 min-h-0">
             <label for="editContent" class="block text-sm font-medium text-gray-700 mb-2 text-center flex-none">Content Editor</label>
             <div class="flex-1 overflow-hidden border rounded-lg bg-white min-h-0">
-              <client-only>
                 <editor
                   v-model="editComponentData.content"
                   :init="{
@@ -806,7 +800,6 @@
                     }
                   }"
                 />
-              </client-only>
             </div>
           </div>
           
@@ -1014,7 +1007,7 @@ export default defineComponent({
       if (this.pageMenuStore.isLocked) {
         await this.pageMenuStore.releaseLock();
       }
-      this.$router.push('/conferences');
+      this.$router.push('/dashboard/conferences');
     },
     generateSlug(title: string): string {
       return title

@@ -28,7 +28,6 @@ import Dialog from 'primevue/dialog'
 import Divider from 'primevue/divider'
 import Drawer from 'primevue/drawer'
 import Dropdown from 'primevue/dropdown'
-import Editor from 'primevue/editor'
 import FileUpload from 'primevue/fileupload'
 import IconField from 'primevue/iconfield'
 import InputGroup from 'primevue/inputgroup'
@@ -122,7 +121,6 @@ async function startApp() {
   app.component('Divider', Divider)
   app.component('Drawer', Drawer)
   app.component('Dropdown', Dropdown)
-  app.component('Editor', Editor)
   app.component('FileUpload', FileUpload)
   app.component('IconField', IconField)
   app.component('InputGroup', InputGroup)
