@@ -20,6 +20,7 @@ class PageMenuResource extends JsonResource
             'conference_id' => $this->conference_id,
             'title' => $this->title,
             'slug' => $this->slug,
+            'order' => $this->order,
             'is_published' => (bool) $this->is_published,
             'page_data' => $this->whenLoaded('pageData', function () {
                 return PageDataResource::collection($this->pageData);
