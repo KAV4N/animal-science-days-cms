@@ -126,9 +126,9 @@
     </div>
   </div>
 </template>
+
 <script lang="ts">
 import { defineComponent } from 'vue';
-import { useRouter } from 'vue-router';
 import apiService from '@/services/apiService';
 import type { Conference } from '@/types/conference';
 import type { Decade } from '@/types/decade';
@@ -234,9 +234,8 @@ export default defineComponent({
     },
 
     goToConference(conference: Conference) {
-      const router = useRouter();
-      router.push({
-        name: 'conference-detail',
+      this.$router.push({
+        name: 'conference',
         params: { slug: conference.slug }
       });
     }
