@@ -1,64 +1,62 @@
 <template>
-  <div class="conference-editor h-screen flex flex-col bg-gray-50">
+  <div class="conference-editor h-screen flex flex-col">
     <!-- Top Header -->
-    <div class="header bg-white shadow-sm border-b border-gray-200 px-3 sm:px-6 py-3 sm:py-4 flex-none">
-      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-        <div class="min-w-0">
-          <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 truncate">Conference Page Editor</h1>
-          <p class="text-gray-600 mt-1 text-sm sm:text-base hidden sm:block">Manage and edit conference pages and components</p>
-        </div>
-        
-        <!-- Lock status and actions -->
-        <div class="flex items-center gap-2 sm:gap-4 flex-wrap">
-          <div v-if="pageMenuStore.lockStatus.isLocked" class="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 px-2 sm:px-4 py-1 sm:py-2 rounded-lg text-xs sm:text-sm">
-            <i class="pi pi-lock text-green-600"></i>
-            <span class="font-medium hidden sm:inline">Editing Mode Active</span>
-            <span class="font-medium sm:hidden">Editing</span>
+    <Card class="header shadow-sm p-4 flex-none rounded-none">
+      <template #content>
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 p-0">
+          <div class="min-w-0">
+            <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold truncate">Conference Page Editor</h1>
+            <p class="mt-2 text-sm sm:text-base hidden sm:block">Manage and edit conference pages and components</p>
           </div>
           
-          <div v-else-if="!pageMenuStore.loading" class="flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-700 px-2 sm:px-4 py-1 sm:py-2 rounded-lg text-xs sm:text-sm">
-            <i class="pi pi-lock-open text-amber-600"></i>
-            <span class="hidden sm:inline">Read Only Mode</span>
-            <span class="sm:hidden">Read Only</span>
+          <!-- Lock status and actions -->
+          <div class="flex items-center gap-4 flex-wrap">
+            <div v-if="pageMenuStore.lockStatus.isLocked" class="flex items-center gap-2 p-2 rounded-lg text-sm">
+              <i class="pi pi-lock"></i>
+              <span class="font-medium hidden sm:inline">Editing Mode Active</span>
+              <span class="font-medium sm:hidden">Editing</span>
+            </div>
+            
+            <div v-else-if="!pageMenuStore.loading" class="flex items-center gap-2 p-2 rounded-lg text-sm">
+              <i class="pi pi-lock-open"></i>
+              <span class="hidden sm:inline">Read Only Mode</span>
+              <span class="sm:hidden">Read Only</span>
+              <Button 
+                label="Enable" 
+                icon="pi pi-lock" 
+                @click="acquireLock"
+                size="small"
+                class="ml-2 text-xs"
+              />
+            </div>
+            
             <Button 
-              label="Enable" 
-              icon="pi pi-lock" 
-              @click="acquireLock"
+              icon="pi pi-times" 
+              class="hidden sm:inline-flex"
+              label="Exit"
+              @click="handleExit"
+              outlined
               size="small"
-              severity="warning"
-              class="ml-1 sm:ml-2 text-xs"
+            />
+            <Button 
+              icon="pi pi-times" 
+              class="sm:hidden"
+              @click="handleExit"
+              outlined
+              size="small"
             />
           </div>
-          
-          <Button 
-            icon="pi pi-times" 
-            class="hidden sm:inline-flex"
-            label="Exit"
-            @click="handleExit"
-            severity="secondary"
-            outlined
-            size="small"
-          />
-          <Button 
-            icon="pi pi-times" 
-            class="sm:hidden"
-            @click="handleExit"
-            severity="secondary"
-            outlined
-            size="small"
-          />
         </div>
-      </div>
-    </div>
+      </template>
+    </Card>
 
     <!-- Mobile Menu Toggle -->
-    <div class="lg:hidden bg-white border-b border-gray-200 px-3 py-2">
+    <div class="lg:hidden p-4">
       <div class="flex justify-between items-center">
         <Button 
           :icon="showLeftPanel ? 'pi pi-times' : 'pi pi-bars'"
           :label="showLeftPanel ? 'Close' : 'Overview'"
           @click="showLeftPanel = !showLeftPanel"
-          severity="secondary"
           outlined
           size="small"
         />
@@ -66,7 +64,6 @@
           :icon="showRightPanel ? 'pi pi-times' : 'pi pi-list'"
           :label="showRightPanel ? 'Close' : 'Pages'"
           @click="showRightPanel = !showRightPanel"
-          severity="secondary"
           outlined
           size="small"
         />
@@ -77,321 +74,348 @@
     <div class="flex-1 flex overflow-hidden relative">
       <!-- Conference Overview Panel (Left) -->
       <div :class="[
-        'bg-white border-r border-gray-200 flex flex-col transition-all duration-300 z-20',
+        'flex flex-col transition-all duration-300 z-20',
         'lg:w-80 lg:relative lg:translate-x-0',
         'absolute inset-y-0 left-0 w-80 max-w-[90vw]',
         showLeftPanel ? 'translate-x-0 shadow-lg' : '-translate-x-full'
       ]">
-        <!-- Conference Info Header -->
-        <div class="px-4 sm:px-6 py-4 border-b border-gray-100">
-          <h2 class="text-base sm:text-lg font-semibold text-gray-900 mb-2">Conference Overview</h2>
-          <div class="space-y-2 text-xs sm:text-sm text-gray-600">
-            <div class="flex items-center gap-2">
-              <i class="pi pi-calendar text-blue-500"></i>
-              <span>Conference ID: {{ conferenceId }}</span>
+        <!-- Conference Info Card -->
+        <Card class="m-4 flex-none">
+          <template #title>
+            <h2 class="text-lg font-semibold">Conference Overview</h2>
+          </template>
+          <template #content>
+            <div class="space-y-3 text-sm p-0">
+              <div class="flex items-center gap-2">
+                <i class="pi pi-calendar"></i>
+                <span>Conference ID: {{ conferenceId }}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <i class="pi pi-file"></i>
+                <span>{{ pageMenuStore.menus.length }} Pages Total</span>
+              </div>
             </div>
-            <div class="flex items-center gap-2">
-              <i class="pi pi-file text-purple-500"></i>
-              <span>{{ pageMenuStore.menus.length }} Pages Total</span>
+          </template>
+        </Card>
+
+        <!-- Quick Actions Card -->
+        <Card class="m-4 flex-none">
+          <template #title>
+            <h3 class="text-base font-semibold">Quick Actions</h3>
+          </template>
+          <template #content>
+            <div class="space-y-3 p-0">
+              <Button 
+                label="Create New Page" 
+                icon="pi pi-plus" 
+                @click="openAddMenuDialog"
+                :disabled="!pageMenuStore.isLocked"
+                class="w-full text-sm"
+                size="small"
+              />
+              <Button 
+                label="Add Component" 
+                icon="pi pi-plus-circle" 
+                @click="openAddComponentDialog"
+                :disabled="!pageMenuStore.selectedMenu || !pageMenuStore.isLocked"
+                outlined
+                class="w-full text-sm"
+                size="small"
+              />
+              
+              <!-- Component Type Selector -->
+              <div class="mt-4">
+                <label class="block text-sm font-medium mb-2">Quick Add Component</label>
+                <Dropdown
+                  v-model="newComponentType"
+                  :options="availableComponentTypes"
+                  placeholder="Select component type"
+                  class="w-full text-sm"
+                  :disabled="!pageMenuStore.selectedMenu || !pageMenuStore.isLocked"
+                  @change="openAddComponentDialog"
+                />
+              </div>
             </div>
-          </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="px-4 sm:px-6 py-4 border-b border-gray-100">
-          <div class="space-y-2">
-            <Button 
-              label="Create New Page" 
-              icon="pi pi-plus" 
-              @click="openAddMenuDialog"
-              :disabled="!pageMenuStore.isLocked"
-              class="w-full text-sm"
-              size="small"
-            />
-            <Button 
-              label="Add Component" 
-              icon="pi pi-plus-circle" 
-              @click="openAddComponentDialog"
-              :disabled="!pageMenuStore.selectedMenu || !pageMenuStore.isLocked"
-              severity="info"
-              outlined
-              class="w-full text-sm"
-              size="small"
-            />
-          </div>
-        </div>
-
-        <!-- Component Type Selector -->
-        <div class="px-4 sm:px-6 py-4 border-b border-gray-100">
-          <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Quick Add Component</label>
-          <Dropdown
-            v-model="newComponentType"
-            :options="availableComponentTypes"
-            placeholder="Select component type"
-            class="w-full text-sm"
-            :disabled="!pageMenuStore.selectedMenu || !pageMenuStore.isLocked"
-            @change="openAddComponentDialog"
-          />
-        </div>
+          </template>
+        </Card>
 
         <!-- Loading State -->
         <div v-if="pageMenuStore.loading && !loadingSelectedMenu" class="flex-1 flex items-center justify-center p-4">
-          <div class="text-center">
-            <i class="pi pi-spin pi-spinner text-2xl sm:text-3xl text-blue-500 mb-2"></i>
-            <p class="text-gray-600 text-sm">Loading conference data...</p>
-          </div>
+          <Card class="w-full">
+            <template #content>
+              <div class="text-center p-0">
+                <i class="pi pi-spin pi-spinner text-3xl mb-4"></i>
+                <p class="text-sm">Loading conference data...</p>
+              </div>
+            </template>
+          </Card>
         </div>
 
         <!-- Empty State -->
-        <div v-else-if="!pageMenuStore.hasMenus" class="flex-1 flex items-center justify-center p-4 sm:p-6">
-          <div class="text-center">
-            <i class="pi pi-file text-4xl sm:text-6xl text-gray-300 mb-4"></i>
-            <h3 class="text-base sm:text-lg font-medium text-gray-900 mb-2">No Pages Created</h3>
-            <p class="text-gray-600 mb-4 text-sm">Get started by creating your first conference page</p>
-            <Button 
-              label="Create First Page" 
-              icon="pi pi-plus" 
-              @click="openAddMenuDialog"
-              :disabled="!pageMenuStore.isLocked"
-              size="small"
-            />
-          </div>
+        <div v-else-if="!pageMenuStore.hasMenus" class="flex-1 flex items-center justify-center p-4">
+          <Card class="w-full">
+            <template #content>
+              <div class="text-center p-0">
+                <i class="pi pi-file text-6xl mb-4"></i>
+                <h3 class="text-lg font-medium mb-4">No Pages Created</h3>
+                <p class="mb-4 text-sm">Get started by creating your first conference page</p>
+                <Button 
+                  label="Create First Page" 
+                  icon="pi pi-plus" 
+                  @click="openAddMenuDialog"
+                  :disabled="!pageMenuStore.isLocked"
+                  size="small"
+                />
+              </div>
+            </template>
+          </Card>
         </div>
 
         <!-- Conference Stats -->
-        <div v-else class="flex-1 flex flex-col justify-center p-4 sm:p-6">
+        <div v-else class="flex-1 flex flex-col justify-center p-4">
           <div class="space-y-4">
-            <div class="bg-blue-50 rounded-lg p-3 sm:p-4">
-              <div class="flex items-center gap-3">
-                <i class="pi pi-chart-bar text-blue-600 text-xl sm:text-2xl"></i>
-                <div>
-                  <p class="text-blue-900 font-semibold text-sm">Total Components</p>
-                  <p class="text-blue-700 text-xl sm:text-2xl font-bold">
-                    {{ pageMenuStore.selectedMenu?.page_data?.length || 0 }}
-                  </p>
+            <Card>
+              <template #content>
+                <div class="flex items-center gap-4 p-0">
+                  <i class="pi pi-chart-bar text-2xl"></i>
+                  <div>
+                    <p class="font-semibold text-sm">Total Components</p>
+                    <p class="text-2xl font-bold">
+                      {{ pageMenuStore.selectedMenu?.page_data?.length || 0 }}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </div>
+              </template>
+            </Card>
             
-            <div class="bg-green-50 rounded-lg p-3 sm:p-4">
-              <div class="flex items-center gap-3">
-                <i class="pi pi-check-circle text-green-600 text-xl sm:text-2xl"></i>
-                <div>
-                  <p class="text-green-900 font-semibold text-sm">Published Pages</p>
-                  <p class="text-green-700 text-xl sm:text-2xl font-bold">
-                    {{ pageMenuStore.menus.filter(m => m.is_published).length }}
-                  </p>
+            <Card>
+              <template #content>
+                <div class="flex items-center gap-4 p-0">
+                  <i class="pi pi-check-circle text-2xl"></i>
+                  <div>
+                    <p class="font-semibold text-sm">Published Pages</p>
+                    <p class="text-2xl font-bold">
+                      {{ pageMenuStore.menus.filter(m => m.is_published).length }}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </div>
+              </template>
+            </Card>
           </div>
         </div>
       </div>
 
       <!-- Main Editor Area (Center) -->
-      <div class="flex-1 flex flex-col bg-white min-w-0">
+      <div class="flex-1 flex flex-col min-w-0">
         <!-- Error State -->
-        <div v-if="pageMenuStore.error" class="mx-3 sm:mx-6 mt-4">
-          <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2 text-sm">
-            <i class="pi pi-exclamation-triangle"></i>
-            <span>{{ pageMenuStore.error }}</span>
-          </div>
+        <div v-if="pageMenuStore.error" class="m-4">
+          <Card>
+            <template #content>
+              <div class="flex items-center gap-2 text-sm p-0">
+                <i class="pi pi-exclamation-triangle"></i>
+                <span>{{ pageMenuStore.error }}</span>
+              </div>
+            </template>
+          </Card>
         </div>
 
         <!-- No Page Selected State -->
         <div v-if="!pageMenuStore.selectedMenu && !pageMenuStore.loading" class="flex-1 flex items-center justify-center p-4">
-          <div class="text-center max-w-md">
-            <i class="pi pi-arrow-right text-4xl sm:text-6xl text-gray-300 mb-4"></i>
-            <h3 class="text-lg sm:text-xl font-medium text-gray-900 mb-2">Select a Page to Edit</h3>
-            <p class="text-gray-600 text-sm sm:text-base">Choose a page from the pages panel to start editing its content and components</p>
-          </div>
+          <Card class="max-w-md">
+            <template #content>
+              <div class="text-center p-0">
+                <i class="pi pi-arrow-right text-6xl mb-4"></i>
+                <h3 class="text-xl font-medium mb-4">Select a Page to Edit</h3>
+                <p class="text-base">Choose a page from the pages panel to start editing its content and components</p>
+              </div>
+            </template>
+          </Card>
         </div>
 
         <!-- Loading Selected Menu -->
         <div v-else-if="loadingSelectedMenu" class="flex-1 flex items-center justify-center">
-          <div class="text-center">
-            <i class="pi pi-spin pi-spinner text-3xl sm:text-4xl text-blue-500 mb-4"></i>
-            <h3 class="text-base sm:text-lg font-medium text-gray-900 mb-2">Loading Page Content</h3>
-            <p class="text-gray-600 text-sm">Please wait while we load the page data...</p>
-          </div>
+          <Card>
+            <template #content>
+              <div class="text-center p-0">
+                <i class="pi pi-spin pi-spinner text-4xl mb-4"></i>
+                <h3 class="text-lg font-medium mb-4">Loading Page Content</h3>
+                <p class="text-sm">Please wait while we load the page data...</p>
+              </div>
+            </template>
+          </Card>
         </div>
 
         <!-- Selected Page Editor -->
         <div v-else-if="pageMenuStore.selectedMenu" class="flex-1 flex flex-col min-h-0">
-          <!-- Page Header -->
-          <div class="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div class="min-w-0">
-                <h2 class="text-lg sm:text-2xl font-bold text-gray-900 truncate">{{ pageMenuStore.selectedMenu.title }}</h2>
-                <div class="flex flex-wrap items-center gap-2 sm:gap-4 mt-2">
-                  <Badge 
-                    :value="pageMenuStore.selectedMenu.is_published ? 'Published' : 'Draft'" 
-                    :severity="pageMenuStore.selectedMenu.is_published ? 'success' : 'warning'" 
-                  />
-                  <span class="text-xs sm:text-sm text-gray-600">Slug: /{{ pageMenuStore.selectedMenu.slug }}</span>
-                  <span class="text-xs sm:text-sm text-gray-600">Order: {{ pageMenuStore.selectedMenu.order }}</span>
+          <!-- Page Header Card -->
+          <Card class="m-4 flex-none">
+            <template #content>
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-0">
+                <div class="min-w-0">
+                  <h2 class="text-2xl font-bold truncate">{{ pageMenuStore.selectedMenu.title }}</h2>
+                  <div class="flex flex-wrap items-center gap-4 mt-3">
+                    <Badge 
+                      :value="pageMenuStore.selectedMenu.is_published ? 'Published' : 'Draft'" 
+                    />
+                    <span class="text-sm">Slug: /{{ pageMenuStore.selectedMenu.slug }}</span>
+                    <span class="text-sm">Order: {{ pageMenuStore.selectedMenu.order }}</span>
+                  </div>
                 </div>
+                <Button 
+                  icon="pi pi-cog" 
+                  class="hidden sm:inline-flex"
+                  label="Page Settings"
+                  @click="handleEditMenuTitle(pageMenuStore.selectedMenu.id)"
+                  :disabled="!pageMenuStore.isLocked"
+                  outlined
+                  size="small"
+                />
+               
               </div>
-              <Button 
-                icon="pi pi-cog" 
-                class="hidden sm:inline-flex"
-                label="Page Settings"
-                @click="handleEditMenuTitle(pageMenuStore.selectedMenu.id)"
-                :disabled="!pageMenuStore.isLocked"
-                severity="secondary"
-                outlined
-                size="small"
-              />
-              <Button 
-                icon="pi pi-cog" 
-                class="sm:hidden"
-                @click="handleEditMenuTitle(pageMenuStore.selectedMenu.id)"
-                :disabled="!pageMenuStore.isLocked"
-                severity="secondary"
-                outlined
-                size="small"
-              />
-            </div>
-          </div>
+            </template>
+          </Card>
 
           <!-- Components Section -->
           <div class="flex-1 overflow-hidden flex flex-col min-h-0">
-            <!-- Components Header -->
-            <div class="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-100 bg-gray-50">
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <h3 class="text-base sm:text-lg font-semibold text-gray-900">Page Components</h3>
-                <div class="flex items-center justify-between sm:gap-2">
-                  <span class="text-xs sm:text-sm text-gray-600">
-                    {{ pageMenuStore.selectedMenu.page_data?.length || 0 }} components
-                  </span>
-                  <Button 
-                    icon="pi pi-plus" 
-                    class="hidden sm:inline-flex"
-                    label="Add Component"
-                    @click="openAddComponentDialog"
-                    :disabled="!pageMenuStore.isLocked"
-                    size="small"
-                  />
-                  <Button 
-                    icon="pi pi-plus" 
-                    class="sm:hidden"
-                    @click="openAddComponentDialog"
-                    :disabled="!pageMenuStore.isLocked"
-                    size="small"
-                  />
+            <!-- Components Header Card -->
+            <Card class="m-4 flex-none">
+              <template #content>
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-0">
+                  <h3 class="text-lg font-semibold">Page Components</h3>
+                  <div class="flex items-center justify-between gap-4">
+                    <span class="text-sm">
+                      {{ pageMenuStore.selectedMenu.page_data?.length || 0 }} components
+                    </span>
+                    <Button 
+                      icon="pi pi-plus" 
+                      class="hidden sm:inline-flex"
+                      label="Add Component"
+                      @click="openAddComponentDialog"
+                      :disabled="!pageMenuStore.isLocked"
+                      size="small"
+                    />
+                    <Button 
+                      icon="pi pi-plus" 
+                      class="sm:hidden"
+                      @click="openAddComponentDialog"
+                      :disabled="!pageMenuStore.isLocked"
+                      size="small"
+                    />
+                  </div>
                 </div>
-              </div>
-            </div>
+              </template>
+            </Card>
 
             <!-- Empty Components State -->
             <div v-if="!pageMenuStore.selectedMenu.page_data || pageMenuStore.selectedMenu.page_data.length === 0" 
-                 class="flex-1 flex items-center justify-center p-4 sm:p-8">
-              <div class="text-center max-w-md">
-                <i class="pi pi-plus-circle text-4xl sm:text-6xl text-gray-300 mb-4"></i>
-                <h3 class="text-lg sm:text-xl font-medium text-gray-900 mb-2">No Components Yet</h3>
-                <p class="text-gray-600 mb-6 text-sm sm:text-base">Start building your page by adding components like text editors, images, or other content blocks</p>
-                <Button 
-                  label="Add Your First Component" 
-                  icon="pi pi-plus" 
-                  @click="openAddComponentDialog"
-                  :disabled="!pageMenuStore.isLocked"
-                  size="small"
-                />
-              </div>
+                 class="flex-1 flex items-center justify-center p-4">
+              <Card class="max-w-md">
+                <template #content>
+                  <div class="text-center p-0">
+                    <i class="pi pi-plus-circle text-6xl mb-4"></i>
+                    <h3 class="text-xl font-medium mb-4">No Components Yet</h3>
+                    <p class="mb-6 text-base">Start building your page by adding components like text editors, images, or other content blocks</p>
+                    <Button 
+                      label="Add Your First Component" 
+                      icon="pi pi-plus" 
+                      @click="openAddComponentDialog"
+                      :disabled="!pageMenuStore.isLocked"
+                      size="small"
+                    />
+                  </div>
+                </template>
+              </Card>
             </div>
 
             <!-- Components List -->
-            <div v-else class="flex-1 overflow-y-auto p-3 sm:p-6">
-              <div class="space-y-4 sm:space-y-6">
-                <div v-for="(component, index) in pageMenuStore.selectedMenu.page_data" 
+            <div v-else class="flex-1 overflow-y-auto p-4">
+              <div class="space-y-4">
+                <Card v-for="(component, index) in pageMenuStore.selectedMenu.page_data" 
                      :key="component.id"
-                     class="group bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200">
+                     class="group hover:shadow-md transition-all duration-200">
                   
                   <!-- Component Header -->
-                  <div class="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-gray-100">
-                    <div class="flex items-start justify-between gap-3">
-                      <div class="flex items-start gap-3 min-w-0 flex-1">
-                        <div class="bg-blue-100 text-blue-700 rounded-lg p-1 sm:p-2 flex-shrink-0">
-                          <i class="pi pi-code text-sm sm:text-lg"></i>
-                        </div>
-                        <div class="min-w-0 flex-1">
-                          <h4 class="font-semibold text-gray-900 text-sm sm:text-base truncate">
-                            {{ component.component_type }}: {{ component.tag || 'Unnamed Component' }}
-                          </h4>
-                          <div class="flex flex-wrap items-center gap-2 mt-1">
-                            <Badge 
-                              :value="component.is_published ? 'Published' : 'Draft'" 
-                              :severity="component.is_published ? 'success' : 'warning'"
-                              class="text-xs"
-                            />
-                            <span class="text-xs text-gray-500">Position: {{ index + 1 }}</span>
+                  <template #header>
+                    <div class="p-4">
+                      <div class="flex items-start justify-between gap-4">
+                        <div class="flex items-start gap-4 min-w-0 flex-1">
+                          <div class="rounded-lg p-2 flex-shrink-0">
+                            <i class="pi pi-code text-lg"></i>
+                          </div>
+                          <div class="min-w-0 flex-1">
+                            <h4 class="font-semibold text-base truncate">
+                              {{ component.component_type }}: {{ component.tag || 'Unnamed Component' }}
+                            </h4>
+                            <div class="flex flex-wrap items-center gap-3 mt-2">
+                              <Badge 
+                                :value="component.is_published ? 'Published' : 'Draft'" 
+                                class="text-xs"
+                              />
+                              <span class="text-xs">Position: {{ index + 1 }}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      
-                      <!-- Component Actions -->
-                      <div class="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity flex-shrink-0">
-                        <div class="flex flex-col sm:flex-row gap-1">
-                          <div class="flex gap-1">
-                            <Button 
-                              icon="pi pi-arrow-up" 
-                              severity="secondary" 
-                              size="small"
-                              :disabled="isFirstComponent(component.id) || !pageMenuStore.isLocked"
-                              @click="moveComponentUp(component.id)"
-                              outlined
-                              class="p-1"
-                            />
-                            <Button 
-                              icon="pi pi-arrow-down" 
-                              severity="secondary" 
-                              size="small"
-                              :disabled="isLastComponent(component.id) || !pageMenuStore.isLocked"
-                              @click="moveComponentDown(component.id)"
-                              outlined
-                              class="p-1"
-                            />
-                          </div>
-                          <div class="flex gap-1">
-                            <Button 
-                              icon="pi pi-pencil" 
-                              severity="info" 
-                              size="small"
-                              :disabled="!pageMenuStore.isLocked"
-                              @click="editComponent(component.id)"
-                              outlined
-                              class="p-1"
-                            />
-                            <Button 
-                              icon="pi pi-trash" 
-                              severity="danger" 
-                              size="small"
-                              :disabled="!pageMenuStore.isLocked"
-                              @click="confirmDeleteComponent(component.id)"
-                              outlined
-                              class="p-1"
-                            />
+                        
+                        <!-- Component Actions -->
+                        <div class="flex items-center gap-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity flex-shrink-0">
+                          <div class="flex flex-col sm:flex-row gap-2">
+                            <div class="flex gap-2">
+                              <Button 
+                                icon="pi pi-arrow-up" 
+                                size="small"
+                                :disabled="isFirstComponent(component.id) || !pageMenuStore.isLocked"
+                                @click="moveComponentUp(component.id)"
+                                outlined
+                                class="p-2"
+                              />
+                              <Button 
+                                icon="pi pi-arrow-down" 
+                                size="small"
+                                :disabled="isLastComponent(component.id) || !pageMenuStore.isLocked"
+                                @click="moveComponentDown(component.id)"
+                                outlined
+                                class="p-2"
+                              />
+                            </div>
+                            <div class="flex gap-2">
+                              <Button 
+                                icon="pi pi-pencil" 
+                                size="small"
+                                :disabled="!pageMenuStore.isLocked"
+                                @click="editComponent(component.id)"
+                                outlined
+                                class="p-2"
+                              />
+                              <Button 
+                                icon="pi pi-trash" 
+                                size="small"
+                                :disabled="!pageMenuStore.isLocked"
+                                @click="confirmDeleteComponent(component.id)"
+                                outlined
+                                class="p-2"
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </template>
                   
                   <!-- Component Content Preview -->
-                  <div class="px-3 sm:px-6 py-3 sm:py-4">
-                    <div v-if="component.component_type === 'Editor'" class="bg-gray-50 rounded-lg p-3 sm:p-4">
-                      <div class="text-xs sm:text-sm text-gray-600 mb-2">Content Preview:</div>
+                  <template #content>
+                    <div v-if="component.component_type === 'Editor'" class="p-0">
+                      <div class="text-sm mb-3">Content Preview:</div>
                       <div 
-                        class="prose prose-sm max-w-none text-gray-800 line-clamp-3 text-sm" 
+                        class="prose prose-sm max-w-none line-clamp-3 text-sm p-4 rounded" 
                         v-html="component.data?.content || 'No content'"
                       ></div>
                     </div>
-                    <div v-else class="bg-gray-50 rounded-lg p-3 sm:p-4">
-                      <div class="text-xs sm:text-sm text-gray-600">Component Data</div>
-                      <pre class="text-xs text-gray-700 mt-2 overflow-hidden break-all">{{ JSON.stringify(component.data, null, 2) }}</pre>
+                    <div v-else class="p-0">
+                      <div class="text-sm mb-3">Component Data</div>
+                      <pre class="text-xs p-4 rounded overflow-hidden break-all">{{ JSON.stringify(component.data, null, 2) }}</pre>
                     </div>
-                  </div>
-                </div>
+                  </template>
+                </Card>
               </div>
             </div>
           </div>
@@ -400,113 +424,124 @@
 
       <!-- Pages Sidebar (Right) -->
       <div :class="[
-        'bg-white border-l border-gray-200 flex flex-col transition-all duration-300 z-10',
+        'flex flex-col transition-all duration-300 z-10',
         'lg:w-96 lg:relative lg:translate-x-0',
         'absolute inset-y-0 right-0 w-80 max-w-[90vw]',
         showRightPanel ? 'translate-x-0 shadow-lg' : 'translate-x-full'
       ]">
-        <!-- Sidebar Header -->
-        <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-pink-50">
-          <div class="flex justify-between items-center">
-            <h3 class="text-base sm:text-lg font-bold text-gray-900">Pages</h3>
-            <Button 
-              icon="pi pi-plus" 
-              size="small"
-              @click="openAddMenuDialog"
-              :disabled="!pageMenuStore.isLocked"
-              class="rounded-full"
-            />
-          </div>
-          <p class="text-xs sm:text-sm text-gray-600 mt-1">Manage your conference pages</p>
-        </div>
+        <!-- Sidebar Header Card -->
+        <Card class="m-4 flex-none">
+          <template #title>
+            <div class="flex justify-between items-center">
+              <h3 class="text-lg font-bold">Pages</h3>
+              <Button 
+                icon="pi pi-plus" 
+                size="small"
+                @click="openAddMenuDialog"
+                :disabled="!pageMenuStore.isLocked"
+                class="rounded-full"
+              />
+            </div>
+          </template>
+          <template #subtitle>
+            <p class="text-sm">Manage your conference pages</p>
+          </template>
+        </Card>
 
         <!-- Pages List -->
-        <div class="flex-1 overflow-y-auto p-3 sm:p-4">
+        <div class="flex-1 overflow-y-auto p-4">
           <div v-if="pageMenuStore.loading && !loadingSelectedMenu" class="flex items-center justify-center h-32">
-            <div class="text-center">
-              <i class="pi pi-spin pi-spinner text-xl sm:text-2xl text-blue-500 mb-2"></i>
-              <p class="text-gray-600 text-sm">Loading pages...</p>
-            </div>
+            <Card>
+              <template #content>
+                <div class="text-center p-0">
+                  <i class="pi pi-spin pi-spinner text-2xl mb-4"></i>
+                  <p class="text-sm">Loading pages...</p>
+                </div>
+              </template>
+            </Card>
           </div>
           
           <div v-else-if="pageMenuStore.menus.length === 0" class="flex items-center justify-center h-32">
-            <div class="text-center">
-              <i class="pi pi-file text-3xl sm:text-4xl text-gray-300 mb-2"></i>
-              <p class="text-gray-500 text-sm">No pages created yet</p>
-            </div>
+            <Card>
+              <template #content>
+                <div class="text-center p-0">
+                  <i class="pi pi-file text-4xl mb-4"></i>
+                  <p class="text-sm">No pages created yet</p>
+                </div>
+              </template>
+            </Card>
           </div>
           
-          <div v-else class="space-y-3">
-            <div v-for="menu in pageMenuStore.menus" 
+          <div v-else class="space-y-4">
+            <Card v-for="menu in pageMenuStore.menus" 
                  :key="menu.id"
                  :class="[
-                   'group p-3 sm:p-4 border rounded-xl cursor-pointer transition-all duration-200 hover:shadow-md',
+                   'group cursor-pointer transition-all duration-200 hover:shadow-md',
                    pageMenuStore.selectedMenu?.id === menu.id 
-                     ? 'bg-blue-50 border-blue-200 shadow-md ring-2 ring-blue-100' 
-                     : 'bg-white border-gray-200 hover:border-gray-300'
+                     ? 'shadow-md border-l-4 border-primary' 
+                     : ''
                  ]"
                  @click="selectMenu(menu.id)">
               
-              <div class="flex justify-between items-start mb-3">
-                <div class="flex-1 min-w-0">
-                  <h4 class="font-semibold text-gray-900 truncate text-sm sm:text-base">{{ menu.title }}</h4>
-                  <p class="text-xs sm:text-sm text-gray-600 mt-1 truncate">/{{ menu.slug }}</p>
+              <template #content>
+                <div class="p-0">
+                  <div class="flex justify-between items-start mb-4">
+                    <div class="flex-1 min-w-0">
+                      <h4 class="font-semibold truncate text-base">{{ menu.title }}</h4>
+                      <p class="text-sm mt-2 truncate">/{{ menu.slug }}</p>
+                    </div>
+                    <div class="flex items-center gap-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity ml-4 flex-shrink-0">
+                      <Button 
+                        icon="pi pi-pencil" 
+                        size="small"
+                        :disabled="!pageMenuStore.isLocked"
+                        @click.stop="handleEditMenuTitle(menu.id)"
+                        text
+                        class="p-2"
+                      />
+                      <Button 
+                        icon="pi pi-trash" 
+                        size="small"
+                        :disabled="!pageMenuStore.isLocked"
+                        @click.stop="confirmDeleteMenu(menu.id)"
+                        text
+                        class="p-2"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-center justify-between">
+                    <div class="flex flex-wrap items-center gap-3">
+                      <Badge 
+                        :value="menu.is_published ? 'Published' : 'Draft'" 
+                        class="text-xs"
+                      />
+                      <span class="text-xs">{{ menu.page_data?.length || 0 }} components</span>
+                    </div>
+                    
+                    <div class="flex items-center gap-2">
+                      <Button 
+                        icon="pi pi-arrow-up" 
+                        size="small"
+                        :disabled="isFirstMenu(menu.id) || !pageMenuStore.isLocked"
+                        @click.stop="moveMenuUp(menu.id)"
+                        text
+                        class="p-2"
+                      />
+                      <Button 
+                        icon="pi pi-arrow-down" 
+                        size="small"
+                        :disabled="isLastMenu(menu.id) || !pageMenuStore.isLocked"
+                        @click.stop="moveMenuDown(menu.id)"
+                        text
+                        class="p-2"
+                      />
+                      <span class="text-xs ml-2">{{ menu.order }}</span>
+                    </div>
+                  </div>
                 </div>
-                <div class="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity ml-2 flex-shrink-0">
-                  <Button 
-                    icon="pi pi-pencil" 
-                    severity="secondary" 
-                    size="small"
-                    :disabled="!pageMenuStore.isLocked"
-                    @click.stop="handleEditMenuTitle(menu.id)"
-                    text
-                    class="p-1"
-                  />
-                  <Button 
-                    icon="pi pi-trash" 
-                    severity="danger" 
-                    size="small"
-                    :disabled="!pageMenuStore.isLocked"
-                    @click.stop="confirmDeleteMenu(menu.id)"
-                    text
-                    class="p-1"
-                  />
-                </div>
-              </div>
-              
-              <div class="flex items-center justify-between">
-                <div class="flex flex-wrap items-center gap-2">
-                  <Badge 
-                    :value="menu.is_published ? 'Published' : 'Draft'" 
-                    :severity="menu.is_published ? 'success' : 'warning'"
-                    class="text-xs"
-                  />
-                  <span class="text-xs text-gray-500">{{ menu.page_data?.length || 0 }} components</span>
-                </div>
-                
-                <div class="flex items-center gap-1">
-                  <Button 
-                    icon="pi pi-arrow-up" 
-                    severity="secondary" 
-                    size="small"
-                    :disabled="isFirstMenu(menu.id) || !pageMenuStore.isLocked"
-                    @click.stop="moveMenuUp(menu.id)"
-                    text
-                    class="p-1"
-                  />
-                  <Button 
-                    icon="pi pi-arrow-down" 
-                    severity="secondary" 
-                    size="small"
-                    :disabled="isLastMenu(menu.id) || !pageMenuStore.isLocked"
-                    @click.stop="moveMenuDown(menu.id)"
-                    text
-                    class="p-1"
-                  />
-                  <span class="text-xs text-gray-400 ml-1">{{ menu.order }}</span>
-                </div>
-              </div>
-            </div>
+              </template>
+            </Card>
           </div>
         </div>
       </div>
@@ -515,7 +550,7 @@
       <div 
         v-if="(showLeftPanel || showRightPanel)"
         @click="showLeftPanel = false; showRightPanel = false"
-        class="absolute inset-0 bg-black bg-opacity-50 z-5 lg:hidden"
+        class="absolute inset-0 z-5 lg:hidden"
       ></div>
     </div>
     
@@ -529,69 +564,74 @@
       :closable="true"
       :breakpoints="{ '640px': '95vw' }"
     >
-      <div class="space-y-6 p-2">
-        <div class="text-center mb-6">
-          <div class="bg-blue-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-            <i class="pi pi-file-plus text-blue-600 text-2xl"></i>
-          </div>
-          <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Create New Page</h2>
-          <p class="text-gray-600">Add a new page to your conference website</p>
-        </div>
-        
-        <div class="space-y-6">
-          <div>
-            <label for="newMenuTitle" class="block text-sm font-medium text-gray-700 mb-2">Page Title *</label>
-            <InputText 
-              id="newMenuTitle" 
-              v-model="newMenuTitle" 
-              autofocus 
-              class="w-full" 
-              placeholder="Enter page title..."
-            />
-            <small v-if="titleError" class="text-red-500 mt-1 block">{{ titleError }}</small>
-          </div>
-          
-          <div>
-            <label for="newMenuSlug" class="block text-sm font-medium text-gray-700 mb-2">Page Slug</label>
-            <InputText 
-              id="newMenuSlug" 
-              v-model="newMenuSlug" 
-              class="w-full" 
-              placeholder="Auto-generated from title"
-            />
-            <small class="text-gray-500 mt-1 block">URL-friendly version of the title (auto-generated if left empty)</small>
-            <small v-if="slugError" class="text-red-500 mt-1 block">{{ slugError }}</small>
-          </div>
-          
-          <div class="bg-gray-50 rounded-lg p-4">
-            <div class="flex items-center">
-              <Checkbox v-model="newMenuPublished" inputId="newMenuPublished" binary />
-              <label for="newMenuPublished" class="ml-3 text-sm font-medium text-gray-700">
-                Publish immediately
-              </label>
+      <Card>
+        <template #content>
+          <div class="space-y-6 p-0">
+            <div class="text-center mb-6">
+              <div class="rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                <i class="pi pi-file-plus text-2xl"></i>
+              </div>
+              <h2 class="text-3xl font-bold mb-4">Create New Page</h2>
+              <p>Add a new page to your conference website</p>
             </div>
-            <p class="text-sm text-gray-600 mt-2 ml-6">Published pages are visible to conference attendees</p>
+            
+            <div class="space-y-6">
+              <div>
+                <label for="newMenuTitle" class="block text-sm font-medium mb-2">Page Title *</label>
+                <InputText 
+                  id="newMenuTitle" 
+                  v-model="newMenuTitle" 
+                  autofocus 
+                  class="w-full" 
+                  placeholder="Enter page title..."
+                />
+                <small v-if="titleError" class="mt-2 block">{{ titleError }}</small>
+              </div>
+              
+              <div>
+                <label for="newMenuSlug" class="block text-sm font-medium mb-2">Page Slug</label>
+                <InputText 
+                  id="newMenuSlug" 
+                  v-model="newMenuSlug" 
+                  class="w-full" 
+                  placeholder="Auto-generated from title"
+                />
+                <small class="mt-2 block">URL-friendly version of the title (auto-generated if left empty)</small>
+                <small v-if="slugError" class="mt-2 block">{{ slugError }}</small>
+              </div>
+              
+              <Card>
+                <template #content>
+                  <div class="flex items-center p-0">
+                    <Checkbox v-model="newMenuPublished" inputId="newMenuPublished" binary />
+                    <label for="newMenuPublished" class="ml-4 text-sm font-medium">
+                      Publish immediately
+                    </label>
+                  </div>
+                  <p class="text-sm mt-3 ml-8">Published pages are visible to conference attendees</p>
+                </template>
+              </Card>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row justify-center gap-4 pt-4">
+              <Button 
+                label="Cancel" 
+                icon="pi pi-times" 
+                @click="cancelAddMenu" 
+                outlined
+                class="w-full sm:w-auto"
+              />
+              <Button 
+                label="Create Page" 
+                icon="pi pi-check" 
+                @click="handleAddMenu" 
+                autofocus
+                class="w-full sm:w-auto"
+              />
+            </div>
           </div>
-        </div>
-        
-        <div class="flex flex-col sm:flex-row justify-center gap-3 pt-4 border-t border-gray-200">
-          <Button 
-            label="Cancel" 
-            icon="pi pi-times" 
-            @click="cancelAddMenu" 
-            severity="secondary"
-            outlined
-            class="w-full sm:w-auto"
-          />
-          <Button 
-            label="Create Page" 
-            icon="pi pi-check" 
-            @click="handleAddMenu" 
-            autofocus
-            class="w-full sm:w-auto"
-          />
-        </div>
-      </div>
+        </template>
+      </Card>
     </Dialog>
     
     <!-- Edit Menu Dialog -->
@@ -604,67 +644,61 @@
       :closable="true"
       :breakpoints="{ '640px': '95vw' }"
     >
-      <div class="space-y-6 p-2">
-        <div class="text-center mb-6">
-          <div class="bg-purple-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-            <i class="pi pi-cog text-purple-600 text-2xl"></i>
-          </div>
-          <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Edit Page Settings</h2>
-          <p class="text-gray-600">Update your page configuration and settings</p>
-        </div>
-        
-        <div class="space-y-6">
-          <div>
-            <label for="editMenuTitle" class="block text-sm font-medium text-gray-700 mb-2">Page Title *</label>
-            <InputText 
-              id="editMenuTitle" 
-              v-model="editMenuTitle" 
-              autofocus 
-              class="w-full"
-            />
-            <small v-if="titleError" class="text-red-500 mt-1 block">{{ titleError }}</small>
-          </div>
-          
-          <div>
-            <label for="editMenuSlug" class="block text-sm font-medium text-gray-700 mb-2">Page Slug</label>
-            <InputText 
-              id="editMenuSlug" 
-              v-model="editMenuSlug" 
-              class="w-full"
-            />
-            <small class="text-gray-500 mt-1 block">URL-friendly version of the title</small>
-            <small v-if="slugError" class="text-red-500 mt-1 block">{{ slugError }}</small>
-          </div>
-          
-          <div class="bg-gray-50 rounded-lg p-4">
-            <div class="flex items-center">
-              <Checkbox v-model="editMenuPublished" inputId="editMenuPublished" binary />
-              <label for="editMenuPublished" class="ml-3 text-sm font-medium text-gray-700">
-                Published
-              </label>
+      <Card>
+        <template #content>
+          <div class="space-y-6 p-0">
+            <div class="text-center mb-6">
+              <div class="rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                <i class="pi pi-cog text-2xl"></i>
+              </div>
+              <h2 class="text-3xl font-bold mb-4">Edit Page Settings</h2>
+              <p>Update your page configuration and settings</p>
             </div>
-            <p class="text-sm text-gray-600 mt-2 ml-6">Controls whether this page is visible to attendees</p>
+            
+            <div class="space-y-6">
+              <div>
+                <label for="editMenuSlug" class="block text-sm font-medium mb-2">Page Slug</label>
+                <InputText 
+                  id="editMenuSlug" 
+                  v-model="editMenuSlug" 
+                  class="w-full"
+                />
+                <small class="mt-2 block">URL-friendly version of the title</small>
+                <small v-if="slugError" class="mt-2 block">{{ slugError }}</small>
+              </div>
+              
+              <Card>
+                <template #content>
+                  <div class="flex items-center p-0">
+                    <Checkbox v-model="editMenuPublished" inputId="editMenuPublished" binary />
+                    <label for="editMenuPublished" class="ml-4 text-sm font-medium">
+                      Published
+                    </label>
+                  </div>
+                  <p class="text-sm mt-3 ml-8">Controls whether this page is visible to attendees</p>
+                </template>
+              </Card>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row justify-center gap-4 pt-4">
+              <Button 
+                label="Cancel" 
+                icon="pi pi-times" 
+                @click="cancelEditMenu" 
+                outlined
+                class="w-full sm:w-auto"
+              />
+              <Button 
+                label="Save Changes" 
+                icon="pi pi-check" 
+                @click="saveEditMenu" 
+                autofocus
+                class="w-full sm:w-auto"
+              />
+            </div>
           </div>
-        </div>
-        
-        <div class="flex flex-col sm:flex-row justify-center gap-3 pt-4 border-t border-gray-200">
-          <Button 
-            label="Cancel" 
-            icon="pi pi-times" 
-            @click="cancelEditMenu" 
-            severity="secondary"
-            outlined
-            class="w-full sm:w-auto"
-          />
-          <Button 
-            label="Save Changes" 
-            icon="pi pi-check" 
-            @click="saveEditMenu" 
-            autofocus
-            class="w-full sm:w-auto"
-          />
-        </div>
-      </div>
+        </template>
+      </Card>
     </Dialog>
     
     <!-- Add Component Dialog -->
@@ -677,79 +711,84 @@
       :closable="true"
       :breakpoints="{ '640px': '95vw' }"
     >
-      <div class="space-y-6 p-2">
-        <div class="text-center mb-6">
-          <div class="bg-blue-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-            <i class="pi pi-plus-circle text-blue-600 text-2xl"></i>
-          </div>
-          <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Add New Component</h2>
-          <p class="text-gray-600">Create a new content component for your page</p>
-        </div>
-        
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div class="space-y-6">
-            <div>
-              <label for="componentName" class="block text-sm font-medium text-gray-700 mb-2">Component Name</label>
-              <InputText 
-                id="componentName" 
-                v-model="newComponentName" 
-                class="w-full" 
-                placeholder="Enter component name..."
-              />
-            </div>
-            
-            <div>
-              <label for="componentType" class="block text-sm font-medium text-gray-700 mb-2">Component Type</label>
-              <Dropdown
-                id="componentType"
-                v-model="newComponentType"
-                :options="availableComponentTypes"
-                placeholder="Select component type"
-                class="w-full"
-              />
-            </div>
-            
-            <div class="bg-gray-50 rounded-lg p-4">
-              <div class="flex items-center">
-                <Checkbox v-model="newComponentPublished" inputId="newComponentPublished" binary />
-                <label for="newComponentPublished" class="ml-3 text-sm font-medium text-gray-700">
-                  Publish immediately
-                </label>
+      <Card>
+        <template #content>
+          <div class="space-y-6 p-0">
+            <div class="text-center mb-6">
+              <div class="rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                <i class="pi pi-plus-circle text-2xl"></i>
               </div>
-              <p class="text-sm text-gray-600 mt-2 ml-6">Published components are visible to attendees</p>
+              <h2 class="text-3xl font-bold mb-4">Add New Component</h2>
+              <p>Create a new content component for your page</p>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div class="space-y-6">
+                <div>
+                  <label for="componentName" class="block text-sm font-medium mb-2">Component Name</label>
+                  <InputText 
+                    id="componentName" 
+                    v-model="newComponentName" 
+                    class="w-full" 
+                    placeholder="Enter component name..."
+                  />
+                </div>
+                
+                <div>
+                  <label for="componentType" class="block text-sm font-medium mb-2">Component Type</label>
+                  <Dropdown
+                    id="componentType"
+                    v-model="newComponentType"
+                    :options="availableComponentTypes"
+                    placeholder="Select component type"
+                    class="w-full"
+                  />
+                </div>
+                
+                <Card>
+                  <template #content>
+                    <div class="flex items-center p-0">
+                      <Checkbox v-model="newComponentPublished" inputId="newComponentPublished" binary />
+                      <label for="newComponentPublished" class="ml-4 text-sm font-medium">
+                        Publish immediately
+                      </label>
+                    </div>
+                    <p class="text-sm mt-3 ml-8">Published components are visible to attendees</p>
+                  </template>
+                </Card>
+              </div>
+              
+              <div v-if="newComponentType === 'Editor'" class="space-y-4">
+                <label for="initialContent" class="block text-sm font-medium">Initial Content</label>
+                <Textarea
+                  id="initialContent"
+                  v-model="newComponentData.content"
+                  :rows="12"
+                  class="w-full"
+                  placeholder="Enter initial content for your editor component..."
+                />
+              </div>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row justify-center gap-4 pt-4">
+              <Button 
+                label="Cancel" 
+                icon="pi pi-times" 
+                @click="cancelAddComponent" 
+                outlined
+                class="w-full sm:w-auto"
+              />
+              <Button 
+                label="Add Component" 
+                icon="pi pi-check" 
+                @click="handleAddComponent" 
+                autofocus
+                class="w-full sm:w-auto"
+              />
             </div>
           </div>
-          
-          <div v-if="newComponentType === 'Editor'" class="space-y-4">
-            <label for="initialContent" class="block text-sm font-medium text-gray-700">Initial Content</label>
-            <Textarea
-              id="initialContent"
-              v-model="newComponentData.content"
-              :rows="12"
-              class="w-full"
-              placeholder="Enter initial content for your editor component..."
-            />
-          </div>
-        </div>
-        
-        <div class="flex flex-col sm:flex-row justify-center gap-3 pt-4 border-t border-gray-200">
-          <Button 
-            label="Cancel" 
-            icon="pi pi-times" 
-            @click="cancelAddComponent" 
-            severity="secondary"
-            outlined
-            class="w-full sm:w-auto"
-          />
-          <Button 
-            label="Add Component" 
-            icon="pi pi-check" 
-            @click="handleAddComponent" 
-            autofocus
-            class="w-full sm:w-auto"
-          />
-        </div>
-      </div>
+        </template>
+      </Card>
     </Dialog>
     
     <!-- Edit Component Dialog -->
@@ -763,76 +802,85 @@
       :breakpoints="{ '640px': '95vw' }"
       :contentStyle="{ height: 'calc(90vh - 100px)', padding: '1rem' }"
     >
-      <div class="h-full flex flex-col">
-        <div class="text-center mb-4 flex-none">
-          <div class="bg-blue-100 rounded-full p-3 w-12 h-12 mx-auto mb-3 flex items-center justify-center">
-            <i class="pi pi-pencil text-blue-600 text-lg"></i>
-          </div>
-          <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-1">Edit Component</h2>
-          <p class="text-gray-600 text-sm">Modify your component settings and content</p>
-        </div>
-        
-        <div class="flex-1 flex flex-col overflow-hidden min-h-0">
-          <!-- Component Name Input -->
-          <div class="mb-4 max-w-md mx-auto w-full flex-none">
-            <label for="editComponentName" class="block text-sm font-medium text-gray-700 mb-2 text-center">Component Name</label>
-            <InputText 
-              id="editComponentName" 
-              v-model="editComponentName" 
-              class="w-full text-center" 
-            />
-          </div>
-          
-          <!-- Content Editor -->
-          <div v-if="editComponentType === 'Editor'" class="flex-1 flex flex-col overflow-hidden mb-4 min-h-0">
-            <label for="editContent" class="block text-sm font-medium text-gray-700 mb-2 text-center flex-none">Content Editor</label>
-            <div class="flex-1 overflow-hidden border rounded-lg bg-white min-h-0">
-                <editor
-                  v-model="editComponentData.content"
-                  :init="{
-                    height: '100%',
-                    menubar: true,
-                    plugins: 'accordion advlist anchor autolink autoresize autosave charmap code codesample directionality fullscreen image insertdatetime link lists media nonbreaking pagebreak preview quickbars save searchreplace table template visualblocks visualchars wordcount emoticons help',
-                    toolbar: 'undo redo | formatselect | bold italic backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | help',
-                    mobile: {
-                      menubar: false,
-                      toolbar: 'undo redo | bold italic | bullist numlist'
-                    }
-                  }"
+      <Card class="h-full">
+        <template #content>
+          <div class="h-full flex flex-col p-0">
+            <div class="text-center mb-4 flex-none">
+              <div class="rounded-full p-4 w-12 h-12 mx-auto mb-4 flex items-center justify-center">
+                <i class="pi pi-pencil text-lg"></i>
+              </div>
+              <h2 class="text-2xl font-bold mb-2">Edit Component</h2>
+              <p class="text-sm">Modify your component settings and content</p>
+            </div>
+            
+            <div class="flex-1 flex flex-col overflow-hidden min-h-0">
+              <!-- Component Name Input -->
+              <div class="mb-4 max-w-md mx-auto w-full flex-none">
+                <label for="editComponentName" class="block text-sm font-medium mb-2 text-center">Component Name</label>
+                <InputText 
+                  id="editComponentName" 
+                  v-model="editComponentName" 
+                  class="w-full text-center" 
                 />
+              </div>
+              
+              <!-- Content Editor -->
+              <div v-if="editComponentType === 'Editor'" class="flex-1 flex flex-col overflow-hidden mb-4 min-h-0">
+                <label for="editContent" class="block text-sm font-medium mb-2 text-center flex-none">Content Editor</label>
+                <Card class="flex-1 overflow-hidden min-h-0">
+                  <template #content>
+                    <div class="h-full p-0">
+                      <editor
+                        v-model="editComponentData.content"
+                        :init="{
+                          height: '100%',
+                          menubar: true,
+                          plugins: 'accordion advlist anchor autolink autoresize autosave charmap code codesample directionality fullscreen image insertdatetime link lists media nonbreaking pagebreak preview quickbars save searchreplace table template visualblocks visualchars wordcount emoticons help',
+                          toolbar: 'undo redo | formatselect | bold italic backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | help',
+                          mobile: {
+                            menubar: false,
+                            toolbar: 'undo redo | bold italic | bullist numlist'
+                          }
+                        }"
+                      />
+                    </div>
+                  </template>
+                </Card>
+              </div>
+              
+              <!-- Published Checkbox -->
+              <Card class="max-w-md mx-auto w-full mb-4 flex-none">
+                <template #content>
+                  <div class="flex items-center justify-center p-0">
+                    <Checkbox v-model="editComponentPublished" inputId="editComponentPublished" binary />
+                    <label for="editComponentPublished" class="ml-4 text-sm font-medium">
+                      Published
+                    </label>
+                  </div>
+                  <p class="text-sm mt-3 text-center">Controls component visibility</p>
+                </template>
+              </Card>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row justify-center gap-4 pt-4 flex-none">
+              <Button 
+                label="Cancel" 
+                icon="pi pi-times" 
+                @click="cancelEditComponent" 
+                outlined
+                class="w-full sm:w-auto"
+              />
+              <Button 
+                label="Save Changes" 
+                icon="pi pi-check" 
+                @click="saveEditComponent" 
+                autofocus
+                class="w-full sm:w-auto"
+              />
             </div>
           </div>
-          
-          <!-- Published Checkbox -->
-          <div class="bg-gray-50 rounded-lg p-3 max-w-md mx-auto w-full mb-4 flex-none">
-            <div class="flex items-center justify-center">
-              <Checkbox v-model="editComponentPublished" inputId="editComponentPublished" binary />
-              <label for="editComponentPublished" class="ml-3 text-sm font-medium text-gray-700">
-                Published
-              </label>
-            </div>
-            <p class="text-sm text-gray-600 mt-2 text-center">Controls component visibility</p>
-          </div>
-        </div>
-        
-        <div class="flex flex-col sm:flex-row justify-center gap-3 pt-4 border-t border-gray-200 flex-none">
-          <Button 
-            label="Cancel" 
-            icon="pi pi-times" 
-            @click="cancelEditComponent" 
-            severity="secondary"
-            outlined
-            class="w-full sm:w-auto"
-          />
-          <Button 
-            label="Save Changes" 
-            icon="pi pi-check" 
-            @click="saveEditComponent" 
-            autofocus
-            class="w-full sm:w-auto"
-          />
-        </div>
-      </div>
+        </template>
+      </Card>
     </Dialog>
     
     <!-- Confirm Delete Dialog -->
@@ -845,38 +893,42 @@
       :closable="true"
       :breakpoints="{ '640px': '95vw' }"
     >
-      <div class="space-y-6 p-2">
-        <div class="text-center mb-6">
-          <div class="bg-red-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-            <i class="pi pi-exclamation-triangle text-red-600 text-2xl"></i>
+      <Card>
+        <template #content>
+          <div class="space-y-6 p-0">
+            <div class="text-center mb-6">
+              <div class="rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                <i class="pi pi-exclamation-triangle text-2xl"></i>
+              </div>
+              <h2 class="text-3xl font-bold mb-4">Confirm Deletion</h2>
+              <p>This action cannot be undone</p>
+            </div>
+            
+            <Card>
+              <template #content>
+                <p class="text-center p-0">{{ confirmDeleteMessage }}</p>
+              </template>
+            </Card>
+            
+            <div class="flex flex-col sm:flex-row justify-center gap-4">
+              <Button 
+                label="Cancel" 
+                icon="pi pi-times" 
+                @click="cancelDelete" 
+                outlined
+                class="w-full sm:w-auto"
+              />
+              <Button 
+                label="Delete" 
+                icon="pi pi-trash" 
+                @click="confirmDelete" 
+                autofocus
+                class="w-full sm:w-auto"
+              />
+            </div>
           </div>
-          <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Confirm Deletion</h2>
-          <p class="text-gray-600">This action cannot be undone</p>
-        </div>
-        
-        <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-          <p class="text-red-800 text-center">{{ confirmDeleteMessage }}</p>
-        </div>
-        
-        <div class="flex flex-col sm:flex-row justify-center gap-3">
-          <Button 
-            label="Cancel" 
-            icon="pi pi-times" 
-            @click="cancelDelete" 
-            severity="secondary"
-            outlined
-            class="w-full sm:w-auto"
-          />
-          <Button 
-            label="Delete" 
-            icon="pi pi-trash" 
-            @click="confirmDelete" 
-            autofocus
-            severity="danger"
-            class="w-full sm:w-auto"
-          />
-        </div>
-      </div>
+        </template>
+      </Card>
     </Dialog>
   </div>
 </template>
@@ -971,11 +1023,10 @@ export default defineComponent({
     },
     async fetchMenus() {
       await this.pageMenuStore.fetchMenus();
+      // Remove any pre-selected menu to ensure no page is selected on load
+      this.pageMenuStore.selectedMenu = null;
       if (!this.pageMenuStore.isLocked) {
         await this.checkLock();
-      }
-      if (this.pageMenuStore.menus.length > 0 && !this.pageMenuStore.selectedMenu) {
-        await this.selectMenu(this.pageMenuStore.menus[0].id);
       }
     },
     async checkLock() {
