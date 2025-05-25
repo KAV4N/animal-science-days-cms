@@ -1,93 +1,211 @@
 <template>
-  <div class="min-h-screen flex items-start justify-center p-4">
-    <div class="w-full max-w-7xl">
+  <div class="min-h-screen bg-gradient-to-br from-surface-50 to-surface-100 dark:from-surface-950 dark:to-surface-900">
+    <div class="container mx-auto px-4 py-6 max-w-7xl">
       <!-- Loading State -->
-      <div v-if="loading" class="flex flex-col items-center space-y-4">
-        <p-progress-spinner style="width: 50px; height: 50px" />
-        <p>Loading conference...</p>
+      <div v-if="loading" class="flex flex-col items-center justify-center min-h-[60vh] space-y-6">
+        <div class="bg-surface-0 dark:bg-surface-900 rounded-xl p-8 shadow-lg border border-surface-200 dark:border-surface-700">
+          <div class="flex flex-col items-center space-y-4">
+            <p-progress-spinner class="w-12 h-12" strokeWidth="3" />
+            <p class="text-lg font-medium text-surface-700 dark:text-surface-200">Loading conference...</p>
+          </div>
+        </div>
       </div>
 
       <!-- Error State -->
-      <div v-else-if="error" class="flex flex-col items-center space-y-4">
-        <h2 class="text-2xl font-bold">Error</h2>
-        <p>{{ error }}</p>
-        <p-button label="Retry" @click="loadConference" severity="primary" />
+      <div v-else-if="error" class="flex flex-col items-center justify-center min-h-[60vh] space-y-6">
+        <div class="bg-surface-0 dark:bg-surface-900 rounded-xl p-8 shadow-lg border border-red-200 dark:border-red-800 max-w-md w-full text-center">
+          <div class="flex flex-col items-center space-y-4">
+            <div class="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center">
+              <i class="pi pi-exclamation-triangle text-red-600 dark:text-red-400 text-2xl"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-surface-900 dark:text-surface-50">Something went wrong</h2>
+            <p class="text-surface-600 dark:text-surface-400">{{ error }}</p>
+            <p-button 
+              label="Try Again" 
+              @click="loadConference" 
+              severity="danger"
+              class="mt-4"
+              icon="pi pi-refresh"
+            />
+          </div>
+        </div>
       </div>
 
       <!-- Main Content -->
-      <div v-else-if="conference" class="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
+      <div v-else-if="conference" class="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <!-- Sidebar -->
-        <aside class="w-full md:w-64 rounded-lg">
-          <div class="p-4">
-            <h2 class="text-lg font-semibold">{{ conference.title }}</h2>
-            <div class="mt-2 space-y-1">
-              <p class="text-sm">📍 {{ conference.location }}</p>
-              <p class="text-sm">
-                📅 {{ formatDate(conference.start_date) }} - {{ formatDate(conference.end_date) }}
-              </p>
+        <aside class="lg:col-span-1">
+          <div class="sticky top-6">
+            <!-- Conference Header Card -->
+            <div class="bg-surface-0 dark:bg-surface-900 rounded-xl shadow-lg border border-surface-200 dark:border-surface-700 overflow-hidden mb-6">
+              <div class="bg-gradient-to-r from-primary-500 to-primary-600 p-6 text-white">
+                <h2 class="text-xl font-bold mb-3">{{ conference.title }}</h2>
+                <div class="space-y-2 text-primary-50">
+                  <div class="flex items-center space-x-2">
+                    <i class="pi pi-map-marker text-sm"></i>
+                    <span class="text-sm">{{ conference.location }}</span>
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <i class="pi pi-calendar text-sm"></i>
+                    <span class="text-sm">
+                      {{ formatDate(conference.start_date) }} - {{ formatDate(conference.end_date) }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Navigation Card -->
+            <div class="bg-surface-0 dark:bg-surface-900 rounded-xl shadow-lg border border-surface-200 dark:border-surface-700 overflow-hidden">
+              <div class="p-4 border-b border-surface-200 dark:border-surface-700">
+                <h3 class="font-semibold text-surface-900 dark:text-surface-50 flex items-center space-x-2">
+                  <i class="pi pi-list text-primary-500"></i>
+                  <span>Pages</span>
+                </h3>
+              </div>
+              
+              <nav class="p-2">
+                <div v-if="pagesLoading" class="flex flex-col items-center space-y-3 py-8">
+                  <p-progress-spinner class="w-6 h-6" strokeWidth="4" />
+                  <p class="text-sm text-surface-600 dark:text-surface-400">Loading pages...</p>
+                </div>
+                
+                <ul v-else-if="conference.pages && conference.pages.length > 0" class="space-y-1">
+                  <li v-for="page in conference.pages" :key="page.id">
+                    <button 
+                      @click="selectPage(page)"
+                      class="w-full text-left px-3 py-3 rounded-lg transition-all duration-200 flex items-center space-x-3 group"
+                      :class="activePageId === page.id 
+                        ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border-l-4 border-primary-500' 
+                        : 'hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-700 dark:text-surface-300'"
+                    >
+                      <i class="pi pi-file text-sm transition-colors"
+                         :class="activePageId === page.id ? 'text-primary-500' : 'text-surface-400 group-hover:text-surface-600'"></i>
+                      <span class="font-medium">{{ page.title }}</span>
+                    </button>
+                  </li>
+                </ul>
+                
+                <div v-else class="text-center py-8">
+                  <div class="flex flex-col items-center space-y-3">
+                    <i class="pi pi-inbox text-3xl text-surface-400"></i>
+                    <p class="text-surface-600 dark:text-surface-400">No pages available</p>
+                  </div>
+                </div>
+              </nav>
             </div>
           </div>
-          <nav class="p-4">
-            <div v-if="pagesLoading" class="flex flex-col items-center space-y-2">
-              <p-progress-spinner style="width: 24px; height: 24px" />
-              <p class="text-sm">Loading pages...</p>
-            </div>
-            <ul v-else-if="conference.pages && conference.pages.length > 0" class="space-y-2">
-              <li 
-                v-for="page in conference.pages" 
-                :key="page.id"
-                class="w-full"
-              >
-                <button 
-                  @click="selectPage(page)"
-                  class="w-full text-left px-4 py-2 rounded-md transition-colors"
-                  :class="{ 'text-blue-600': activePageId === page.id }"
-                >
-                  {{ page.title }}
-                </button>
-              </li>
-            </ul>
-            <div v-else class="text-center">
-              <p>No pages available for this conference.</p>
-            </div>
-          </nav>
         </aside>
 
         <!-- Main Content Area -->
-        <main class="flex-1 rounded-lg p-4">
+        <main class="lg:col-span-3">
           <div v-if="activePage" class="space-y-6">
-            <header>
-              <h1 class="text-3xl font-bold">{{ activePage.title }}</h1>
-            </header>
-            <div class="space-y-4">
+            <!-- Page Header -->
+            <div class="bg-surface-0 dark:bg-surface-900 rounded-xl shadow-lg border border-surface-200 dark:border-surface-700 p-6">
+              <div class="flex items-start justify-between">
+                <div>
+                  <h1 class="text-3xl font-bold text-surface-900 dark:text-surface-50 mb-2">{{ activePage.title }}</h1>
+                  <div class="flex items-center space-x-4 text-sm text-surface-600 dark:text-surface-400">
+                    <span class="flex items-center space-x-1">
+                      <i class="pi pi-clock"></i>
+                      <span>Last updated {{ formatDate(activePage.updated_at || activePage.created_at) }}</span>
+                    </span>
+                  </div>
+                </div>
+                <p-chip 
+                  :label="`Page ${activePage.order || 1}`" 
+                  class="bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300"
+                />
+              </div>
+            </div>
+
+            <!-- Page Content -->
+            <div class="space-y-6">
               <div 
-                v-for="pageData in activePage.page_data || []" 
+                v-for="(pageData, index) in activePage.page_data || []" 
                 :key="pageData.id"
-                class="p-4 rounded-lg"
+                class="bg-surface-0 dark:bg-surface-900 rounded-xl shadow-lg border border-surface-200 dark:border-surface-700 overflow-hidden"
               >
+                <!-- Editor Content -->
                 <div 
                   v-if="pageData.component_type === 'Editor' && pageData.data?.content"
-                  class="editor-content"
-                  v-html="pageData.data.content"
-                ></div>
-                <div v-else-if="pageData.component_type === 'Text'" class="text-content">
-                  <p class="leading-relaxed">{{ pageData.data?.text || 'No text content available' }}</p>
+                  class="p-6"
+                >
+                  <div class="prose prose-lg max-w-none dark:prose-invert prose-headings:text-surface-900 dark:prose-headings:text-surface-50 prose-p:text-surface-700 dark:prose-p:text-surface-300 prose-a:text-primary-600 dark:prose-a:text-primary-400 prose-strong:text-surface-900 dark:prose-strong:text-surface-100">
+                    <div v-html="pageData.data.content"></div>
+                  </div>
                 </div>
-                <div v-else class="p-4 rounded-lg">
-                  <h4 class="text-lg font-semibold mb-2">{{ pageData.component_type }}</h4>
-                  <pre class="p-3 rounded text-sm overflow-x-auto">{{ JSON.stringify(pageData.data, null, 2) }}</pre>
+                
+                <!-- Text Content -->
+                <div v-else-if="pageData.component_type === 'Text'" class="p-6">
+                  <div class="prose prose-lg max-w-none dark:prose-invert">
+                    <p class="text-surface-700 dark:text-surface-300 leading-relaxed">
+                      {{ pageData.data?.text || 'No text content available' }}
+                    </p>
+                  </div>
+                </div>
+                
+                <!-- Other Component Types -->
+                <div v-else class="p-6">
+                  <div class="mb-4 pb-4 border-b border-surface-200 dark:border-surface-700">
+                    <div class="flex items-center space-x-2">
+                      <p-chip :label="pageData.component_type" severity="info" />
+                      <span class="text-sm text-surface-600 dark:text-surface-400">Component</span>
+                    </div>
+                  </div>
+                  <div class="bg-surface-50 dark:bg-surface-800 rounded-lg p-4">
+                    <pre class="text-sm text-surface-700 dark:text-surface-300 overflow-x-auto whitespace-pre-wrap">{{ JSON.stringify(pageData.data, null, 2) }}</pre>
+                  </div>
                 </div>
               </div>
-              <div v-if="!activePage.page_data || activePage.page_data.length === 0" class="text-center py-8">
-                <p class="text-lg">No content available for this page.</p>
+              
+              <!-- Empty State for Page Content -->
+              <div v-if="!activePage.page_data || activePage.page_data.length === 0" 
+                   class="bg-surface-0 dark:bg-surface-900 rounded-xl shadow-lg border border-surface-200 dark:border-surface-700 p-12">
+                <div class="text-center space-y-4">
+                  <div class="w-16 h-16 bg-surface-100 dark:bg-surface-800 rounded-full flex items-center justify-center mx-auto">
+                    <i class="pi pi-file-o text-2xl text-surface-400"></i>
+                  </div>
+                  <h3 class="text-xl font-semibold text-surface-900 dark:text-surface-50">No content available</h3>
+                  <p class="text-surface-600 dark:text-surface-400">This page doesn't have any content yet.</p>
+                </div>
               </div>
             </div>
           </div>
-          <div v-else class="text-center space-y-4 py-8">
-            <h2 class="text-2xl font-bold">Welcome to {{ conference.title }}</h2>
-            <p v-if="pagesLoading">Loading pages...</p>
-            <p v-else-if="conference.pages && conference.pages.length > 0">Select a page from the menu to view its content.</p>
-            <p v-else>No pages are available for this conference.</p>
+          
+          <!-- Welcome State -->
+          <div v-else class="bg-surface-0 dark:bg-surface-900 rounded-xl shadow-lg border border-surface-200 dark:border-surface-700 p-12">
+            <div class="text-center space-y-6">
+              <div class="w-20 h-20 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mx-auto">
+                <i class="pi pi-home text-3xl text-primary-600 dark:text-primary-400"></i>
+              </div>
+              <div>
+                <h2 class="text-2xl font-bold text-surface-900 dark:text-surface-50 mb-2">
+                  Welcome to {{ conference.title }}
+                </h2>
+                <p class="text-surface-600 dark:text-surface-400" v-if="pagesLoading">
+                  Loading pages...
+                </p>
+                <p class="text-surface-600 dark:text-surface-400" v-else-if="conference.pages && conference.pages.length > 0">
+                  Select a page from the sidebar to view its content.
+                </p>
+                <p class="text-surface-600 dark:text-surface-400" v-else>
+                  No pages are available for this conference yet.
+                </p>
+              </div>
+              
+              <div v-if="conference.pages && conference.pages.length > 0" class="flex flex-wrap gap-2 justify-center">
+                <p-button 
+                  v-for="page in conference.pages.slice(0, 3)" 
+                  :key="page.id"
+                  :label="page.title"
+                  @click="selectPage(page)"
+                  severity="secondary"
+                  outlined
+                  size="small"
+                />
+              </div>
+            </div>
           </div>
         </main>
       </div>
@@ -95,13 +213,11 @@
   </div>
 </template>
 
-
 <script lang="ts">
 import { defineComponent } from 'vue';
 import apiService from '@/services/apiService';
 import type { Conference } from '@/types/conference';
 import type { PageMenu } from '@/types/pageMenu';
-
 
 interface ConferenceWithPages extends Conference {
   pages?: PageMenu[];
@@ -394,4 +510,3 @@ export default defineComponent({
   margin-top: 0.5rem;
 }
 </style>
-
