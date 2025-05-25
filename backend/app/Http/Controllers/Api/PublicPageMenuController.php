@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
@@ -28,11 +27,16 @@ class PublicPageMenuController extends Controller
         
         $menus = $conference->pageMenus()
             ->where('is_published', true)
+            ->with(['pageData' => function($query) {
+                $query->where('is_published', true)
+                    ->orderBy('order', 'asc');
+            }])
             ->orderBy('created_at', 'asc')
             ->get();
         
         return $this->successResponse(
-            PageMenuResource::collection($menus)
+            PageMenuResource::collection($menus),
+            'Published pages retrieved successfully'
         );
     }
 
@@ -52,16 +56,15 @@ class PublicPageMenuController extends Controller
         $menu = $conference->pageMenus()
             ->where('slug', $pageSlug)
             ->where('is_published', true)
+            ->with(['pageData' => function($query) {
+                $query->where('is_published', true)
+                    ->orderBy('order', 'asc');
+            }])
             ->firstOrFail();
         
-        // Load only published page data
-        $menu->load(['pageData' => function($query) {
-            $query->where('is_published', true)
-                ->orderBy('order', 'asc');
-        }]);
-        
         return $this->successResponse(
-            new PageMenuResource($menu)
+            new PageMenuResource($menu),
+            'Page menu retrieved successfully'
         );
     }
 }

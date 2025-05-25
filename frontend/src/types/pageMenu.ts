@@ -19,8 +19,8 @@ export interface PageMenu {
   conference_id: number;
   title: string;
   slug: string;
+  order?: number;
   is_published: boolean;
-  order: number;
   page_data?: PageData[];
   created_at: string;
   updated_at: string;

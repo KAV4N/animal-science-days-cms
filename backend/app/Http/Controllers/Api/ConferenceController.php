@@ -105,22 +105,6 @@ class ConferenceController extends Controller
         $validated = $request->validated();
         $validated['created_by'] = $request->user()->id;
         
-        // Check if trying to create a conference set as latest
-        if (isset($validated['is_latest']) && $validated['is_latest']) {
-            // Check if the current latest conference is locked by another user
-            $latestConference = Conference::where('is_latest', true)->first();
-            if ($latestConference) {
-                $latestLockInfo = $this->lockService->checkLock($latestConference->id);
-                if ($latestLockInfo && $latestLockInfo['user_id'] !== $request->user()->id) {
-                    return $this->errorResponse(
-                        'Cannot create conference as latest: Current latest conference is being edited by another user',
-                        423,
-                        ['lock_info' => $latestLockInfo]
-                    );
-                }
-            }
-        }
-
         $conference = Conference::create($validated);
 
         return $this->successResponse(
@@ -158,38 +142,11 @@ class ConferenceController extends Controller
             return $this->errorResponse('You are not authorized to update this conference', 403);
         }
         
-        $lockInfo = $this->lockService->checkLock($conference->id);
-        if ($lockInfo && $lockInfo['user_id'] !== $request->user()->id) {
-            return $this->errorResponse(
-                'Conference is currently being edited by another user',
-                423,
-                ['lock_info' => $lockInfo]
-            );
-        }
-        
         $validated = $request->validated();
-        
-        // Check if trying to update a conference to be set as latest
-        if (isset($validated['is_latest']) && $validated['is_latest'] && !$conference->is_latest) {
-            // Check if the current latest conference is locked by another user
-            $latestConference = Conference::where('is_latest', true)
-                ->where('id', '!=', $conference->id)
-                ->first();
-                
-            if ($latestConference) {
-                $latestLockInfo = $this->lockService->checkLock($latestConference->id);
-                if ($latestLockInfo && $latestLockInfo['user_id'] !== $request->user()->id) {
-                    return $this->errorResponse(
-                        'Cannot set as latest: Current latest conference is being edited by another user',
-                        423,
-                        ['lock_info' => $latestLockInfo]
-                    );
-                }
-            }
-        }
         
         $conference->update($validated);
         
+        $lockInfo = $this->lockService->checkLock($conference->id);
         if ($lockInfo && $lockInfo['user_id'] === $request->user()->id) {
             $this->lockService->refreshLock($conference->id, $request->user()->id);
         }
@@ -230,36 +187,6 @@ class ConferenceController extends Controller
 
         if ($request->has('latest')) {
             $isLatest = filter_var($request->latest, FILTER_VALIDATE_BOOLEAN);
-            
-            // If trying to set as latest, check if the conference is locked by another user
-            if ($isLatest) {
-                // Check if this conference is locked by another user
-                $lockInfo = $this->lockService->checkLock($conference->id);
-                if ($lockInfo && $lockInfo['user_id'] !== $request->user()->id) {
-                    return $this->errorResponse(
-                        'Cannot set as latest: Conference is currently being edited by another user',
-                        423,
-                        ['lock_info' => $lockInfo]
-                    );
-                }
-                
-                // Check if the current latest conference is locked by another user
-                $latestConference = Conference::where('is_latest', true)
-                    ->where('id', '!=', $conference->id)
-                    ->first();
-                    
-                if ($latestConference) {
-                    $latestLockInfo = $this->lockService->checkLock($latestConference->id);
-                    if ($latestLockInfo && $latestLockInfo['user_id'] !== $request->user()->id) {
-                        return $this->errorResponse(
-                            'Cannot set as latest: Current latest conference is being edited by another user',
-                            423,
-                            ['lock_info' => $latestLockInfo]
-                        );
-                    }
-                }
-            }
-            
             $updates['is_latest'] = $isLatest;
             $message = $isLatest ? 'Conference set as latest successfully' : 'Conference removed from latest status';
         }
