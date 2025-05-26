@@ -100,7 +100,7 @@
 
      <Card class="m-4 flex-none">
         <template #title>
-          <h3 class="text-base font-semibold">Quick Actions</h3>
+          <h3 class="text-base font-semibold">Actions</h3>
         </template>
         <template #content>
           <div class="space-y-3 p-0">

@@ -15,7 +15,6 @@ use App\Http\Controllers\Api\PageDataController;
 use App\Http\Controllers\Api\ConferenceLockController;
 use App\Http\Controllers\Api\PublicPageMenuController;
 use App\Http\Controllers\Api\MediaController;
-use App\Http\Controllers\Api\PublicMediaController;
 
 Route::prefix('v1')->group(function () {
     // Public routes for universities
@@ -34,14 +33,6 @@ Route::prefix('v1')->group(function () {
         Route::get('/conferences/{conferenceSlug}/pages', [PublicPageMenuController::class, 'index']);
         Route::get('/conferences/{conferenceSlug}/pages/{pageSlug}', [PublicPageMenuController::class, 'show']);
         
-        // Public routes for media
-        Route::prefix('conferences/{conferenceSlug}/media')->group(function () {
-            Route::get('/', [PublicMediaController::class, 'index']);
-            Route::get('/{mediaUuid}', [PublicMediaController::class, 'show']);
-            Route::get('/{mediaUuid}/download', [PublicMediaController::class, 'download']);
-            Route::get('/{mediaUuid}/serve', [PublicMediaController::class, 'serve']);
-            Route::get('/{mediaUuid}/conversions/{conversion}', [PublicMediaController::class, 'serveConversion']);
-        });
     });
 
     // Authentication routes
