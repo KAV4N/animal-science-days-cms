@@ -1,217 +1,216 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-surface-50 to-surface-100 dark:from-surface-950 dark:to-surface-900">
-    <div class="container mx-auto px-4 py-6 max-w-7xl">
+  <div class="min-h-screen p-2">
+    <div class="max-w-7xl mx-auto">
+
       <!-- Loading State -->
       <div v-if="loading" class="flex flex-col items-center justify-center min-h-[60vh] space-y-6">
-        <div class="bg-surface-0 dark:bg-surface-900 rounded-xl p-8 shadow-lg border border-surface-200 dark:border-surface-700">
-          <div class="flex flex-col items-center space-y-4">
-            <p-progress-spinner class="w-12 h-12" strokeWidth="3" />
-            <p class="text-lg font-medium text-surface-700 dark:text-surface-200">Loading conference...</p>
-          </div>
-        </div>
+        <Card class="w-full max-w-md mx-auto">
+          <template #content>
+            <div class="flex flex-col items-center space-y-4 p-4">
+              <ProgressSpinner class="w-12 h-12" strokeWidth="3" />
+              <p class="text-lg font-medium">Loading conference...</p>
+            </div>
+          </template>
+        </Card>
       </div>
 
       <!-- Error State -->
       <div v-else-if="error" class="flex flex-col items-center justify-center min-h-[60vh] space-y-6">
-        <div class="bg-surface-0 dark:bg-surface-900 rounded-xl p-8 shadow-lg border border-red-200 dark:border-red-800 max-w-md w-full text-center">
-          <div class="flex flex-col items-center space-y-4">
-            <div class="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center">
-              <i class="pi pi-exclamation-triangle text-red-600 dark:text-red-400 text-2xl"></i>
+        <Card class="w-full max-w-md text-center">
+          <template #content>
+            <div class="flex flex-col items-center space-y-4 p-4">
+              <div class="w-16 h-16 rounded-full flex items-center justify-center">
+                <i class="pi pi-exclamation-triangle text-2xl"></i>
+              </div>
+              <h2 class="text-2xl font-bold">Something went wrong</h2>
+              <p>{{ error }}</p>
+              <Button 
+                label="Try Again" 
+                @click="loadConference" 
+                class="mt-2"
+                icon="pi pi-refresh"
+              />
             </div>
-            <h2 class="text-2xl font-bold text-surface-900 dark:text-surface-50">Something went wrong</h2>
-            <p class="text-surface-600 dark:text-surface-400">{{ error }}</p>
-            <p-button 
-              label="Try Again" 
-              @click="loadConference" 
-              severity="danger"
-              class="mt-4"
-              icon="pi pi-refresh"
-            />
+          </template>
+        </Card>
+      </div>
+
+      <!-- Main Layout -->
+      <div v-else-if="conference" class="space-y-2">
+        
+        <!-- Conference Header Card -->
+        <Card class="w-full">
+          <template #content>
+            <div class="p-6">
+              <h1 class="text-3xl font-bold mb-4 text-center">{{ conference.title }}</h1>
+              <div class="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-8">
+                <div class="flex items-center space-x-2">
+                  <i class="pi pi-map-marker"></i>
+                  <span>{{ conference.location }}</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <i class="pi pi-calendar"></i>
+                  <span>
+                    {{ formatDate(conference.start_date) }} - {{ formatDate(conference.end_date) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </template>
+        </Card>
+
+        <!-- Layout -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-2">
+          
+          <!-- Sidebar -->
+          <div class="lg:col-span-1 space-y-2">
+            <Card class="h-fit">
+              <template #header>
+                <div class="p-4 pb-2">
+                  <h2 class="text-lg font-semibold flex items-center space-x-2">
+                    <i class="pi pi-list"></i>
+                    <span>Pages</span>
+                  </h2>
+                </div>
+              </template>
+              <template #content>
+                <div class="p-4 pt-0">
+                  <div v-if="pagesLoading" class="flex flex-col items-center space-y-3 py-8">
+                    <ProgressSpinner class="w-6 h-6" strokeWidth="4" />
+                    <p class="text-sm">Loading pages...</p>
+                  </div>
+                  <div v-else-if="conference.pages && conference.pages.length > 0" class="space-y-1">
+                    <Button
+                      v-for="page in conference.pages" 
+                      :key="page.id"
+                      @click="selectPage(page)"
+                      :label="page.title"
+                      :outlined="activePageId !== page.id"
+                      :severity="activePageId === page.id ? 'primary' : 'secondary'"
+                      class="w-full justify-start"
+                      size="small"
+                    >
+                      <template #icon>
+                        <i class="pi pi-file mr-2"></i>
+                      </template>
+                    </Button>
+                  </div>
+                  <div v-else class="text-center py-8">
+                    <div class="flex flex-col items-center space-y-3">
+                      <i class="pi pi-inbox text-3xl opacity-50"></i>
+                      <p class="text-sm opacity-75">No pages available</p>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </Card>
+          </div>
+
+          <!-- Page Content -->
+          <div class="lg:col-span-3 space-y-2">
+
+            <Card v-if="activePage" class="w-full">
+              <template #content>
+                <div class="p-6">
+                  <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                      <h2 class="text-2xl font-bold mb-2">{{ activePage.title }}</h2>
+                      <div class="flex items-center space-x-4 text-sm opacity-75">
+                        <span class="flex items-center space-x-1">
+                          <i class="pi pi-clock"></i>
+                          <span>Last updated {{ formatDate(activePage.updated_at || activePage.created_at) }}</span>
+                        </span>
+                      </div>
+                    </div>
+                    <Chip :label="`Page ${activePage.order || 1}`" />
+                  </div>
+                </div>
+              </template>
+            </Card>
+
+            <Card v-else class="w-full">
+              <template #content>
+                <div class="text-center space-y-6 p-12">
+                  <div class="w-20 h-20 rounded-full flex items-center justify-center mx-auto opacity-50">
+                    <i class="pi pi-home text-3xl"></i>
+                  </div>
+                  <div>
+                    <h2 class="text-2xl font-bold mb-2">
+                      Welcome to {{ conference.title }}
+                    </h2>
+                    <p v-if="pagesLoading" class="opacity-75">Loading pages...</p>
+                    <p v-else-if="conference.pages?.length" class="opacity-75">
+                      Select a page from the sidebar to view its content.
+                    </p>
+                    <p v-else class="opacity-75">No pages are available for this conference yet.</p>
+                  </div>
+                  <div v-if="conference.pages?.length" class="flex flex-wrap gap-2 justify-center">
+                    <Button 
+                      v-for="page in conference.pages.slice(0, 3)" 
+                      :key="page.id"
+                      :label="page.title"
+                      @click="selectPage(page)"
+                      outlined
+                      size="small"
+                    />
+                  </div>
+                </div>
+              </template>
+            </Card>
+
+            <template v-if="activePage?.page_data?.length">
+              <Card 
+                v-for="pageData in activePage.page_data" 
+                :key="pageData.id"
+                class="w-full"
+              >
+                <template #content>
+                  <div class="p-4 pt-0">
+                   <div 
+                      v-if="pageData.component_type === 'Editor' && pageData.data?.content"
+                      class="editor-content"
+                      v-html="pageData.data.content"
+                    ></div>
+
+                    <div v-else-if="pageData.component_type === 'Text'" class="prose prose-lg max-w-none">
+                      <p class="leading-relaxed">
+                        {{ pageData.data?.text || 'No text content available' }}
+                      </p>
+                    </div>
+
+                    <div v-else>
+                      <div class="rounded-lg p-4 border">
+                        <pre class="text-sm overflow-x-auto whitespace-pre-wrap opacity-75">
+                          {{ JSON.stringify(pageData.data, null, 2) }}
+                        </pre>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </Card>
+            </template>
+
+            <Card v-else-if="activePage" class="w-full">
+              <template #content>
+                <div class="text-center space-y-4 p-12">
+                  <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto opacity-50">
+                    <i class="pi pi-file-o text-2xl"></i>
+                  </div>
+                  <h3 class="text-xl font-semibold">No content available</h3>
+                  <p class="opacity-75">This page doesn't have any content yet.</p>
+                </div>
+              </template>
+            </Card>
+
           </div>
         </div>
       </div>
 
-      <!-- Main Content -->
-      <div v-else-if="conference" class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <!-- Sidebar -->
-        <aside class="lg:col-span-1">
-          <div class="sticky top-6">
-            <!-- Conference Header Card -->
-            <div class="bg-surface-0 dark:bg-surface-900 rounded-xl shadow-lg border border-surface-200 dark:border-surface-700 overflow-hidden mb-6">
-              <div class="bg-gradient-to-r from-primary-500 to-primary-600 p-6 text-white">
-                <h2 class="text-xl font-bold mb-3">{{ conference.title }}</h2>
-                <div class="space-y-2 text-primary-50">
-                  <div class="flex items-center space-x-2">
-                    <i class="pi pi-map-marker text-sm"></i>
-                    <span class="text-sm">{{ conference.location }}</span>
-                  </div>
-                  <div class="flex items-center space-x-2">
-                    <i class="pi pi-calendar text-sm"></i>
-                    <span class="text-sm">
-                      {{ formatDate(conference.start_date) }} - {{ formatDate(conference.end_date) }}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Navigation Card -->
-            <div class="bg-surface-0 dark:bg-surface-900 rounded-xl shadow-lg border border-surface-200 dark:border-surface-700 overflow-hidden">
-              <div class="p-4 border-b border-surface-200 dark:border-surface-700">
-                <h3 class="font-semibold text-surface-900 dark:text-surface-50 flex items-center space-x-2">
-                  <i class="pi pi-list text-primary-500"></i>
-                  <span>Pages</span>
-                </h3>
-              </div>
-              
-              <nav class="p-2">
-                <div v-if="pagesLoading" class="flex flex-col items-center space-y-3 py-8">
-                  <p-progress-spinner class="w-6 h-6" strokeWidth="4" />
-                  <p class="text-sm text-surface-600 dark:text-surface-400">Loading pages...</p>
-                </div>
-                
-                <ul v-else-if="conference.pages && conference.pages.length > 0" class="space-y-1">
-                  <li v-for="page in conference.pages" :key="page.id">
-                    <button 
-                      @click="selectPage(page)"
-                      class="w-full text-left px-3 py-3 rounded-lg transition-all duration-200 flex items-center space-x-3 group"
-                      :class="activePageId === page.id 
-                        ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border-l-4 border-primary-500' 
-                        : 'hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-700 dark:text-surface-300'"
-                    >
-                      <i class="pi pi-file text-sm transition-colors"
-                         :class="activePageId === page.id ? 'text-primary-500' : 'text-surface-400 group-hover:text-surface-600'"></i>
-                      <span class="font-medium">{{ page.title }}</span>
-                    </button>
-                  </li>
-                </ul>
-                
-                <div v-else class="text-center py-8">
-                  <div class="flex flex-col items-center space-y-3">
-                    <i class="pi pi-inbox text-3xl text-surface-400"></i>
-                    <p class="text-surface-600 dark:text-surface-400">No pages available</p>
-                  </div>
-                </div>
-              </nav>
-            </div>
-          </div>
-        </aside>
-
-        <!-- Main Content Area -->
-        <main class="lg:col-span-3">
-          <div v-if="activePage" class="space-y-6">
-            <!-- Page Header -->
-            <div class="bg-surface-0 dark:bg-surface-900 rounded-xl shadow-lg border border-surface-200 dark:border-surface-700 p-6">
-              <div class="flex items-start justify-between">
-                <div>
-                  <h1 class="text-3xl font-bold text-surface-900 dark:text-surface-50 mb-2">{{ activePage.title }}</h1>
-                  <div class="flex items-center space-x-4 text-sm text-surface-600 dark:text-surface-400">
-                    <span class="flex items-center space-x-1">
-                      <i class="pi pi-clock"></i>
-                      <span>Last updated {{ formatDate(activePage.updated_at || activePage.created_at) }}</span>
-                    </span>
-                  </div>
-                </div>
-                <p-chip 
-                  :label="`Page ${activePage.order || 1}`" 
-                  class="bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300"
-                />
-              </div>
-            </div>
-
-            <!-- Page Content -->
-            <div class="space-y-6">
-              <div 
-                v-for="(pageData, index) in activePage.page_data || []" 
-                :key="pageData.id"
-                class="bg-surface-0 dark:bg-surface-900 rounded-xl shadow-lg border border-surface-200 dark:border-surface-700 overflow-hidden"
-              >
-                <!-- Editor Content -->
-                <div 
-                  v-if="pageData.component_type === 'Editor' && pageData.data?.content"
-                  class="p-6"
-                >
-                  <div class="prose prose-lg max-w-none dark:prose-invert prose-headings:text-surface-900 dark:prose-headings:text-surface-50 prose-p:text-surface-700 dark:prose-p:text-surface-300 prose-a:text-primary-600 dark:prose-a:text-primary-400 prose-strong:text-surface-900 dark:prose-strong:text-surface-100">
-                    <div v-html="pageData.data.content"></div>
-                  </div>
-                </div>
-                
-                <!-- Text Content -->
-                <div v-else-if="pageData.component_type === 'Text'" class="p-6">
-                  <div class="prose prose-lg max-w-none dark:prose-invert">
-                    <p class="text-surface-700 dark:text-surface-300 leading-relaxed">
-                      {{ pageData.data?.text || 'No text content available' }}
-                    </p>
-                  </div>
-                </div>
-                
-                <!-- Other Component Types -->
-                <div v-else class="p-6">
-                  <div class="mb-4 pb-4 border-b border-surface-200 dark:border-surface-700">
-                    <div class="flex items-center space-x-2">
-                      <p-chip :label="pageData.component_type" severity="info" />
-                      <span class="text-sm text-surface-600 dark:text-surface-400">Component</span>
-                    </div>
-                  </div>
-                  <div class="bg-surface-50 dark:bg-surface-800 rounded-lg p-4">
-                    <pre class="text-sm text-surface-700 dark:text-surface-300 overflow-x-auto whitespace-pre-wrap">{{ JSON.stringify(pageData.data, null, 2) }}</pre>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Empty State for Page Content -->
-              <div v-if="!activePage.page_data || activePage.page_data.length === 0" 
-                   class="bg-surface-0 dark:bg-surface-900 rounded-xl shadow-lg border border-surface-200 dark:border-surface-700 p-12">
-                <div class="text-center space-y-4">
-                  <div class="w-16 h-16 bg-surface-100 dark:bg-surface-800 rounded-full flex items-center justify-center mx-auto">
-                    <i class="pi pi-file-o text-2xl text-surface-400"></i>
-                  </div>
-                  <h3 class="text-xl font-semibold text-surface-900 dark:text-surface-50">No content available</h3>
-                  <p class="text-surface-600 dark:text-surface-400">This page doesn't have any content yet.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Welcome State -->
-          <div v-else class="bg-surface-0 dark:bg-surface-900 rounded-xl shadow-lg border border-surface-200 dark:border-surface-700 p-12">
-            <div class="text-center space-y-6">
-              <div class="w-20 h-20 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mx-auto">
-                <i class="pi pi-home text-3xl text-primary-600 dark:text-primary-400"></i>
-              </div>
-              <div>
-                <h2 class="text-2xl font-bold text-surface-900 dark:text-surface-50 mb-2">
-                  Welcome to {{ conference.title }}
-                </h2>
-                <p class="text-surface-600 dark:text-surface-400" v-if="pagesLoading">
-                  Loading pages...
-                </p>
-                <p class="text-surface-600 dark:text-surface-400" v-else-if="conference.pages && conference.pages.length > 0">
-                  Select a page from the sidebar to view its content.
-                </p>
-                <p class="text-surface-600 dark:text-surface-400" v-else>
-                  No pages are available for this conference yet.
-                </p>
-              </div>
-              
-              <div v-if="conference.pages && conference.pages.length > 0" class="flex flex-wrap gap-2 justify-center">
-                <p-button 
-                  v-for="page in conference.pages.slice(0, 3)" 
-                  :key="page.id"
-                  :label="page.title"
-                  @click="selectPage(page)"
-                  severity="secondary"
-                  outlined
-                  size="small"
-                />
-              </div>
-            </div>
-          </div>
-        </main>
-      </div>
     </div>
   </div>
 </template>
+
+
 
 <script lang="ts">
 import { defineComponent } from 'vue';
@@ -269,14 +268,15 @@ export default defineComponent({
       this.activePageId = null;
 
       try {
+        let conferenceSlug: string;
+
         if (this.slug) {
+          // Load specific conference by slug
           const response = await apiService.get<{ payload: ConferenceWithPages }>(`/v1/public/conferences/${this.slug}`);
           this.conference = response.data.payload;
-          if (this.conference?.pages && this.conference.pages.length > 0) {
-            const sortedPages = [...this.conference.pages].sort((a, b) => (a.order || 0) - (b.order || 0));
-            this.selectPage(sortedPages[0]);
-          }
+          conferenceSlug = this.slug;
         } else {
+          // Load latest conference
           const latestResponse = await apiService.get<{ payload: Conference }>('/v1/public/conferences?latest=1');
           const latestConference = latestResponse.data.payload;
           if (!latestConference.slug) {
@@ -284,8 +284,14 @@ export default defineComponent({
           }
           this.conference = latestConference as ConferenceWithPages;
           this.conference.pages = [];
-          await this.loadPages(latestConference.slug);
+          conferenceSlug = latestConference.slug;
         }
+
+        // Always load pages separately to ensure we get the most up-to-date data
+        if (conferenceSlug) {
+          await this.loadPages(conferenceSlug);
+        }
+
       } catch (err: any) {
         console.error('Error loading conference:', err);
         this.error = err.response?.data?.message || err.message || 'Failed to load conference';
@@ -297,16 +303,23 @@ export default defineComponent({
     async loadPages(slug: string): Promise<void> {
       this.pagesLoading = true;
       try {
+        console.log('Loading pages for slug:', slug);
         const response = await apiService.get<{ payload: PageMenu[] }>(`/v1/public/conferences/${slug}/pages`);
+        console.log('Pages response:', response.data);
+        
         if (this.conference) {
           this.conference.pages = response.data.payload;
-          if (this.conference.pages.length > 0) {
+          console.log('Conference pages set to:', this.conference.pages);
+          
+          if (this.conference.pages && this.conference.pages.length > 0) {
             const sortedPages = [...this.conference.pages].sort((a, b) => (a.order || 0) - (b.order || 0));
+            console.log('Sorted pages:', sortedPages);
             this.selectPage(sortedPages[0]);
           }
         }
       } catch (err: any) {
         console.error('Error loading pages:', err);
+        // Only set error if we don't have a conference loaded
         if (!this.conference) {
           this.error = err.response?.data?.message || 'Failed to load pages';
         }
@@ -316,6 +329,7 @@ export default defineComponent({
     },
 
     selectPage(page: PageMenu): void {
+      console.log('Selecting page:', page);
       this.activePage = page;
       this.activePageId = page.id;
     },
@@ -428,8 +442,6 @@ export default defineComponent({
   margin: 1rem 0;
 }
 
-
-
 .editor-content :deep(pre) {
   padding: 1rem;
   border-radius: 0.5rem;
@@ -499,8 +511,6 @@ export default defineComponent({
 .editor-content :deep(th) {
   font-weight: bold;
 }
-
-
 
 .editor-content :deep(caption) {
   caption-side: bottom;

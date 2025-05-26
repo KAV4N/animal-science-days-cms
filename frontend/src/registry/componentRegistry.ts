@@ -7,5 +7,4 @@ const componentRegistry = {
       edit: () => import('./components/editor/BannerEditor.vue'),
       public: () => import('./components/public/BannerDisplay.vue')
     },
-    // other component types...
   }
