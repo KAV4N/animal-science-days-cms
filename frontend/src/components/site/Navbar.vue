@@ -77,10 +77,10 @@ export default defineComponent({
 </script>
 
 <template>
-  <nav class="landing-container fixed left-1/2 -translate-x-1/2 w-full z-[1000] transition-all duration-300"
-    :class="{ 'lg:max-w-[1350px] backdrop-blur-[5px]': !isScrolled, 'md:max-w-[1050px] lg:max-w-[1050px]': isScrolled }">
+  <nav class="landing-container fixed left-1/2 -translate-x-1/2 w-full z-[1000] transition-all duration-300 "
+    :class="{ 'lg:max-w-[1600px] backdrop-blur-[5px]': !isScrolled, 'md:max-w-[1400px] lg:max-w-[1400px]': isScrolled }">
     <div
-      class="py-2 pl-4 md:pl-4 pr-4 rounded-3xl md:rounded-full lg:rounded-full border border-transparent transition-all duration-300"
+      class="bg-surface-50 py-2 pl-4 md:pl-4 pr-4 rounded-3xl md:rounded-full lg:rounded-full border border-transparent transition-all duration-300"
       :class="{ ' shadow backdrop-blur-[5px]': isScrolled }">
       <div class="flex items-center justify-between">
 

@@ -1,6 +1,6 @@
 <template>
   <!-- Desktop Sidebar using Card -->
-  <Card v-if="!isMobileView" class="static-sidebar bg-surface-900 shadow text-white" :class="{ 'hidden': !visible }" :pt="cardPt" style="border-radius: 0px;">
+  <Card v-if="!isMobileView" class="static-sidebar shadow-lg border-e" :class="{ 'hidden': !visible }" :pt="cardPt" style="border-radius: 0px;">
     <template #content>
       <div class="flex flex-col h-full">
         <!-- Logo/Header -->
@@ -35,8 +35,7 @@
                   <router-link 
                     v-ripple 
                     to="/dashboard/conferences" 
-                    class="flex items-center cursor-pointer p-2 rounded duration-150 transition-colors p-ripple text-sm"
-                    :class="{ 'bg-active': isActiveRoute('/dashboard/conferences') }"
+                    class="flex items-center cursor-pointer p-2 rounded p-ripple text-sm"
                   >
                     <i class="pi pi-calendar-plus mr-2"></i>
                     <span class="font-medium">Conference Management</span>
@@ -46,8 +45,7 @@
                   <router-link 
                     v-ripple 
                     to="/dashboard/users" 
-                    class="flex items-center cursor-pointer p-2 rounded duration-150 transition-colors p-ripple text-sm"
-                    :class="{ 'bg-active': isActiveRoute('/dashboard/users') }"
+                    class="flex items-center cursor-pointer p-2 rounded p-ripple text-sm"
                   >
                     <i class="pi pi-user-edit mr-2"></i>
                     <span class="font-medium">User Management</span>
@@ -61,7 +59,7 @@
         <!-- User Profile - Explicitly at the bottom -->
         <div class="mt-auto shrink-0">
           <hr class="mb-2 mx-2 border-t border-0" />
-          <a v-ripple class="flex items-center cursor-pointer p-2 gap-2 rounded duration-150 transition-colors p-ripple text-sm" @click="handleLogout">
+          <a v-ripple class="flex items-center cursor-pointer p-2 gap-2 rounded p-ripple text-sm" @click="handleLogout">
             <Avatar icon="pi pi-sign-out" size="small" shape="circle" />
             <span class="font-medium">Logout</span>
           </a>
@@ -71,7 +69,7 @@
   </Card>
 
   <!-- Mobile Sidebar (Drawer) - No Card here -->
-  <Drawer v-model:visible="mobileDrawerVisible" :pt="{ root: { class: 'mobile-sidebar-drawer' } }" class="md:hidden bg-surface-950">
+  <Drawer v-model:visible="mobileDrawerVisible" :pt="{ root: { class: 'mobile-sidebar-drawer' } }" class="md:hidden">
     <template #container="{ closeCallback }">
       <div class="flex flex-col h-full">
         <!-- Logo/Header -->
@@ -109,8 +107,7 @@
                   <router-link 
                     v-ripple 
                     to="/dashboard/conferences" 
-                    class="flex items-center cursor-pointer p-2 rounded duration-150 transition-colors p-ripple text-sm"
-                    :class="{ 'bg-active': isActiveRoute('/dashboard/conferences') }"
+                    class="flex items-center cursor-pointer p-2 rounded p-ripple text-sm"
                     @click="closeMobileDrawer"
                   >
                     <i class="pi pi-calendar-plus mr-2"></i>
@@ -121,8 +118,7 @@
                   <router-link 
                     v-ripple 
                     to="/dashboard/users" 
-                    class="flex items-center cursor-pointer p-2 rounded duration-150 transition-colors p-ripple text-sm"
-                    :class="{ 'bg-active': isActiveRoute('/dashboard/users') }"
+                    class="flex items-center cursor-pointer p-2 rounded p-ripple text-sm"
                     @click="closeMobileDrawer"
                   >
                     <i class="pi pi-user-edit mr-2"></i>
@@ -137,7 +133,7 @@
         <!-- User Profile -->
         <div class="mt-auto shrink-0">
           <hr class="mb-2 mx-2 border-t border-0"/>
-          <a v-ripple class="flex items-center cursor-pointer p-2 gap-2 rounded duration-150 transition-colors p-ripple text-sm" @click="handleLogout">
+          <a v-ripple class="flex items-center cursor-pointer p-2 gap-2 rounded p-ripple text-sm" @click="handleLogout">
             <Avatar icon="pi pi-sign-out" size="small" shape="circle" />
             <span class="font-medium">Logout</span>
           </a>
@@ -152,6 +148,7 @@ import Avatar from 'primevue/avatar';
 import Button from 'primevue/button';
 import Drawer from 'primevue/drawer';
 import Card from 'primevue/card';
+import { useAuthStore } from '@/stores/authStore';
 
 export default {
   name: 'DashboardSidebar',
@@ -189,6 +186,10 @@ export default {
       }
     };
   },
+  setup() {
+    const authStore = useAuthStore();
+    return { authStore };
+  },
   created() {
     this.checkViewport();
     window.addEventListener('resize', this.checkViewport);
@@ -223,8 +224,9 @@ export default {
     closeMobileDrawer() {
       this.mobileDrawerVisible = false;
     },
-    handleLogout() {
-      this.$emit('logout');
+    async handleLogout() {
+      await this.authStore.logout();
+      this.$router.push({ name: 'HomePage' });
     }
   }
 };
@@ -244,14 +246,11 @@ export default {
 
 :deep(.p-card) {
   height: 100%;
-  border-radius: 0;
 }
 
 :deep(.p-card-body) {
   padding: 0;
   height: 100%;
-  border-color: rgba(82, 82, 82, 0.26);
-  border-right-width: 1px !important;
 }
 
 :deep(.p-card-content) {
@@ -267,7 +266,6 @@ export default {
 }
 
 :deep(.p-drawer-content) {
-  background-color: var(--surface-card);
   padding: 0;
   display: flex;
   flex-direction: column;

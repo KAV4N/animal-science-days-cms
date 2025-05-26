@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Conference;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class ConferenceLockService
@@ -81,6 +82,38 @@ class ConferenceLockService
     }
 
     /**
+     * Release all locks for a specific user
+     *
+     * @param int $userId
+     * @return int Number of locks released
+     */
+    public function releaseAllUserLocks(int $userId): int
+    {
+        $locksReleased = 0;
+        
+        // Query the cache table directly since we're using database driver
+        $cacheEntries = DB::table('cache')
+            ->where('key', 'like', $this->cacheKeyPrefix . '%')
+            ->get();
+        
+        foreach ($cacheEntries as $entry) {
+            $lockData = unserialize($entry->value);
+            
+            // Check if this is a valid lock entry and belongs to the user
+            if (is_array($lockData) && isset($lockData['user_id']) && $lockData['user_id'] === $userId) {
+                // Extract conference ID from cache key
+                $conferenceId = str_replace($this->cacheKeyPrefix, '', $entry->key);
+                
+                // Remove the lock
+                Cache::forget($entry->key);
+                $locksReleased++;
+            }
+        }
+        
+        return $locksReleased;
+    }
+
+    /**
      * Force release a lock (for admins)
      *
      * @param int $conferenceId
@@ -140,6 +173,73 @@ class ConferenceLockService
         }
         
         return false;
+    }
+
+    /**
+     * Get all active locks for a user
+     *
+     * @param int $userId
+     * @return array
+     */
+    public function getUserLocks(int $userId): array
+    {
+        $userLocks = [];
+        
+        // Query the cache table directly
+        $cacheEntries = DB::table('cache')
+            ->where('key', 'like', $this->cacheKeyPrefix . '%')
+            ->get();
+        
+        foreach ($cacheEntries as $entry) {
+            $lockData = unserialize($entry->value);
+            
+            // Check if this is a valid lock entry and belongs to the user
+            if (is_array($lockData) && isset($lockData['user_id']) && $lockData['user_id'] === $userId) {
+                // Check if lock hasn't expired
+                $lockTime = Carbon::parse($lockData['locked_at']);
+                if ($lockTime->diffInMinutes(now()) < $this->lockTimeout) {
+                    $conferenceId = str_replace($this->cacheKeyPrefix, '', $entry->key);
+                    $userLocks[] = [
+                        'conference_id' => $conferenceId,
+                        'lock_data' => $lockData
+                    ];
+                }
+            }
+        }
+        
+        return $userLocks;
+    }
+
+    /**
+     * Clean up expired locks
+     *
+     * @return int Number of expired locks cleaned up
+     */
+    public function cleanupExpiredLocks(): int
+    {
+        $cleanedUp = 0;
+        
+        // Query the cache table directly
+        $cacheEntries = DB::table('cache')
+            ->where('key', 'like', $this->cacheKeyPrefix . '%')
+            ->get();
+        
+        foreach ($cacheEntries as $entry) {
+            $lockData = unserialize($entry->value);
+            
+            // Check if this is a valid lock entry
+            if (is_array($lockData) && isset($lockData['locked_at'])) {
+                $lockTime = Carbon::parse($lockData['locked_at']);
+                
+                // Check if lock has expired
+                if ($lockTime->diffInMinutes(now()) >= $this->lockTimeout) {
+                    Cache::forget($entry->key);
+                    $cleanedUp++;
+                }
+            }
+        }
+        
+        return $cleanedUp;
     }
     
     /**

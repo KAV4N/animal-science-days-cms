@@ -48,7 +48,7 @@ export default defineComponent({
         if (loginSuccessful) {
           this.$emit('login');
           this.closeDialog();
-          this.$router.push({ name: 'Dashboard' });
+          this.$router.push('dashboard');
         } else {
           this.errorMessage = this.authStore.error || 'Login failed';
         }

@@ -30,6 +30,7 @@
 import Button from 'primevue/button';
 import Card from 'primevue/card';
 import Tooltip from 'primevue/tooltip';
+import { useAuthStore } from '@/stores/authStore';
 
 export default {
   name: 'DashboardTopbar',
@@ -55,12 +56,18 @@ export default {
       }
     };
   },
+  
+  setup() {
+    const authStore = useAuthStore();
+    return { authStore };
+  },
   methods: {
     toggleMobileMenu() {
       this.$emit('toggle-mobile-menu');
     },
-    handleLogout() {
-      this.$emit('logout');
+    async handleLogout() {
+      await this.authStore.logout();
+      this.$router.push({ name: 'HomePage' });
     }
   }
 };
