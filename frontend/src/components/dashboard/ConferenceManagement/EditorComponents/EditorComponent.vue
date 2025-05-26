@@ -2,7 +2,7 @@
   <Dialog 
     v-model:visible="localVisible" 
     header="Edit Text Content" 
-    :style="{ width: '95vw', maxWidth: '1200px', height: '90vh' }" 
+    :style="{ width: '95vw', maxWidth: '1400px', height: '90vh' }" 
     :modal="true"
     :maximizable="false"
     :closable="true"
@@ -39,16 +39,7 @@
                   <div class="h-full p-0">
                     <editor
                       v-model="localContent"
-                      :init="{
-                        height: '100%',
-                        menubar: true,
-                        plugins: 'accordion advlist anchor autolink autoresize autosave charmap code codesample directionality fullscreen image insertdatetime link lists media nonbreaking pagebreak preview quickbars save searchreplace table template visualblocks visualchars wordcount emoticons help',
-                        toolbar: 'undo redo | formatselect | bold italic backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | help',
-                        mobile: {
-                          menubar: false,
-                          toolbar: 'undo redo | bold italic | bullist numlist'
-                        }
-                      }"
+                      :init="editorConfig"
                     />
                   </div>
                 </template>
@@ -88,12 +79,180 @@
         </div>
       </template>
     </Card>
+
+    <!-- Media Browser Dialog -->
+    <Dialog 
+      v-model:visible="showMediaBrowser" 
+      header="Select Media" 
+      :style="{ width: '95vw', maxWidth: '1000px', height: '80vh' }" 
+      :modal="true"
+      :maximizable="true"
+      :closable="true"
+      :breakpoints="{ '640px': '95vw' }"
+    >
+      <div class="h-full flex flex-col">
+        <!-- Media Browser Header -->
+        <Card class="mb-4 flex-shrink-0">
+          <template #content>
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-0">
+              <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-1">
+                <!-- Collection Filter -->
+                <div class="flex items-center gap-2">
+                  <label class="text-sm font-medium whitespace-nowrap">Collection:</label>
+                  <Dropdown
+                    v-model="mediaSelectedCollection"
+                    :options="mediaCollectionOptions"
+                    option-label="label"
+                    option-value="value"
+                    placeholder="All Collections"
+                    class="w-40"
+                    @change="fetchMediaForBrowser"
+                  />
+                </div>
+                
+                <!-- Search -->
+                <div class="flex items-center gap-2 flex-1 min-w-0">
+                  <label class="text-sm font-medium whitespace-nowrap">Search:</label>
+                  <InputText
+                    v-model="mediaSearchTerm"
+                    placeholder="Search files..."
+                    class="flex-1"
+                    @keyup.enter="fetchMediaForBrowser"
+                  />
+                  <Button
+                    icon="pi pi-search"
+                    @click="fetchMediaForBrowser"
+                    outlined
+                    size="small"
+                  />
+                </div>
+              </div>
+            </div>
+          </template>
+        </Card>
+
+        <!-- Media Grid -->
+        <div class="flex-1 overflow-y-auto">
+          <!-- Loading State -->
+          <div v-if="mediaLoading" class="flex items-center justify-center h-64">
+            <Card>
+              <template #content>
+                <div class="text-center p-0">
+                  <i class="pi pi-spin pi-spinner text-4xl mb-4"></i>
+                  <p class="text-lg">Loading media files...</p>
+                </div>
+              </template>
+            </Card>
+          </div>
+
+          <!-- Empty State -->
+          <div v-else-if="browserMedia.length === 0" class="flex items-center justify-center h-64">
+            <Card>
+              <template #content>
+                <div class="text-center p-0">
+                  <i class="pi pi-images text-6xl mb-4 text-gray-400"></i>
+                  <h3 class="text-xl font-medium mb-4">No Media Files</h3>
+                  <p class="mb-6">No media files found matching your criteria</p>
+                </div>
+              </template>
+            </Card>
+          </div>
+
+          <!-- Media Grid -->
+          <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <Card 
+              v-for="item in browserMedia" 
+              :key="item.id"
+              class="group hover:shadow-lg transition-all duration-200 cursor-pointer"
+              @click="selectMediaItem(item)"
+            >
+              <template #content>
+                <div class="p-0">
+                  <!-- Media Preview -->
+                  <div class="aspect-square bg-gray-100 rounded-lg mb-4 overflow-hidden relative">
+                    <!-- Image Preview -->
+                    <img 
+                      v-if="isImage(item.mime_type) && item.conversions.thumb"
+                      :src="item.conversions.thumb"
+                      :alt="item.name"
+                      class="w-full h-full object-cover"
+                    />
+                    <!-- Document Icon -->
+                    <div 
+                      v-else-if="isDocument(item.mime_type)"
+                      class="w-full h-full flex items-center justify-center"
+                    >
+                      <i class="pi pi-file-pdf text-6xl text-red-500" v-if="item.mime_type === 'application/pdf'"></i>
+                      <i class="pi pi-file text-6xl text-blue-500" v-else></i>
+                    </div>
+                    <!-- Video Icon -->
+                    <div 
+                      v-else-if="isVideo(item.mime_type)"
+                      class="w-full h-full flex items-center justify-center"
+                    >
+                      <i class="pi pi-video text-6xl text-purple-500"></i>
+                    </div>
+                    <!-- Generic File Icon -->
+                    <div 
+                      v-else
+                      class="w-full h-full flex items-center justify-center"
+                    >
+                      <i class="pi pi-file text-6xl text-gray-500"></i>
+                    </div>
+                    
+                    <!-- Selection Indicator -->
+                    <div class="absolute top-2 right-2">
+                      <Button
+                        icon="pi pi-check"
+                        class="rounded-full"
+                        size="small"
+                        severity="success"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Media Info -->
+                  <div class="space-y-2">
+                    <h4 class="font-semibold text-sm truncate" :title="item.name">
+                      {{ item.name || item.file_name }}
+                    </h4>
+                    <div class="flex items-center justify-between text-xs text-gray-600">
+                      <Badge 
+                        :value="item.collection_name" 
+                        class="text-xs"
+                      />
+                      <span>{{ item.size_human }}</span>
+                    </div>
+                    <p class="text-xs text-gray-500 truncate" :title="item.file_name">
+                      {{ item.file_name }}
+                    </p>
+                  </div>
+                </div>
+              </template>
+            </Card>
+          </div>
+
+          <!-- Load More Button -->
+          <div v-if="hasMoreMediaPages" class="text-center mt-6">
+            <Button
+              label="Load More"
+              icon="pi pi-chevron-down"
+              @click="loadMoreMedia"
+              :loading="mediaLoadingMore"
+              outlined
+            />
+          </div>
+        </div>
+      </div>
+    </Dialog>
   </Dialog>
 </template>
 
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue';
 import Editor from '@hugerte/hugerte-vue';
+import apiService from '@/services/apiService';
+import type { MediaItem } from '@/types/media';
 
 interface ComponentData {
   content: string;
@@ -120,6 +279,10 @@ export default defineComponent({
     isPublished: {
       type: Boolean,
       default: false
+    },
+    conferenceId: {
+      type: Number,
+      required: true
     }
   },
   emits: ['update:visible', 'save', 'cancel'],
@@ -128,8 +291,96 @@ export default defineComponent({
       localComponentName: '',
       localContent: '<p>Enter content here...</p>',
       localPublished: false,
-      localVisible: false
+      localVisible: false,
+      
+      // Media browser state
+      showMediaBrowser: false,
+      browserMedia: [] as MediaItem[],
+      mediaLoading: false,
+      mediaLoadingMore: false,
+      mediaCurrentPage: 1,
+      hasMoreMediaPages: false,
+      mediaSearchTerm: '',
+      mediaSelectedCollection: '',
+      
+      mediaCollectionOptions: [
+        { label: 'All Collections', value: '' },
+        { label: 'Images', value: 'images' },
+        { label: 'Documents', value: 'documents' },
+        { label: 'General', value: 'general' }
+      ],
+      
+      // TinyMCE editor instance
+      editorInstance: null as any
     };
+  },
+  computed: {
+    editorConfig() {
+      return {
+        height: '100%',
+        menubar: true,
+        plugins: [
+          'accordion', 'advlist', 'anchor', 'autolink', 'autoresize', 'autosave', 
+          'charmap', 'code', 'codesample', 'directionality', 'fullscreen', 
+          'image', 'insertdatetime', 'link', 'lists', 'media', 'nonbreaking', 
+          'pagebreak', 'preview', 'quickbars', 'save', 'searchreplace', 
+          'table', 'template', 'visualblocks', 'visualchars', 'wordcount', 
+          'emoticons', 'help'
+        ].join(' '),
+        toolbar: [
+          'undo redo | formatselect | bold italic backcolor | alignleft aligncenter alignright alignjustify',
+          'bullist numlist outdent indent | link image media_browser | removeformat | help'
+        ].join(' | '),
+        mobile: {
+          menubar: false,
+          toolbar: 'undo redo | bold italic | bullist numlist | image media_browser'
+        },
+        setup: (editor: any) => {
+          this.editorInstance = editor;
+          
+          // Add custom button for media browser
+          editor.ui.registry.addButton('media_browser', {
+            icon: 'image',
+            tooltip: 'Insert from Media Library',
+            onAction: () => {
+              this.openMediaBrowser();
+            }
+          });
+          
+          // Add custom image handling to replace default image dialog
+          editor.ui.registry.addButton('image', {
+            icon: 'image',
+            tooltip: 'Insert/Edit Image',
+            onAction: () => {
+              this.openMediaBrowser();
+            }
+          });
+        },
+        // Override default image upload and use our media browser
+        images_upload_handler: (blobInfo: any, success: Function, failure: Function) => {
+          // For now, we'll handle uploads through our media browser
+          // You could implement direct upload here if needed
+          failure('Please use the Media Library to upload and insert images');
+        },
+        // Customize image dialog to use our media browser
+        file_picker_callback: (callback: Function, value: string, meta: any) => {
+          if (meta.filetype === 'image') {
+            this.openMediaBrowser(callback);
+          }
+        },
+        content_style: `
+          body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; 
+            font-size: 14px; 
+            line-height: 1.6;
+          }
+          img {
+            max-width: 100%;
+            height: auto;
+          }
+        `
+      };
+    }
   },
   watch: {
     visible: {
@@ -175,6 +426,7 @@ export default defineComponent({
       this.localContent = this.componentData?.content || '<p>Enter content here...</p>';
       this.localPublished = this.isPublished;
     },
+    
     handleSave() {
       this.$emit('save', {
         name: this.localComponentName,
@@ -182,9 +434,150 @@ export default defineComponent({
         isPublished: this.localPublished
       });
     },
+    
     handleCancel() {
       this.$emit('cancel');
       this.$emit('update:visible', false);
+    },
+    
+    // Media browser methods
+    openMediaBrowser(callback?: Function) {
+      this.showMediaBrowser = true;
+      this.mediaCallback = callback; // Store callback for file picker
+      this.fetchMediaForBrowser();
+    },
+    
+    async fetchMediaForBrowser(reset = true) {
+      if (reset) {
+        this.mediaCurrentPage = 1;
+        this.browserMedia = [];
+      }
+      
+      this.mediaLoading = reset;
+      this.mediaLoadingMore = !reset;
+      
+      try {
+        const params: any = {
+          page: this.mediaCurrentPage,
+          per_page: 20
+        };
+        
+        if (this.mediaSelectedCollection) {
+          params.collection = this.mediaSelectedCollection;
+        }
+        
+        if (this.mediaSearchTerm) {
+          params.search = this.mediaSearchTerm;
+        }
+        
+        const response = await apiService.get(`/v1/conferences/${this.conferenceId}/media`, { params });
+        
+        let newMedia: MediaItem[] = [];
+        let paginationInfo: any = {};
+        
+        if (response.data.payload && Array.isArray(response.data.payload)) {
+          newMedia = response.data.payload;
+        } else if (response.data.payload && response.data.payload.data) {
+          newMedia = response.data.payload.data;
+        } else if (response.data.payload) {
+          newMedia = response.data.payload;
+        }
+        
+        if (response.data.meta) {
+          paginationInfo = response.data.meta;
+        }
+        
+        if (reset) {
+          this.browserMedia = newMedia || [];
+        } else {
+          this.browserMedia.push(...(newMedia || []));
+        }
+        
+        if (paginationInfo.current_page && paginationInfo.last_page) {
+          this.hasMoreMediaPages = paginationInfo.current_page < paginationInfo.last_page;
+        } else {
+          this.hasMoreMediaPages = false;
+        }
+        
+      } catch (error) {
+        console.error('Error fetching media:', error);
+        this.$toast?.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to fetch media files',
+          life: 3000
+        });
+      } finally {
+        this.mediaLoading = false;
+        this.mediaLoadingMore = false;
+      }
+    },
+    
+    async loadMoreMedia() {
+      this.mediaCurrentPage++;
+      await this.fetchMediaForBrowser(false);
+    },
+    
+    selectMediaItem(media: MediaItem) {
+      if (this.editorInstance) {
+        let content = '';
+        
+        if (this.isImage(media.mime_type)) {
+          // Insert image
+          const imageUrl = media.url;
+          const altText = media.name || media.file_name;
+          
+          content = `<img src="${imageUrl}" alt="${altText}" title="${altText}" style="max-width: 100%; height: auto;" />`;
+          
+          this.editorInstance.insertContent(content);
+        } else if (this.isDocument(media.mime_type) || this.isVideo(media.mime_type)) {
+          // Insert link to document/video
+          const linkUrl = media.url;
+          const linkText = media.name || media.file_name;
+          const icon = this.getFileIcon(media.mime_type);
+          
+          content = `<a href="${linkUrl}" target="_blank" title="Download ${linkText}">
+            <i class="${icon}"></i> ${linkText}
+          </a>`;
+          
+          this.editorInstance.insertContent(content);
+        }
+        
+        // If this was called from file picker callback
+        if (this.mediaCallback) {
+          this.mediaCallback(media.url, { alt: media.name || media.file_name });
+          this.mediaCallback = null;
+        }
+      }
+      
+      this.showMediaBrowser = false;
+    },
+    
+    // Media type checking methods
+    isImage(mimeType: string): boolean {
+      return mimeType.startsWith('image/');
+    },
+    
+    isDocument(mimeType: string): boolean {
+      return [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      ].includes(mimeType);
+    },
+    
+    isVideo(mimeType: string): boolean {
+      return mimeType.startsWith('video/');
+    },
+    
+    getFileIcon(mimeType: string): string {
+      if (this.isImage(mimeType)) return 'pi pi-image';
+      if (mimeType === 'application/pdf') return 'pi pi-file-pdf';
+      if (this.isDocument(mimeType)) return 'pi pi-file';
+      if (this.isVideo(mimeType)) return 'pi pi-video';
+      return 'pi pi-file';
     }
   }
 });

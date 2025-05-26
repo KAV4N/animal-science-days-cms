@@ -847,6 +847,7 @@
       :component-name="editComponentName"
       :component-data="editComponentData"
       :is-published="editComponentPublished"
+      :conference-id="conferenceId"
       @save="handleSaveEditorComponent"
       @cancel="handleCancelEditorComponent"
     />
