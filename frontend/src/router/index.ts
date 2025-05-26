@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory, type RouteRecordRaw, type NavigationGuardNext, type RouteLocationNormalized } from 'vue-router';
+import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
 import { useAuthStore } from '@/stores/authStore';
 import middlewarePipeline from './middleware/middleware-pipeline';
 
@@ -6,37 +6,36 @@ import Dashboard from '@/views/Dashboard.vue';
 import ConferenceManagement from '@/views/dashboard/ConferenceManagement.vue';
 import UserManagement from '@/views/dashboard/UserManagement.vue';
 import Site from '@/views/Site.vue';
-import Home from '@/views/site/Home.vue';
-
-import AuthGateway from '@/views/auth/Login.vue';
+import ConferenceView from '@/views/site/ConferenceView.vue';
 
 import middleware from './middleware';
 import ChangePassword from '@/views/auth/ChangePassword.vue';
 import Login from '@/views/auth/Login.vue';
-
 import ConferenceEditorView from '@/views/dashboard/ConferenceEditorView.vue';
 import ConferencesByDecade from '@/views/site/ConferencesByDecade.vue';
 
 const routes: Array<RouteRecordRaw> = [
-  {
-    path: '/editor',
-    name: 'Editor',
-    component: ConferenceEditorView,
-  },
   {
     path: '/',
     component: Site,
     children: [
       {
         path: '',
-        name: 'HomePage',
-        component: Home
+        name: 'latest',
+        component: ConferenceView,
+        props: { slug: '' } 
       },
       {
-        path: 'conferences',
-        name: 'conferences',
+        path: 'conferences/:slug',
+        name: 'conference',
+        component: ConferenceView,
+        props: (route) => ({ slug: route.params.slug })
+      },
+      {
+        path: 'archive',
+        name: 'archive',
         component: ConferencesByDecade
-      }
+      },
     ]
   },
   {
@@ -72,6 +71,12 @@ const routes: Array<RouteRecordRaw> = [
         path: 'conferences',
         name: 'ConferenceManagement',
         component: ConferenceManagement
+      },
+      {
+        path: 'conferences/:id/edit',
+        name: 'ConferenceEdit',
+        component: ConferenceEditorView,
+        props: true
       },
       {
         path: 'users',

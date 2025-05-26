@@ -9,8 +9,9 @@
       
       <div>
         <label for="email" class="block font-bold mb-2">Email</label>
-        <InputText id="email" v-model.trim="userData.email" required="true" :invalid="submitted && !userData.email" class="w-full" />
+        <InputText id="email" v-model.trim="userData.email" required="true" :invalid="submitted && (emailError || !userData.email)" class="w-full" />
         <small v-if="submitted && !userData.email" class="text-red-500">Email is required.</small>
+        <small v-if="submitted && userData.email && emailError" class="text-red-500">{{ emailError }}</small>
       </div>
       
       <div v-if="!userData.id">
@@ -75,13 +76,16 @@
 
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue';
-import { type User } from '@/types/user';
-import { type University } from '@/types/university';
+import { useAuthStore } from '@/stores/authStore';
 import apiService from '@/services/apiService';
+import type { User, Role, Permission } from '@/types/user';
+import type { University } from '@/types/university';
 
 interface PasswordUser extends User {
   password?: string;
   role?: string;
+  university_id?: number | null;
+  generate_password?: boolean;
 }
 
 interface RoleOption {
@@ -100,10 +104,6 @@ export default defineComponent({
     user: {
       type: Object as PropType<User | null>,
       default: null
-    },
-    currentUserRole: {
-      type: String,
-      default: 'super_admin'
     }
   },
   
@@ -118,7 +118,8 @@ export default defineComponent({
       availableRoles: [] as RoleOption[],
       autoGeneratePassword: true,
       passwordOption: 'keep',
-      rolesFetched: false
+      rolesFetched: false,
+      emailError: ''
     };
   },
   
@@ -130,6 +131,29 @@ export default defineComponent({
       set(value: boolean) {
         this.$emit('update:modelValue', value);
       }
+    },
+    
+    authStore() {
+      return useAuthStore();
+    },
+    
+    currentUserRole(): string {
+      const roleNames = this.authStore.getRoleNames;
+      if (roleNames.includes('super_admin')) return 'super_admin';
+      if (roleNames.includes('admin')) return 'admin';
+      return 'editor';
+    },
+    
+    currentUserPermissions(): string[] {
+      return this.authStore.getPermissionNames;
+    },
+    
+    canManageAllRoles(): boolean {
+      return this.authStore.hasSuperAdminAccess;
+    },
+    
+    canManageEditors(): boolean {
+      return this.authStore.hasAdminAccess;
     }
   },
   
@@ -152,15 +176,31 @@ export default defineComponent({
     
     user(newUser) {
       if (newUser) {
+        // Extract the primary role from the user's roles array
+        const primaryRole = newUser.roles && newUser.roles.length > 0 
+          ? newUser.roles[0].name 
+          : 'editor';
+          
+        // Extract university ID from either direct property or nested university object
+        const universityId = newUser.university_id || (newUser.university ? newUser.university.id : null);
+        
         this.userData = { 
-          ...newUser, 
+          ...newUser,
           password: '',
-          role: newUser.roles ? newUser.roles[0] : 'editor',
-          university_id: newUser.university_id || (newUser.university ? newUser.university.id : null)
+          role: primaryRole,
+          university_id: universityId
         };
         this.passwordOption = 'keep';
+        this.emailError = ''; // Reset email error when user changes
       } else {
         this.resetForm();
+      }
+    },
+    
+    'userData.email'() {
+      // Clear email error when user edits the email
+      if (this.emailError) {
+        this.emailError = '';
       }
     }
   },
@@ -180,24 +220,29 @@ export default defineComponent({
         const response = await apiService.get('/v1/roles/available');
         const roles = response.data.payload;
         
-        this.availableRoles = roles.map((role: { id: string, name: string }) => ({
+        this.availableRoles = roles.map((role: { id: number, name: string }) => ({
           label: this.formatRoleName(role.name),
           value: role.name
         }));
       } catch (error) {
         console.error('Failed to fetch roles:', error);
-
-        if (this.currentUserRole === 'super_admin') {
+        
+        // Fallback role options based on current user's role
+        if (this.authStore.hasSuperAdminAccess) {
           this.availableRoles = [
-            { label: 'Editor', value: 'editor' },
-            { label: 'Admin', value: 'admin' }
+            { label: 'Super Admin', value: 'super_admin' },
+            { label: 'Admin', value: 'admin' },
+            { label: 'Editor', value: 'editor' }
           ];
-        } else if (this.currentUserRole === 'admin') {
+        } else if (this.authStore.hasAdminAccess) {
           this.availableRoles = [
+            { label: 'Admin', value: 'admin' },
             { label: 'Editor', value: 'editor' }
           ];
         } else {
-          this.availableRoles = [];
+          this.availableRoles = [
+            { label: 'Editor', value: 'editor' }
+          ];
         }
       }
     },
@@ -221,15 +266,40 @@ export default defineComponent({
       this.submitted = false;
       this.autoGeneratePassword = true;
       this.passwordOption = 'keep';
+      this.emailError = '';
     },
     
     hideDialog() {
       this.visible = false;
       this.submitted = false;
+      this.emailError = '';
+    },
+    
+    validateEmail(email: string): boolean {
+      // RFC 5322 compliant email regex
+      const emailRegex = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+      
+      if (!email) {
+        this.emailError = 'Email is required.';
+        return false;
+      }
+      
+      if (!emailRegex.test(email)) {
+        this.emailError = 'Please enter a valid email address.';
+        return false;
+      }
+      
+      return true;
     },
     
     async saveUser() {
       this.submitted = true;
+      this.emailError = '';
+      
+      // Validate email format
+      if (!this.validateEmail(this.userData.email || '')) {
+        return;
+      }
 
       if (this.userData.name?.trim() && 
           this.userData.email?.trim() && 
@@ -238,32 +308,38 @@ export default defineComponent({
         this.saving = true;
         
         try {
-          let payload = { ...this.userData };
+          const payload: PasswordUser = { 
+            ...this.userData,
+            // Convert role string to proper Role[] format
+            roles: [{ id: 0, name: this.userData.role }] 
+          };
           
-         
+          // Handle password logic for new users
           if (!this.userData.id) {
-          
             if (!this.userData.password && !this.autoGeneratePassword) {
               this.saving = false;
-              return; 
+              return; // Stop if no password provided for new user
             }
             
             if (this.autoGeneratePassword) {
               payload.password = undefined;
+              payload.generate_password = true;
             }
           } else {
-            
             if (this.passwordOption === 'keep') {
               payload.password = undefined;
             } else if (this.passwordOption === 'generate') {
               payload.generate_password = true;
               payload.password = undefined;
             }
+            // For manual, the password field is already set correctly
           }
           
-          
+          // Emit the save event with the prepared payload
           this.$emit('save', payload);
           this.hideDialog();
+        } catch (error) {
+          console.error('Error saving user:', error);
         } finally {
           this.saving = false;
         }

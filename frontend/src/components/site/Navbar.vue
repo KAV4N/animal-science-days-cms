@@ -24,7 +24,7 @@ export default defineComponent({
         {
           label: 'Conference Archive',
           icon: 'pi pi-history',
-          route: '/conferences'
+          route: '/archive'
         }
       ],
       isMobileMenuOpen: false

@@ -13,6 +13,7 @@ class PageData extends Model
     protected $fillable = [
         'menu_id',
         'component_type',
+        'tag',
         'order',
         'data',
         'is_published',

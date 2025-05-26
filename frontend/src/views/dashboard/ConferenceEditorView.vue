@@ -1,14 +1,6 @@
 <template>
-  <div class="dashboard-container">
-    <div class="header bg-white shadow-sm p-4 mb-4">
-      <h1 class="text-2xl font-bold">Conference Page Editor</h1>
-    </div>
-    
-    <div class="content px-4">
-      <div class="bg-white rounded-lg shadow-sm p-4">
-        <ConferenceEditor />
-      </div>
-    </div>
+  <div class="conference-editor-view h-screen overflow-hidden">
+    <ConferenceEditor />
   </div>
 </template>
 
@@ -23,3 +15,11 @@ export default defineComponent({
   }
 });
 </script>
+
+<style scoped>
+.conference-editor-view {
+  /* Remove any padding/margins to ensure full-screen experience */
+  margin: 0;
+  padding: 0;
+}
+</style>

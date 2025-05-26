@@ -19,13 +19,12 @@ return new class extends Migration
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
 
             $table->string('component_type');
-            $table->integer('order');
+            $table->string('tag')->nullable();
+            $table->integer('order')->default(0);
             $table->json('data')->nullable();
 
             $table->boolean('is_published')->default(false);
             $table->timestamps();
-
-            $table->unique(['menu_id', 'order']);
         });
     }
 

@@ -12,6 +12,7 @@ class PageMenu extends Model
         'conference_id',
         'title',
         'slug',
+        'order',
         'is_published',
         'created_by', 
         'updated_by',

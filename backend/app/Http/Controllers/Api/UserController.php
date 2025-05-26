@@ -11,11 +11,19 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
-
+use App\Services\ConferenceLockService;
+use App\Models\Conference;
 
 class UserController extends Controller
 {
     use ApiResponse;
+
+    protected $lockService;
+
+    public function __construct(ConferenceLockService $lockService)
+    {
+        $this->lockService = $lockService;
+    }
 
     public function index(Request $request): JsonResponse
     {
@@ -284,6 +292,15 @@ class UserController extends Controller
         
         if ($user->id === auth()->id()) {
             return $this->errorResponse('You cannot delete your own account', 403);
+        }
+
+        $conferences = Conference::where('created_by', $user->id)
+            ->orWhereHas('editors', function ($q) use ($user) {
+                $q->where('users.id', $user->id);
+            })->get();
+    
+        foreach ($conferences as $conference) {
+            $this->lockService->releaseLock($conference->id, $user->id);
         }
 
         $user->delete();

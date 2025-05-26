@@ -34,17 +34,6 @@ class ConferencePolicy
         return false;
     }
 
-    /**
-     * Determine whether the user can force release a lock on the conference.
-     *
-     * @param  \App\Models\User  $user
-     * @return \Illuminate\Auth\Access\Response|bool
-     */
-    public function forceReleaseLock(User $user)
-    {
-        // Only super admins and admins can force release locks
-        return $user->hasRole(['super_admin', 'admin']);
-    }
 
     /**
      * Determine whether the user can view any conferences.

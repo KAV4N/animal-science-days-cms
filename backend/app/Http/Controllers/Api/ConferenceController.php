@@ -14,7 +14,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
-use App\Http\Resources\Conference\DecadeResource;
 
 class ConferenceController extends Controller
 {
@@ -27,10 +26,14 @@ class ConferenceController extends Controller
         $this->lockService = $lockService;
     }
 
+    /**
+     * Get all conferences for authenticated users with filtering
+     */
     public function index(Request $request): JsonResponse
     {
         $query = Conference::query();
 
+        // Apply filters
         if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -59,6 +62,7 @@ class ConferenceController extends Controller
             $query->where('end_date', '<=', $request->end_date_before);
         }
 
+        // Apply sorting
         $sortField = in_array($request->sort_field, ['name', 'title', 'start_date', 'end_date', 'created_at', 'updated_at']) 
             ? $request->sort_field 
             : 'created_at';
@@ -67,6 +71,7 @@ class ConferenceController extends Controller
             : 'desc';
         $query->orderBy($sortField, $sortOrder);
 
+        // Handle pagination or return all results
         if ($request->has('page') || $request->has('per_page')) {
             $perPage = min(max(intval($request->per_page ?? 10), 1), 100);
             $conferences = $query->paginate($perPage)->withQueryString();
@@ -92,27 +97,14 @@ class ConferenceController extends Controller
         }
     }
 
+    /**
+     * Create a new conference
+     */
     public function store(ConferenceStoreRequest $request): JsonResponse
     {
         $validated = $request->validated();
         $validated['created_by'] = $request->user()->id;
         
-        // Check if trying to create a conference set as latest
-        if (isset($validated['is_latest']) && $validated['is_latest']) {
-            // Check if the current latest conference is locked by another user
-            $latestConference = Conference::where('is_latest', true)->first();
-            if ($latestConference) {
-                $latestLockInfo = $this->lockService->checkLock($latestConference->id);
-                if ($latestLockInfo && $latestLockInfo['user_id'] !== $request->user()->id) {
-                    return $this->errorResponse(
-                        'Cannot create conference as latest: Current latest conference is being edited by another user',
-                        423,
-                        ['lock_info' => $latestLockInfo]
-                    );
-                }
-            }
-        }
-
         $conference = Conference::create($validated);
 
         return $this->successResponse(
@@ -122,6 +114,9 @@ class ConferenceController extends Controller
         );
     }
 
+    /**
+     * Get a specific conference for authenticated users
+     */
     public function show(Conference $conference): JsonResponse
     {
         if (!Gate::allows('view', $conference)) {
@@ -138,44 +133,20 @@ class ConferenceController extends Controller
         );
     }
 
+    /**
+     * Update a conference
+     */
     public function update(ConferenceUpdateRequest $request, Conference $conference): JsonResponse
     {
         if (!Gate::allows('update', $conference)) {
             return $this->errorResponse('You are not authorized to update this conference', 403);
         }
         
-        $lockInfo = $this->lockService->checkLock($conference->id);
-        if ($lockInfo && $lockInfo['user_id'] !== $request->user()->id) {
-            return $this->errorResponse(
-                'Conference is currently being edited by another user',
-                423,
-                ['lock_info' => $lockInfo]
-            );
-        }
-        
         $validated = $request->validated();
-        
-        // Check if trying to update a conference to be set as latest
-        if (isset($validated['is_latest']) && $validated['is_latest'] && !$conference->is_latest) {
-            // Check if the current latest conference is locked by another user
-            $latestConference = Conference::where('is_latest', true)
-                ->where('id', '!=', $conference->id)
-                ->first();
-                
-            if ($latestConference) {
-                $latestLockInfo = $this->lockService->checkLock($latestConference->id);
-                if ($latestLockInfo && $latestLockInfo['user_id'] !== $request->user()->id) {
-                    return $this->errorResponse(
-                        'Cannot set as latest: Current latest conference is being edited by another user',
-                        423,
-                        ['lock_info' => $latestLockInfo]
-                    );
-                }
-            }
-        }
         
         $conference->update($validated);
         
+        $lockInfo = $this->lockService->checkLock($conference->id);
         if ($lockInfo && $lockInfo['user_id'] === $request->user()->id) {
             $this->lockService->refreshLock($conference->id, $request->user()->id);
         }
@@ -186,6 +157,9 @@ class ConferenceController extends Controller
         );
     }
 
+    /**
+     * Delete a conference
+     */
     public function destroy(Conference $conference): JsonResponse
     {
         if (!Gate::allows('delete', $conference)) {
@@ -199,6 +173,9 @@ class ConferenceController extends Controller
         return $this->successResponse(null, 'Conference deleted successfully');
     }
 
+    /**
+     * Update conference status (published, latest)
+     */
     public function updateStatus(Request $request, Conference $conference): JsonResponse
     {
         if (!Gate::allows('update', $conference)) {
@@ -210,36 +187,6 @@ class ConferenceController extends Controller
 
         if ($request->has('latest')) {
             $isLatest = filter_var($request->latest, FILTER_VALIDATE_BOOLEAN);
-            
-            // If trying to set as latest, check if the conference is locked by another user
-            if ($isLatest) {
-                // Check if this conference is locked by another user
-                $lockInfo = $this->lockService->checkLock($conference->id);
-                if ($lockInfo && $lockInfo['user_id'] !== $request->user()->id) {
-                    return $this->errorResponse(
-                        'Cannot set as latest: Conference is currently being edited by another user',
-                        423,
-                        ['lock_info' => $lockInfo]
-                    );
-                }
-                
-                // Check if the current latest conference is locked by another user
-                $latestConference = Conference::where('is_latest', true)
-                    ->where('id', '!=', $conference->id)
-                    ->first();
-                    
-                if ($latestConference) {
-                    $latestLockInfo = $this->lockService->checkLock($latestConference->id);
-                    if ($latestLockInfo && $latestLockInfo['user_id'] !== $request->user()->id) {
-                        return $this->errorResponse(
-                            'Cannot set as latest: Current latest conference is being edited by another user',
-                            423,
-                            ['lock_info' => $latestLockInfo]
-                        );
-                    }
-                }
-            }
-            
             $updates['is_latest'] = $isLatest;
             $message = $isLatest ? 'Conference set as latest successfully' : 'Conference removed from latest status';
         }
@@ -265,6 +212,9 @@ class ConferenceController extends Controller
         );
     }
 
+    /**
+     * Get the latest conference
+     */
     public function latest(Request $request): JsonResponse
     {
         $conference = Conference::where('is_latest', true)->first();
@@ -283,6 +233,9 @@ class ConferenceController extends Controller
         );
     }
 
+    /**
+     * Get conferences where the current user is an editor or creator
+     */
     public function myConferences(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -326,96 +279,6 @@ class ConferenceController extends Controller
             $conferences, 
             ConferenceResource::collection($conferences),
             'User conferences retrieved successfully'
-        );
-    }
-    
-    public function getByDecade(Request $request, int $decade): JsonResponse
-    {
-        // Validate decade format (e.g., 1990, 2000)
-        if ($decade < 1900 || $decade > 2100) {
-            return $this->errorResponse('Invalid decade. Year must be between 1900 and 2100', 400);
-        }
-        
-        // Extract the start year from the decade parameter
-        $startYear = $decade;
-        $endYear = $startYear + 9;
-        
-        // Create date range for the decade
-        $startDate = "{$startYear}-01-01";
-        $endDate = "{$endYear}-12-31";
-        
-        $query = Conference::query()
-            ->where('is_published', true)
-            ->where(function($q) use ($startDate, $endDate) {
-                // Conference dates that overlap with the decade range
-                $q->whereBetween('start_date', [$startDate, $endDate])
-                ->orWhereBetween('end_date', [$startDate, $endDate])
-                // Or where the conference spans the entire decade
-                ->orWhere(function($subQ) use ($startDate, $endDate) {
-                    $subQ->where('start_date', '<=', $startDate)
-                        ->where('end_date', '>=', $endDate);
-                });
-            });
-        
-        // Apply sorting, default to start_date desc
-        $sortField = in_array($request->sort_field, ['name', 'title', 'start_date', 'end_date', 'created_at']) 
-            ? $request->sort_field 
-            : 'start_date';
-        $sortOrder = in_array(strtolower($request->sort_order), ['asc', 'desc']) 
-            ? strtolower($request->sort_order) 
-            : 'desc';
-        $query->orderBy($sortField, $sortOrder);
-        
-        // Always load the university relationship
-        $query->with(['university']);
-        
-        // Get all conferences for the decade
-        $conferences = $query->get();
-        
-        return $this->successResponse(
-            ConferenceResource::collection($conferences),
-            "Conferences from {$decade}s retrieved successfully"
-        );
-    }
-    
-    public function getDecades(): JsonResponse
-    {
-        // Get all published conferences
-        $conferences = Conference::where('is_published', true)
-            ->get(['start_date', 'end_date']);
-        
-        $decadesData = [];
-        
-        // Process each conference to determine which decades it belongs to
-        foreach ($conferences as $conference) {
-            $startYear = (int) $conference->start_date->format('Y');
-            $endYear = (int) $conference->end_date->format('Y');
-            
-            // Calculate the decades this conference spans
-            $startDecade = floor($startYear / 10) * 10;
-            $endDecade = floor($endYear / 10) * 10;
-            
-            // Add all decades this conference spans to our collection
-            for ($decade = $startDecade; $decade <= $endDecade; $decade += 10) {
-                $decadeKey = $decade; // Using integer directly as key
-                
-                if (!isset($decadesData[$decadeKey])) {
-                    $decadesData[$decadeKey] = [
-                        'decade' => $decade, // Store as integer
-                        'count' => 0
-                    ];
-                }
-                
-                $decadesData[$decadeKey]['count']++;
-            }
-        }
-        
-        // Sort decades chronologically
-        ksort($decadesData);
-        
-        return $this->successResponse(
-            DecadeResource::collection(collect(array_values($decadesData))),
-            'Conference decades retrieved successfully'
         );
     }
 }
