@@ -12,7 +12,7 @@ class Media extends BaseMedia
         parent::boot();
 
         static::creating(function ($media) {
-            $user = auth()->getUser();
+            $user = auth()->user();
             if ($user) {
                 $media->uploaded_by = $user->id;
             }
