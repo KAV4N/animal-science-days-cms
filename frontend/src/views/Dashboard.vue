@@ -1,15 +1,13 @@
 <template>
-  <div class="dashboard-container bg-surface-950">
+  <div class="dashboard-container bg-surface-200">
     <Sidebar 
       :visible="sidebarVisible" 
       v-model:mobileVisible="mobileDrawerVisible"
-      @logout="logout"
     />
     
     <Topbar 
       :sidebarVisible="sidebarVisible" 
       @toggle-mobile-menu="toggleMobileDrawer"
-      @logout="logout"
     />
     
     <div class="main-content" :class="{ 'with-sidebar': sidebarVisible }">
@@ -61,11 +59,6 @@ export default defineComponent({
         // Close mobile drawer if screen is resized to desktop
         this.mobileDrawerVisible = false;
       }
-    },
-    logout() {
-      // This would typically clear auth state
-      localStorage.removeItem('isLoggedIn');
-      this.router.push('/');
     }
   }
 });

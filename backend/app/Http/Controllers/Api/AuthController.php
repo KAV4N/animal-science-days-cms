@@ -8,6 +8,7 @@ use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Requests\Auth\ChangePasswordRequest;
 use App\Http\Resources\User\UserResource;
 use App\Services\AuthService;
+use App\Services\ConferenceLockService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -27,14 +28,23 @@ class AuthController extends Controller
     protected $authService;
 
     /**
+     * Conference lock service instance
+     * 
+     * @var ConferenceLockService
+     */
+    protected $conferenceLockService;
+
+    /**
      * Create a new controller instance
      * 
      * @param AuthService $authService
+     * @param ConferenceLockService $conferenceLockService
      * @return void
      */
-    public function __construct(AuthService $authService)
+    public function __construct(AuthService $authService, ConferenceLockService $conferenceLockService)
     {
         $this->authService = $authService;
+        $this->conferenceLockService = $conferenceLockService;
     }
 
     /**
@@ -99,7 +109,13 @@ class AuthController extends Controller
      */
     public function logout(Request $request): JsonResponse
     {
-        $this->authService->logout($request->user());
+        $user = $request->user();
+        
+        // Release all conference locks for this user
+        $this->conferenceLockService->releaseAllUserLocks($user->id);
+        
+        // Logout user and revoke tokens
+        $this->authService->logout($user);
         
         $refreshTokenCookie = Cookie::forget('refresh_token');
         

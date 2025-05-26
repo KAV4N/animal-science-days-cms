@@ -21,7 +21,7 @@ const routes: Array<RouteRecordRaw> = [
     children: [
       {
         path: '',
-        name: 'latest',
+        name: 'HomePage',
         component: ConferenceView,
         props: { slug: '' } 
       },

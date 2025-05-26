@@ -1,5 +1,5 @@
 <template>
-  <Card class="rounded-md mb-4 border-l-4 border-blue-500 shadow-lg">
+  <Card class="rounded-md mb-4 border-l-4 border-blue-500 shadow">
     <template #header>
       <div class="flex flex-wrap justify-between items-center p-2 sm:p-3 rounded-t-md bg-surface-800 gap-2">
         <h3 class="m-0 text-primary-300 font-semibold flex items-center text-base sm:text-lg">
