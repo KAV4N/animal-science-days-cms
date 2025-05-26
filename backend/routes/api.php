@@ -86,7 +86,8 @@ Route::prefix('v1')->group(function () {
                     Route::put('/{media}', [MediaController::class, 'update']);
                     Route::patch('/{media}', [MediaController::class, 'update']);
                     Route::delete('/{media}', [MediaController::class, 'destroy']);
-                    Route::get('/{media}/download', [MediaController::class, 'download']);
+                    Route::get('/{mediaId}/download', [MediaController::class, 'download']);
+
                 });
             });
             

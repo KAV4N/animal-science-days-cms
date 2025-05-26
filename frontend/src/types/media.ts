@@ -44,7 +44,6 @@ export interface MediaItem {
   size_human: string;
   url: string;
   conversions: MediaConversions;
-  custom_properties: Record<string, any>;
   uploaded_by: number;
   created_at: string;
   updated_at: string;
@@ -53,12 +52,10 @@ export interface MediaItem {
 export interface MediaUploadData {
   collection: string;
   name?: string;
-  custom_properties?: Record<string, any>;
 }
 
 export interface MediaUpdateData {
   name?: string;
-  custom_properties?: Record<string, any>;
 }
 
 // Laravel pagination response structure (from your paginatedResponse method)
@@ -82,11 +79,6 @@ export interface MediaFilterParams {
   search?: string;
   per_page?: number;
   page?: number;
-}
-
-export interface CustomProperty {
-  key: string;
-  value: string;
 }
 
 export interface MediaCollectionOption {

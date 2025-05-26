@@ -66,7 +66,6 @@ class MediaController extends Controller
                 'size_human' => $mediaItem->humanReadableSize,
                 'url' => $mediaItem->getUrl(),
                 'conversions' => $this->getConversions($mediaItem),
-                'custom_properties' => $mediaItem->custom_properties,
                 'uploaded_by' => $mediaItem->uploaded_by,
                 'created_at' => $mediaItem->created_at,
                 'updated_at' => $mediaItem->updated_at,
@@ -91,7 +90,6 @@ class MediaController extends Controller
                 Rule::in(['images', 'documents', 'general'])
             ],
             'name' => 'nullable|string|max:255',
-            'custom_properties' => 'nullable|array',
         ]);
 
         if ($validator->fails()) {
@@ -108,20 +106,14 @@ class MediaController extends Controller
         }
 
         try {
-            $mediaAdder = $conference->addMediaFromRequest('file')
-                ->toMediaCollection($collection);
-
+            $mediaAdder = $conference->addMediaFromRequest('file');
+            
             // Set custom name if provided
             if ($request->filled('name')) {
                 $mediaAdder->usingName($request->name);
             }
-
-            // Set custom properties if provided
-            if ($request->filled('custom_properties')) {
-                $mediaAdder->withCustomProperties($request->custom_properties);
-            }
-
-            $media = $mediaAdder;
+            
+            $media = $mediaAdder->toMediaCollection($collection);
 
             $transformedMedia = [
                 'id' => $media->id,
@@ -134,7 +126,6 @@ class MediaController extends Controller
                 'size_human' => $media->humanReadableSize,
                 'url' => $media->getUrl(),
                 'conversions' => $this->getConversions($media),
-                'custom_properties' => $media->custom_properties,
                 'uploaded_by' => $media->uploaded_by,
                 'created_at' => $media->created_at,
                 'updated_at' => $media->updated_at,
@@ -168,7 +159,6 @@ class MediaController extends Controller
             'size_human' => $media->humanReadableSize,
             'url' => $media->getUrl(),
             'conversions' => $this->getConversions($media),
-            'custom_properties' => $media->custom_properties,
             'uploaded_by' => $media->uploaded_by,
             'created_at' => $media->created_at,
             'updated_at' => $media->updated_at,
@@ -189,7 +179,6 @@ class MediaController extends Controller
 
         $validator = Validator::make($request->all(), [
             'name' => 'nullable|string|max:255',
-            'custom_properties' => 'nullable|array',
         ]);
 
         if ($validator->fails()) {
@@ -200,11 +189,6 @@ class MediaController extends Controller
             // Update name if provided
             if ($request->filled('name')) {
                 $media->name = $request->name;
-            }
-
-            // Update custom properties if provided
-            if ($request->filled('custom_properties')) {
-                $media->custom_properties = $request->custom_properties;
             }
 
             $media->save();
@@ -220,7 +204,6 @@ class MediaController extends Controller
                 'size_human' => $media->humanReadableSize,
                 'url' => $media->getUrl(),
                 'conversions' => $this->getConversions($media),
-                'custom_properties' => $media->custom_properties,
                 'uploaded_by' => $media->uploaded_by,
                 'created_at' => $media->created_at,
                 'updated_at' => $media->updated_at,
@@ -254,16 +237,45 @@ class MediaController extends Controller
     /**
      * Download the specified media file.
      */
-    public function download(Conference $conference, Media $media): mixed
+    public function download(Conference $conference, $mediaId): mixed
     {
-        // Ensure media belongs to the conference
-        if ($media->model_id !== $conference->id || $media->model_type !== Conference::class) {
+        // Find media by ID manually instead of relying on route model binding
+        $media = $conference->media()->where('id', $mediaId)->first();
+        
+        if (!$media) {
             return $this->errorResponse('Media not found for this conference', 404);
         }
 
         try {
-            return response()->download($media->getPath(), $media->file_name);
+            $path = $media->getPath();
+            
+            // Check if file exists
+            if (!file_exists($path)) {
+                return $this->errorResponse('File not found on disk', 404);
+            }
+            
+            // Check if file is readable
+            if (!is_readable($path)) {
+                return $this->errorResponse('File is not readable', 500);
+            }
+            
+            // Get the original file name, fallback to file_name if name is empty
+            $downloadName = $media->name ?: $media->file_name;
+            
+            return response()->download($path, $downloadName, [
+                'Content-Type' => $media->mime_type,
+                'Content-Length' => $media->size,
+            ]);
+            
         } catch (\Exception $e) {
+            \Log::error('Media download failed', [
+                'media_id' => $mediaId,
+                'conference_id' => $conference->id,
+                'path' => $media->getPath(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             return $this->errorResponse('Failed to download media: ' . $e->getMessage(), 500);
         }
     }

@@ -1,13 +1,12 @@
 <template>
   <Dialog 
-    v-model:visible="visible" 
+    v-model:visible="dialogVisible" 
     header="Media Manager" 
     :style="{ width: '95vw', maxWidth: '1200px', height: '90vh' }" 
     :modal="true"
     :maximizable="true"
     :closable="true"
     :breakpoints="{ '640px': '95vw' }"
-    @update:visible="$emit('update:visible', $event)"
   >
     <div class="h-full flex flex-col">
       <!-- Header Actions -->
@@ -136,14 +135,6 @@
                   <!-- Actions Overlay -->
                   <div class="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                     <Button
-                      icon="pi pi-eye"
-                      @click="viewMedia(item)"
-                      text
-                      severity="secondary"
-                      size="large"
-                      class="text-white hover:bg-white hover:bg-opacity-20"
-                    />
-                    <Button
                       icon="pi pi-download"
                       @click="downloadMedia(item)"
                       text
@@ -213,6 +204,7 @@
       :style="{ width: '95vw', maxWidth: '600px' }" 
       :modal="true"
       :closable="true"
+      @hide="cancelUpload"
     >
       <Card>
         <template #content>
@@ -276,39 +268,6 @@
                   class="w-full"
                 />
               </div>
-
-              <!-- Custom Properties -->
-              <div>
-                <label class="block text-sm font-medium mb-2">Custom Properties (Optional)</label>
-                <div class="space-y-2">
-                  <div v-for="(prop, index) in uploadData.customProperties" :key="index" class="flex gap-2">
-                    <InputText
-                      v-model="prop.key"
-                      placeholder="Property name"
-                      class="flex-1"
-                    />
-                    <InputText
-                      v-model="prop.value"
-                      placeholder="Property value"
-                      class="flex-1"
-                    />
-                    <Button
-                      icon="pi pi-trash"
-                      @click="removeCustomProperty(index)"
-                      text
-                      severity="danger"
-                      size="small"
-                    />
-                  </div>
-                  <Button
-                    label="Add Property"
-                    icon="pi pi-plus"
-                    @click="addCustomProperty"
-                    text
-                    size="small"
-                  />
-                </div>
-              </div>
             </div>
 
             <div class="flex flex-col sm:flex-row justify-end gap-3 pt-4">
@@ -323,7 +282,7 @@
                 label="Upload"
                 icon="pi pi-check"
                 @click="handleUpload"
-                :disabled="selectedFiles.length === 0 || !uploadData.collection"
+                :disabled="selectedFiles.length === 0 || !uploadData.collection || uploading"
                 :loading="uploading"
                 class="w-full sm:w-auto"
               />
@@ -340,6 +299,7 @@
       :style="{ width: '95vw', maxWidth: '500px' }" 
       :modal="true"
       :closable="true"
+      @hide="cancelEdit"
     >
       <Card>
         <template #content>
@@ -361,39 +321,6 @@
                   v-model="editData.name"
                   class="w-full"
                 />
-              </div>
-
-              <!-- Custom Properties -->
-              <div>
-                <label class="block text-sm font-medium mb-2">Custom Properties</label>
-                <div class="space-y-2">
-                  <div v-for="(prop, index) in editData.customProperties" :key="index" class="flex gap-2">
-                    <InputText
-                      v-model="prop.key"
-                      placeholder="Property name"
-                      class="flex-1"
-                    />
-                    <InputText
-                      v-model="prop.value"
-                      placeholder="Property value"
-                      class="flex-1"
-                    />
-                    <Button
-                      icon="pi pi-trash"
-                      @click="removeEditCustomProperty(index)"
-                      text
-                      severity="danger"
-                      size="small"
-                    />
-                  </div>
-                  <Button
-                    label="Add Property"
-                    icon="pi pi-plus"
-                    @click="addEditCustomProperty"
-                    text
-                    size="small"
-                  />
-                </div>
               </div>
             </div>
 
@@ -426,6 +353,7 @@
       :modal="true"
       :maximizable="true"
       :closable="true"
+      @hide="showViewDialog = false; viewingMedia = null"
     >
       <div v-if="viewingMedia" class="space-y-4">
         <!-- Media Display -->
@@ -510,6 +438,7 @@
       :style="{ width: '95vw', maxWidth: '400px' }" 
       :modal="true"
       :closable="true"
+      @hide="cancelDelete"
     >
       <Card>
         <template #content>
@@ -558,13 +487,13 @@
 <script lang="ts">
 import { defineComponent } from 'vue';
 import apiService from '@/services/apiService';
+import mediaService from '@/services/mediaService';
 import type { 
   MediaItem, 
   MediaPaginatedData, 
   MediaUploadData, 
   MediaUpdateData,
   MediaFilterParams,
-  CustomProperty,
   MediaCollectionOption,
   FileUploadEvent,
   FileRemoveEvent,
@@ -591,6 +520,7 @@ export default defineComponent({
   emits: ['update:visible'],
   data() {
     return {
+      dialogVisible: false,
       media: [] as MediaItem[],
       loading: false,
       loadingMore: false,
@@ -618,22 +548,16 @@ export default defineComponent({
       selectedFiles: [] as File[],
       uploadData: {
         collection: 'general' as string,
-        name: '',
-        customProperties: [] as CustomProperty[]
-      } as MediaUploadData & { customProperties: CustomProperty[] },
+        name: ''
+      } as MediaUploadData,
       
       // Edit Dialog
       showEditDialog: false,
       updating: false,
       editingMedia: null as MediaItem | null,
       editData: {
-        name: '',
-        customProperties: [] as CustomProperty[]
+        name: ''
       },
-      
-      // View Dialog
-      showViewDialog: false,
-      viewingMedia: null as MediaItem | null,
       
       // Delete Dialog
       showDeleteDialog: false,
@@ -641,8 +565,18 @@ export default defineComponent({
       deletingMedia: null as MediaItem | null,
     };
   },
+  computed: {
+    // No computed properties needed for now
+  },
   watch: {
-    visible(newVal) {
+    visible: {
+      immediate: true,
+      handler(newVal) {
+        this.dialogVisible = newVal;
+      }
+    },
+    dialogVisible(newVal) {
+      this.$emit('update:visible', newVal);
       if (newVal) {
         this.fetchMedia();
       }
@@ -741,65 +675,71 @@ export default defineComponent({
       this.selectedFiles = this.selectedFiles.filter(file => file !== event.file);
     },
     
-    addCustomProperty() {
-      this.uploadData.customProperties.push({ key: '', value: '' });
-    },
-    
-    removeCustomProperty(index: number) {
-      this.uploadData.customProperties.splice(index, 1);
-    },
-    
     async handleUpload() {
-      if (this.selectedFiles.length === 0 || !this.uploadData.collection) return;
+      if (this.selectedFiles.length === 0 || !this.uploadData.collection || this.uploading) {
+        return;
+      }
       
       this.uploading = true;
+      let successCount = 0;
+      let errorCount = 0;
       
       try {
         for (const file of this.selectedFiles) {
-          const formData = new FormData();
-          formData.append('file', file);
-          formData.append('collection', this.uploadData.collection);
-          
-          if (this.uploadData.name && this.selectedFiles.length === 1) {
-            formData.append('name', this.uploadData.name);
-          }
-          
-          if (this.uploadData.customProperties.length > 0) {
-            const customProps: Record<string, string> = {};
-            this.uploadData.customProperties
-              .filter(prop => prop.key && prop.value)
-              .forEach(prop => {
-                customProps[prop.key] = prop.value;
-              });
+          try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('collection', this.uploadData.collection);
             
-            if (Object.keys(customProps).length > 0) {
-              formData.append('custom_properties', JSON.stringify(customProps));
+            if (this.uploadData.name && this.selectedFiles.length === 1) {
+              formData.append('name', this.uploadData.name);
             }
+            
+            await apiService.post(`/v1/conferences/${this.conferenceId}/media`, formData, {
+              headers: {
+                'Content-Type': 'multipart/form-data'
+              }
+            });
+            
+            successCount++;
+            
+          } catch (error: any) {
+            console.error('Error uploading file:', file.name, error);
+            errorCount++;
           }
-          
-          await apiService.post(`/v1/conferences/${this.conferenceId}/media`, formData, {
-            headers: {
-              'Content-Type': 'multipart/form-data'
-            }
+        }
+        
+        // Show results
+        if (successCount > 0) {
+          this.$toast.add({
+            severity: 'success',
+            summary: 'Upload Complete',
+            detail: `${successCount} file(s) uploaded successfully${errorCount > 0 ? `, ${errorCount} failed` : ''}`,
+            life: 5000
           });
         }
         
-        this.$toast.add({
-          severity: 'success',
-          summary: 'Success',
-          detail: `${this.selectedFiles.length} file(s) uploaded successfully`,
-          life: 3000
-        });
+        if (errorCount > 0 && successCount === 0) {
+          this.$toast.add({
+            severity: 'error',
+            summary: 'Upload Failed',
+            detail: `Failed to upload ${errorCount} file(s)`,
+            life: 5000
+          });
+        }
         
-        this.cancelUpload();
-        this.fetchMedia();
+        // Close dialog and refresh if any uploads succeeded
+        if (successCount > 0) {
+          this.cancelUpload();
+          this.fetchMedia();
+        }
         
       } catch (error: any) {
-        console.error('Error uploading files:', error);
+        console.error('Error during upload process:', error);
         this.$toast.add({
           severity: 'error',
-          summary: 'Upload Failed',
-          detail: error.response?.data?.message || 'Failed to upload files',
+          summary: 'Upload Error',
+          detail: 'An unexpected error occurred during upload',
           life: 5000
         });
       } finally {
@@ -812,46 +752,59 @@ export default defineComponent({
       this.selectedFiles = [];
       this.uploadData = {
         collection: 'general',
-        name: '',
-        customProperties: []
+        name: ''
       };
       if (this.$refs.fileUpload) {
         (this.$refs.fileUpload as any).clear();
       }
     },
     
-    viewMedia(media: MediaItem) {
-      this.viewingMedia = media;
-      this.showViewDialog = true;
-    },
-    
-    downloadMedia(media: MediaItem) {
-      const link = document.createElement('a');
-      link.href = `/api/v1/conferences/${this.conferenceId}/media/${media.id}/download`;
-      link.download = media.file_name;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+    async downloadMedia(media: MediaItem) {
+      try {
+        // Debug: Log the URL being called
+        const downloadUrl = `/v1/conferences/${this.conferenceId}/media/${media.id}/download`;
+        console.log('Attempting download from:', downloadUrl);
+        console.log('Media object:', media);
+        console.log('Conference ID:', this.conferenceId);
+        
+        await mediaService.downloadMediaFile(this.conferenceId, media);
+        
+        this.$toast.add({
+          severity: 'success',
+          summary: 'Download Started',
+          detail: `Downloading ${media.file_name}`,
+          life: 3000
+        });
+        
+      } catch (error: any) {
+        console.error('Download error:', error);
+        console.error('Error response:', error.response);
+        
+        // Try to read the error response as text if it's a blob
+        if (error.response?.data instanceof Blob) {
+          try {
+            const errorText = await error.response.data.text();
+            console.error('Error response text:', errorText);
+          } catch (e) {
+            console.error('Could not read error response as text');
+          }
+        }
+        
+        this.$toast.add({
+          severity: 'error',
+          summary: 'Download Failed',
+          detail: error.response?.data?.message || `Failed to download file. URL: /v1/conferences/${this.conferenceId}/media/${media.id}/download`,
+          life: 8000
+        });
+      }
     },
     
     editMedia(media: MediaItem) {
       this.editingMedia = media;
       this.editData = {
-        name: media.name || '',
-        customProperties: Object.entries(media.custom_properties || {}).map(([key, value]) => ({
-          key,
-          value: String(value)
-        }))
+        name: media.name || ''
       };
       this.showEditDialog = true;
-    },
-    
-    addEditCustomProperty() {
-      this.editData.customProperties.push({ key: '', value: '' });
-    },
-    
-    removeEditCustomProperty(index: number) {
-      this.editData.customProperties.splice(index, 1);
     },
     
     async saveEdit() {
@@ -860,19 +813,9 @@ export default defineComponent({
       this.updating = true;
       
       try {
-        const updateData: any = {
+        const updateData: MediaUpdateData = {
           name: this.editData.name
         };
-        
-        if (this.editData.customProperties.length > 0) {
-          const customProps: Record<string, string> = {};
-          this.editData.customProperties
-            .filter(prop => prop.key && prop.value)
-            .forEach(prop => {
-              customProps[prop.key] = prop.value;
-            });
-          updateData.custom_properties = customProps;
-        }
         
         await apiService.put(`/v1/conferences/${this.conferenceId}/media/${this.editingMedia.id}`, updateData);
         
@@ -903,8 +846,7 @@ export default defineComponent({
       this.showEditDialog = false;
       this.editingMedia = null;
       this.editData = {
-        name: '',
-        customProperties: []
+        name: ''
       };
     },
     
@@ -973,10 +915,6 @@ export default defineComponent({
       if (this.isDocument(mimeType)) return 'pi pi-file';
       if (this.isVideo(mimeType)) return 'pi pi-video';
       return 'pi pi-file';
-    },
-    
-    formatDate(dateString: string): string {
-      return new Date(dateString).toLocaleDateString();
     }
   }
 });

@@ -48,10 +48,6 @@ class MediaApiService implements MediaService {
       formData.append('name', data.name);
     }
     
-    if (data.custom_properties && Object.keys(data.custom_properties).length > 0) {
-      formData.append('custom_properties', JSON.stringify(data.custom_properties));
-    }
-    
     const response = await apiService.post<ApiResponse<MediaItem>>(
       `/v1/conferences/${conferenceId}/media`,
       formData,
@@ -89,9 +85,31 @@ class MediaApiService implements MediaService {
   async downloadMedia(conferenceId: number, mediaId: number): Promise<Blob> {
     const response = await apiService.get(
       `/v1/conferences/${conferenceId}/media/${mediaId}/download`,
-      { responseType: 'blob' }
+      { 
+        responseType: 'blob',
+        timeout: 30000 // 30 second timeout for large files
+      }
     );
     return response.data;
+  }
+
+  /**
+   * Download media file and trigger browser download
+   */
+  async downloadMediaFile(conferenceId: number, media: MediaItem): Promise<void> {
+    try {
+      const blob = await this.downloadMedia(conferenceId, media.id);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = media.file_name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      throw error;
+    }
   }
 
   /**

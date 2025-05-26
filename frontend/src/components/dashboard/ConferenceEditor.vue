@@ -130,19 +130,6 @@
               class="w-full text-sm"
               size="small"
             />
-            
-            <!-- Component Type Selector -->
-            <div class="mt-4">
-              <label class="block text-sm font-medium mb-2">Quick Add Component</label>
-              <Dropdown
-                v-model="newComponentType"
-                :options="availableComponentTypes"
-                placeholder="Select component type"
-                class="w-full text-sm"
-                :disabled="!pageMenuStore.selectedMenu || !pageMenuStore.isLocked"
-                @change="openAddComponentDialog"
-              />
-            </div>
           </div>
         </template>
       </Card>
