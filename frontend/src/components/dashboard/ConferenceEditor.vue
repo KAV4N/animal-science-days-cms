@@ -98,46 +98,54 @@
           </template>
         </Card>
 
-        <!-- Quick Actions Card -->
-        <Card class="m-4 flex-none">
-          <template #title>
-            <h3 class="text-base font-semibold">Quick Actions</h3>
-          </template>
-          <template #content>
-            <div class="space-y-3 p-0">
-              <Button 
-                label="Create New Page" 
-                icon="pi pi-plus" 
-                @click="openAddMenuDialog"
-                :disabled="!pageMenuStore.isLocked"
+     <Card class="m-4 flex-none">
+        <template #title>
+          <h3 class="text-base font-semibold">Quick Actions</h3>
+        </template>
+        <template #content>
+          <div class="space-y-3 p-0">
+            <Button 
+              label="Create New Page" 
+              icon="pi pi-plus" 
+              @click="openAddMenuDialog"
+              :disabled="!pageMenuStore.isLocked"
+              class="w-full text-sm"
+              size="small"
+            />
+            <Button 
+              label="Add Component" 
+              icon="pi pi-plus-circle" 
+              @click="openAddComponentDialog"
+              :disabled="!pageMenuStore.selectedMenu || !pageMenuStore.isLocked"
+              outlined
+              class="w-full text-sm"
+              size="small"
+            />
+            <Button 
+              label="Manage Media" 
+              icon="pi pi-images" 
+              @click="showMediaManager = true"
+              :disabled="!pageMenuStore.isLocked"
+              outlined
+              class="w-full text-sm"
+              size="small"
+            />
+            
+            <!-- Component Type Selector -->
+            <div class="mt-4">
+              <label class="block text-sm font-medium mb-2">Quick Add Component</label>
+              <Dropdown
+                v-model="newComponentType"
+                :options="availableComponentTypes"
+                placeholder="Select component type"
                 class="w-full text-sm"
-                size="small"
-              />
-              <Button 
-                label="Add Component" 
-                icon="pi pi-plus-circle" 
-                @click="openAddComponentDialog"
                 :disabled="!pageMenuStore.selectedMenu || !pageMenuStore.isLocked"
-                outlined
-                class="w-full text-sm"
-                size="small"
+                @change="openAddComponentDialog"
               />
-              
-              <!-- Component Type Selector -->
-              <div class="mt-4">
-                <label class="block text-sm font-medium mb-2">Quick Add Component</label>
-                <Dropdown
-                  v-model="newComponentType"
-                  :options="availableComponentTypes"
-                  placeholder="Select component type"
-                  class="w-full text-sm"
-                  :disabled="!pageMenuStore.selectedMenu || !pageMenuStore.isLocked"
-                  @change="openAddComponentDialog"
-                />
-              </div>
             </div>
-          </template>
-        </Card>
+          </div>
+        </template>
+      </Card>
 
         <!-- Loading State -->
         <div v-if="pageMenuStore.loading && !loadingSelectedMenu" class="flex-1 flex items-center justify-center p-4">
@@ -865,6 +873,12 @@
       @save="handleSaveContactComponent"
       @cancel="handleCancelContactComponent"
     />
+
+    <MediaManager
+      v-model:visible="showMediaManager"
+      :conference-id="conferenceId"
+      :is-locked="pageMenuStore.isLocked"
+    />
   </div>
 </template>
 
@@ -875,12 +889,14 @@ import { useRoute } from 'vue-router';
 import apiService from '@/services/apiService';
 import EditorComponent from '@/components/dashboard/ConferenceManagement/EditorComponents/EditorComponent.vue';
 import ContactComponent from '@/components/dashboard/ConferenceManagement/EditorComponents/ContactComponent.vue';
+import MediaManager from '@/components/dashboard/ConferenceManagement/EditorComponents/MediaManager.vue';
 
 export default defineComponent({
   name: 'ConferenceEditor',
   components: {
     EditorComponent,
-    ContactComponent
+    ContactComponent,
+    MediaManager
   },
   data() {
     return {
@@ -890,6 +906,7 @@ export default defineComponent({
       newMenuTitle: '',
       newMenuSlug: '',
       newMenuPublished: false,
+      showMediaManager: false,
       
       showEditMenuDialog: false,
       editMenuId: 0,
