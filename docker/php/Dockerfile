@@ -23,17 +23,38 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy existing application directory
-COPY . .
+# Copy application files with proper ownership
+COPY --chown=www-data:www-data . /var/www/html
 
-# Install dependencies
-RUN composer install
+# Install composer dependencies
+RUN composer install --no-dev --optimize-autoloader
 
-# Set permissions
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+# Clear any existing cache files that might have wrong permissions
+RUN rm -rf /var/www/html/storage/framework/views/*
+RUN rm -rf /var/www/html/storage/framework/sessions/*
+RUN rm -rf /var/www/html/bootstrap/cache/*
 
-# Add the chmod command to set write permissions for storage
-RUN chmod -R guo+w /var/www/html/storage
+# Create storage directories if they don't exist
+RUN mkdir -p /var/www/html/storage/logs \
+    /var/www/html/storage/framework/cache \
+    /var/www/html/storage/framework/sessions \
+    /var/www/html/storage/framework/views \
+    /var/www/html/storage/app/public \
+    /var/www/html/storage/app/private \
+    /var/www/html/bootstrap/cache
+
+# Set proper permissions for Laravel directories and files
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache && \
+    chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache && \
+    touch /var/www/html/storage/logs/laravel.log && \
+    chown www-data:www-data /var/www/html/storage/logs/laravel.log && \
+    chmod 664 /var/www/html/storage/logs/laravel.log
+
+# Create storage symbolic link for file uploads
+RUN php artisan storage:link || true
+
+# Switch to www-data user
+USER www-data
 
 # Expose port 9000 for PHP-FPM
 EXPOSE 9000
