@@ -33,7 +33,15 @@ Route::prefix('v1')->group(function () {
         Route::get('/conferences/{conferenceSlug}/pages', [PublicPageMenuController::class, 'index']);
         Route::get('/conferences/{conferenceSlug}/pages/{pageSlug}', [PublicPageMenuController::class, 'show']);
         
+        
     });
+
+    // Public media serve endpoint (no authentication required for serving files)
+    Route::get('/conferences/{conference}/media/{mediaId}/serve', [MediaController::class, 'serve'])
+        ->name('api.media.serve');
+    Route::get('/conferences/{conference}/media/{mediaId}/download', [MediaController::class, 'download'])
+        ->name('api.media.download');
+
 
     // Authentication routes
     Route::prefix('auth')->group(function () {
@@ -77,8 +85,7 @@ Route::prefix('v1')->group(function () {
                     Route::put('/{media}', [MediaController::class, 'update']);
                     Route::patch('/{media}', [MediaController::class, 'update']);
                     Route::delete('/{media}', [MediaController::class, 'destroy']);
-                    Route::get('/{mediaId}/download', [MediaController::class, 'download']);
-
+              
                 });
             });
             

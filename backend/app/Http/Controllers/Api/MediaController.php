@@ -10,7 +10,9 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\File;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class MediaController extends Controller
 {
@@ -54,7 +56,7 @@ class MediaController extends Controller
         $media = $query->paginate($perPage);
 
         // Transform media data
-        $transformedMedia = $media->getCollection()->map(function ($mediaItem) {
+        $transformedMedia = $media->getCollection()->map(function ($mediaItem) use ($conference) {
             return [
                 'id' => $mediaItem->id,
                 'uuid' => $mediaItem->uuid,
@@ -64,7 +66,8 @@ class MediaController extends Controller
                 'mime_type' => $mediaItem->mime_type,
                 'size' => $mediaItem->size,
                 'size_human' => $mediaItem->humanReadableSize,
-                'url' => $mediaItem->getUrl(),
+                'url' => route('api.media.serve', ['conference' => $conference->id, 'mediaId' => $mediaItem->id]),
+                'download_url' => route('api.media.download', ['conference' => $conference->id, 'mediaId' => $mediaItem->id]),
                 'conversions' => $this->getConversions($mediaItem),
                 'uploaded_by' => $mediaItem->uploaded_by,
                 'created_at' => $mediaItem->created_at,
@@ -124,7 +127,8 @@ class MediaController extends Controller
                 'mime_type' => $media->mime_type,
                 'size' => $media->size,
                 'size_human' => $media->humanReadableSize,
-                'url' => $media->getUrl(),
+                'url' => route('api.media.serve', ['conference' => $conference->id, 'mediaId' => $media->id]),
+                'download_url' => route('api.media.download', ['conference' => $conference->id, 'mediaId' => $media->id]),
                 'conversions' => $this->getConversions($media),
                 'uploaded_by' => $media->uploaded_by,
                 'created_at' => $media->created_at,
@@ -157,7 +161,8 @@ class MediaController extends Controller
             'mime_type' => $media->mime_type,
             'size' => $media->size,
             'size_human' => $media->humanReadableSize,
-            'url' => $media->getUrl(),
+            'url' => route('api.media.serve', ['conference' => $conference->id, 'mediaId' => $media->id]),
+            'download_url' => route('api.media.download', ['conference' => $conference->id, 'mediaId' => $media->id]),
             'conversions' => $this->getConversions($media),
             'uploaded_by' => $media->uploaded_by,
             'created_at' => $media->created_at,
@@ -202,7 +207,8 @@ class MediaController extends Controller
                 'mime_type' => $media->mime_type,
                 'size' => $media->size,
                 'size_human' => $media->humanReadableSize,
-                'url' => $media->getUrl(),
+                'url' => route('api.media.serve', ['conference' => $conference->id, 'mediaId' => $media->id]),
+                'download_url' => route('api.media.download', ['conference' => $conference->id, 'mediaId' => $media->id]),
                 'conversions' => $this->getConversions($media),
                 'uploaded_by' => $media->uploaded_by,
                 'created_at' => $media->created_at,
@@ -235,9 +241,9 @@ class MediaController extends Controller
     }
 
     /**
-     * Download the specified media file.
+     * Download the specified media file with proper filename and extension.
      */
-    public function download(Conference $conference, $mediaId): mixed
+    public function download(Conference $conference, $mediaId): StreamedResponse|JsonResponse
     {
         // Find media by ID manually instead of relying on route model binding
         $media = $conference->media()->where('id', $mediaId)->first();
@@ -259,12 +265,31 @@ class MediaController extends Controller
                 return $this->errorResponse('File is not readable', 500);
             }
             
-            // Get the original file name, fallback to file_name if name is empty
-            $downloadName = $media->name ?: $media->file_name;
+            // Get the file extension from the original file
+            $extension = File::extension($path);
             
-            return response()->download($path, $downloadName, [
+            // Create download filename with proper extension
+            $downloadName = $this->createDownloadFilename($media, $extension);
+            
+            // Log download attempt for debugging
+            \Log::info('Media download attempt', [
+                'media_id' => $mediaId,
+                'conference_id' => $conference->id,
+                'original_filename' => $media->file_name,
+                'download_filename' => $downloadName,
+                'extension' => $extension,
+                'mime_type' => $media->mime_type,
+                'path' => $path
+            ]);
+            
+            // Use Storage facade for better file handling
+            $relativePath = str_replace(storage_path('app/'), '', $path);
+            
+            return Storage::download($relativePath, $downloadName, [
                 'Content-Type' => $media->mime_type,
                 'Content-Length' => $media->size,
+                'Cache-Control' => 'no-cache, must-revalidate',
+                'Expires' => 'Sat, 26 Jul 1997 05:00:00 GMT',
             ]);
             
         } catch (\Exception $e) {
@@ -278,6 +303,148 @@ class MediaController extends Controller
             
             return $this->errorResponse('Failed to download media: ' . $e->getMessage(), 500);
         }
+    }
+
+    /**
+     * Serve/display the specified media file inline.
+     */
+    public function serve(Conference $conference, $mediaId): mixed
+    {
+        // Find media by ID manually instead of relying on route model binding
+        $media = $conference->media()->where('id', $mediaId)->first();
+        
+        if (!$media) {
+            return $this->errorResponse('Media not found for this conference', 404);
+        }
+
+        try {
+            $path = $media->getPath();
+            
+            // Check if file exists
+            if (!file_exists($path)) {
+                return $this->errorResponse('File not found on disk', 404);
+            }
+            
+            // Check if file is readable
+            if (!is_readable($path)) {
+                return $this->errorResponse('File is not readable', 500);
+            }
+            
+            // Get file contents
+            $fileContent = file_get_contents($path);
+            
+            if ($fileContent === false) {
+                return $this->errorResponse('Unable to read file', 500);
+            }
+            
+            // Set appropriate headers for inline display
+            $headers = [
+                'Content-Type' => $media->mime_type,
+                'Content-Length' => $media->size,
+                'Content-Disposition' => 'inline; filename="' . ($media->name ?: $media->file_name) . '"',
+                'Cache-Control' => 'public, max-age=31536000', // Cache for 1 year
+                'Expires' => gmdate('D, d M Y H:i:s \G\M\T', time() + 31536000),
+                'Last-Modified' => gmdate('D, d M Y H:i:s \G\M\T', filemtime($path)),
+                'ETag' => '"' . md5_file($path) . '"',
+            ];
+            
+            // Add CORS headers if needed for cross-origin requests
+            $headers['Access-Control-Allow-Origin'] = '*';
+            $headers['Access-Control-Allow-Methods'] = 'GET, HEAD, OPTIONS';
+            $headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization';
+            
+            return response($fileContent, 200, $headers);
+            
+        } catch (\Exception $e) {
+            \Log::error('Media serve failed', [
+                'media_id' => $mediaId,
+                'conference_id' => $conference->id,
+                'path' => $media->getPath(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return $this->errorResponse('Failed to serve media: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Create a proper download filename with extension.
+     */
+    private function createDownloadFilename(Media $media, string $extension): string
+    {
+        // Use custom name if available, otherwise use original file name
+        $baseName = $media->name ?: pathinfo($media->file_name, PATHINFO_FILENAME);
+        
+        // Clean the filename (remove special characters that might cause issues)
+        $baseName = preg_replace('/[^A-Za-z0-9\-_\s]/', '', $baseName);
+        $baseName = trim($baseName);
+        
+        // If we don't have an extension, try to determine it from mime type
+        if (empty($extension)) {
+            $extension = $this->getExtensionFromMimeType($media->mime_type);
+        }
+        
+        // Ensure we have an extension
+        if (empty($extension)) {
+            // Fallback: try to get extension from original filename
+            $extension = pathinfo($media->file_name, PATHINFO_EXTENSION);
+        }
+        
+        // Build the final filename
+        $filename = $baseName;
+        if (!empty($extension)) {
+            $filename .= '.' . $extension;
+        }
+        
+        return $filename;
+    }
+
+    /**
+     * Get file extension from MIME type.
+     */
+    private function getExtensionFromMimeType(string $mimeType): string
+    {
+        $mimeToExtension = [
+            // Images
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/gif' => 'gif',
+            'image/webp' => 'webp',
+            'image/svg+xml' => 'svg',
+            
+            // Documents
+            'application/pdf' => 'pdf',
+            'application/msword' => 'doc',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'docx',
+            'application/vnd.ms-excel' => 'xls',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'xlsx',
+            'application/vnd.ms-powerpoint' => 'ppt',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation' => 'pptx',
+            
+            // Text files
+            'text/plain' => 'txt',
+            'text/csv' => 'csv',
+            'application/rtf' => 'rtf',
+            
+            // Videos
+            'video/mp4' => 'mp4',
+            'video/avi' => 'avi',
+            'video/quicktime' => 'mov',
+            'video/x-msvideo' => 'avi',
+            
+            // Audio
+            'audio/mpeg' => 'mp3',
+            'audio/wav' => 'wav',
+            'audio/ogg' => 'ogg',
+            
+            // Archives
+            'application/zip' => 'zip',
+            'application/x-rar-compressed' => 'rar',
+            'application/x-7z-compressed' => '7z',
+        ];
+
+        return $mimeToExtension[$mimeType] ?? '';
     }
 
     /**
