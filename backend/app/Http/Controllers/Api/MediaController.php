@@ -54,7 +54,7 @@ class MediaController extends Controller
         $media = $query->paginate($perPage);
 
         // Transform media data
-        $transformedMedia = $media->getCollection()->map(function ($mediaItem) {
+        $transformedMedia = $media->getCollection()->map(function ($mediaItem) use ($conference) {
             return [
                 'id' => $mediaItem->id,
                 'uuid' => $mediaItem->uuid,
@@ -64,7 +64,7 @@ class MediaController extends Controller
                 'mime_type' => $mediaItem->mime_type,
                 'size' => $mediaItem->size,
                 'size_human' => $mediaItem->humanReadableSize,
-                'url' => $mediaItem->getUrl(),
+                'url' => route('api.media.serve', ['conference' => $conference->id, 'mediaId' => $mediaItem->id]),
                 'conversions' => $this->getConversions($mediaItem),
                 'uploaded_by' => $mediaItem->uploaded_by,
                 'created_at' => $mediaItem->created_at,
@@ -124,7 +124,7 @@ class MediaController extends Controller
                 'mime_type' => $media->mime_type,
                 'size' => $media->size,
                 'size_human' => $media->humanReadableSize,
-                'url' => $media->getUrl(),
+                'url' => route('api.media.serve', ['conference' => $conference->id, 'mediaId' => $media->id]),
                 'conversions' => $this->getConversions($media),
                 'uploaded_by' => $media->uploaded_by,
                 'created_at' => $media->created_at,
@@ -157,7 +157,7 @@ class MediaController extends Controller
             'mime_type' => $media->mime_type,
             'size' => $media->size,
             'size_human' => $media->humanReadableSize,
-            'url' => $media->getUrl(),
+            'url' => route('api.media.serve', ['conference' => $conference->id, 'mediaId' => $media->id]),
             'conversions' => $this->getConversions($media),
             'uploaded_by' => $media->uploaded_by,
             'created_at' => $media->created_at,
@@ -202,7 +202,7 @@ class MediaController extends Controller
                 'mime_type' => $media->mime_type,
                 'size' => $media->size,
                 'size_human' => $media->humanReadableSize,
-                'url' => $media->getUrl(),
+                'url' => route('api.media.serve', ['conference' => $conference->id, 'mediaId' => $media->id]),
                 'conversions' => $this->getConversions($media),
                 'uploaded_by' => $media->uploaded_by,
                 'created_at' => $media->created_at,
@@ -277,6 +277,69 @@ class MediaController extends Controller
             ]);
             
             return $this->errorResponse('Failed to download media: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Serve/display the specified media file inline.
+     */
+    public function serve(Conference $conference, $mediaId): mixed
+    {
+        // Find media by ID manually instead of relying on route model binding
+        $media = $conference->media()->where('id', $mediaId)->first();
+        
+        if (!$media) {
+            return $this->errorResponse('Media not found for this conference', 404);
+        }
+
+        try {
+            $path = $media->getPath();
+            
+            // Check if file exists
+            if (!file_exists($path)) {
+                return $this->errorResponse('File not found on disk', 404);
+            }
+            
+            // Check if file is readable
+            if (!is_readable($path)) {
+                return $this->errorResponse('File is not readable', 500);
+            }
+            
+            // Get file contents
+            $fileContent = file_get_contents($path);
+            
+            if ($fileContent === false) {
+                return $this->errorResponse('Unable to read file', 500);
+            }
+            
+            // Set appropriate headers for inline display
+            $headers = [
+                'Content-Type' => $media->mime_type,
+                'Content-Length' => $media->size,
+                'Content-Disposition' => 'inline; filename="' . ($media->name ?: $media->file_name) . '"',
+                'Cache-Control' => 'public, max-age=31536000', // Cache for 1 year
+                'Expires' => gmdate('D, d M Y H:i:s \G\M\T', time() + 31536000),
+                'Last-Modified' => gmdate('D, d M Y H:i:s \G\M\T', filemtime($path)),
+                'ETag' => '"' . md5_file($path) . '"',
+            ];
+            
+            // Add CORS headers if needed for cross-origin requests
+            $headers['Access-Control-Allow-Origin'] = '*';
+            $headers['Access-Control-Allow-Methods'] = 'GET, HEAD, OPTIONS';
+            $headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization';
+            
+            return response($fileContent, 200, $headers);
+            
+        } catch (\Exception $e) {
+            \Log::error('Media serve failed', [
+                'media_id' => $mediaId,
+                'conference_id' => $conference->id,
+                'path' => $media->getPath(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return $this->errorResponse('Failed to serve media: ' . $e->getMessage(), 500);
         }
     }
 
