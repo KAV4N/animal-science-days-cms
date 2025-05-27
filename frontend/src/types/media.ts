@@ -37,12 +37,12 @@ export interface MediaItem {
   id: number;
   uuid: string;
   collection_name: string;
-  name: string;
   file_name: string;
   mime_type: string;
   size: number;
   size_human: string;
   url: string;
+  download_url?: string;
   conversions: MediaConversions;
   uploaded_by: number;
   created_at: string;
@@ -51,11 +51,10 @@ export interface MediaItem {
 
 export interface MediaUploadData {
   collection: string;
-  name?: string;
 }
 
 export interface MediaUpdateData {
-  name?: string;
+  file_name?: string;
 }
 
 // Laravel pagination response structure (from your paginatedResponse method)

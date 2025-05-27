@@ -39,7 +39,8 @@ Route::prefix('v1')->group(function () {
     // Public media serve endpoint (no authentication required for serving files)
     Route::get('/conferences/{conference}/media/{mediaId}/serve', [MediaController::class, 'serve'])
         ->name('api.media.serve');
-    Route::get('/conferences/{conference}/media/{mediaId}/download', [MediaController::class, 'download']);
+    Route::get('/conferences/{conference}/media/{mediaId}/download', [MediaController::class, 'download'])
+        ->name('api.media.download');
 
 
     // Authentication routes

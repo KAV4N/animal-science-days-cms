@@ -44,10 +44,6 @@ class MediaApiService implements MediaService {
     formData.append('file', file);
     formData.append('collection', data.collection);
     
-    if (data.name) {
-      formData.append('name', data.name);
-    }
-    
     const response = await apiService.post<ApiResponse<MediaItem>>(
       `/v1/conferences/${conferenceId}/media`,
       formData,

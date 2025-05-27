@@ -1,5 +1,4 @@
 <?php
-// File: app/Http/Controllers/Api/ConferenceController.php
 
 namespace App\Http\Controllers\Api;
 
@@ -14,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 
 class ConferenceController extends Controller
 {
@@ -158,7 +158,7 @@ class ConferenceController extends Controller
     }
 
     /**
-     * Delete a conference
+     * Delete a conference and all associated media files
      */
     public function destroy(Conference $conference): JsonResponse
     {
@@ -166,11 +166,68 @@ class ConferenceController extends Controller
             return $this->errorResponse('You are not authorized to delete this conference', 403);
         }
         
-        $this->lockService->forceReleaseLock($conference->id);
-        
-        $conference->delete();
+        try {
+            DB::beginTransaction();
+            
+            // Force release any locks on this conference
+            $this->lockService->forceReleaseLock($conference->id);
+            
+            // Get all media files associated with this conference
+            $mediaItems = $conference->media;
+            
+            Log::info('Deleting conference and associated media', [
+                'conference_id' => $conference->id,
+                'conference_name' => $conference->name,
+                'media_count' => $mediaItems->count()
+            ]);
+            
+            // Delete all media files (both database records and physical files)
+            foreach ($mediaItems as $media) {
+                try {
+                    // This will delete both the database record and the physical file
+                    // Thanks to Spatie Media Library's built-in cleanup
+                    $media->delete();
+                    
+                    Log::info('Media file deleted', [
+                        'media_id' => $media->id,
+                        'file_name' => $media->file_name,
+                        'conference_id' => $conference->id
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('Failed to delete media file', [
+                        'media_id' => $media->id,
+                        'file_name' => $media->file_name,
+                        'conference_id' => $conference->id,
+                        'error' => $e->getMessage()
+                    ]);
+                    // Continue with other files even if one fails
+                }
+            }
+            
+            // Delete the conference itself
+            $conference->delete();
+            
+            DB::commit();
+            
+            Log::info('Conference deleted successfully', [
+                'conference_id' => $conference->id,
+                'conference_name' => $conference->name
+            ]);
 
-        return $this->successResponse(null, 'Conference deleted successfully');
+            return $this->successResponse(null, 'Conference and all associated files deleted successfully');
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            Log::error('Failed to delete conference', [
+                'conference_id' => $conference->id,
+                'conference_name' => $conference->name,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return $this->errorResponse('Failed to delete conference: ' . $e->getMessage(), 500);
+        }
     }
 
     /**

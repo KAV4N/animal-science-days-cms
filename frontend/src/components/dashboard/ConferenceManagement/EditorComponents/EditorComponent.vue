@@ -174,7 +174,7 @@
                     <img 
                       v-if="isImage(item.mime_type) && item.conversions.thumb"
                       :src="item.conversions.thumb"
-                      :alt="item.name"
+                      :alt="item.file_name"
                       class="w-full h-full object-cover"
                     />
                     <!-- Document Icon -->
@@ -213,8 +213,8 @@
 
                   <!-- Media Info -->
                   <div class="space-y-2">
-                    <h4 class="font-semibold text-sm truncate" :title="item.name">
-                      {{ item.name || item.file_name }}
+                    <h4 class="font-semibold text-sm truncate" :title="item.file_name">
+                      {{ item.file_name }}
                     </h4>
                     <div class="flex items-center justify-between text-xs text-gray-600">
                       <Badge 
@@ -223,9 +223,6 @@
                       />
                       <span>{{ item.size_human }}</span>
                     </div>
-                    <p class="text-xs text-gray-500 truncate" :title="item.file_name">
-                      {{ item.file_name }}
-                    </p>
                   </div>
                 </div>
               </template>
@@ -311,7 +308,8 @@ export default defineComponent({
       ],
       
       // TinyMCE editor instance
-      editorInstance: null as any
+      editorInstance: null as any,
+      mediaCallback: null as Function | null
     };
   },
   computed: {
@@ -329,25 +327,64 @@ export default defineComponent({
         ].join(' '),
         toolbar: [
           'undo redo | formatselect | bold italic backcolor | alignleft aligncenter alignright alignjustify',
-          'bullist numlist outdent indent | link image media_browser | removeformat | help'
+          'bullist numlist outdent indent | link | removeformat | help'
         ].join(' | '),
         mobile: {
           menubar: false,
-          toolbar: 'undo redo | bold italic | bullist numlist | image media_browser'
+          toolbar: 'undo redo | bold italic | bullist numlist | insert'
         },
         setup: (editor: any) => {
           this.editorInstance = editor;
           
-          // Add custom button for media browser
-          editor.ui.registry.addButton('media_browser', {
-            icon: 'image',
-            tooltip: 'Insert from Media Library',
+          // Add custom menu item for media library under Insert menu
+          editor.ui.registry.addMenuItem('media_library', {
+            text: 'Media Library...',
+            icon: 'browse',
+            onAction: () => {
+              this.openMediaBrowser();
+            }
+          });
+
+          // Add custom menu item for downloadable files under Media submenu
+          editor.ui.registry.addMenuItem('downloadable_files', {
+            text: 'Downloadable Files...',
+            icon: 'download',
             onAction: () => {
               this.openMediaBrowser();
             }
           });
           
-          // Add custom image handling to replace default image dialog
+          // Customize the Insert menu to include our media library
+          editor.ui.registry.addMenuButton('insert', {
+            text: 'Insert',
+            fetch: (callback: Function) => {
+              const items = [
+                'image',
+                'media_library',
+                '|',
+                'link',
+                'anchor',
+                '|',
+                'insertdatetime',
+                'nonbreakingspace',
+                'pagebreak',
+                'horizontalrule'
+              ];
+              callback(items);
+            }
+          });
+
+          // Customize the Media menu to include downloadable files
+          editor.ui.registry.addNestedMenuItem('media_files', {
+            text: 'Media Files',
+            icon: 'embed',
+            getSubmenuItems: () => [
+              'media',
+              'downloadable_files'
+            ]
+          });
+          
+          // Override default image button to use our media browser
           editor.ui.registry.addButton('image', {
             icon: 'image',
             tooltip: 'Insert/Edit Image',
@@ -364,8 +401,19 @@ export default defineComponent({
         },
         // Customize image dialog to use our media browser
         file_picker_callback: (callback: Function, value: string, meta: any) => {
-          if (meta.filetype === 'image') {
+          if (meta.filetype === 'image' || meta.filetype === 'media') {
             this.openMediaBrowser(callback);
+          }
+        },
+        // Add custom menu configuration
+        menu: {
+          insert: {
+            title: 'Insert',
+            items: 'image media_library | link anchor | insertdatetime nonbreakingspace pagebreak horizontalrule'
+          },
+          media: {
+            title: 'Media',
+            items: 'media downloadable_files'
           }
         },
         content_style: `
@@ -377,6 +425,27 @@ export default defineComponent({
           img {
             max-width: 100%;
             height: auto;
+          }
+          .download-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: #f3f4f6;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            text-decoration: none;
+            color: #374151;
+            font-weight: 500;
+            transition: all 0.2s;
+          }
+          .download-link:hover {
+            background: #e5e7eb;
+            border-color: #9ca3af;
+            text-decoration: none;
+          }
+          .download-icon {
+            font-size: 1.2em;
           }
         `
       };
@@ -523,29 +592,31 @@ export default defineComponent({
         let content = '';
         
         if (this.isImage(media.mime_type)) {
-          // Insert image
-          const imageUrl = media.url;
-          const altText = media.name || media.file_name;
+          // Insert image using the download URL for better performance
+          const imageUrl = media.download_url || `/v1/conferences/${this.conferenceId}/media/${media.id}/download`;
+          const altText = media.file_name;
           
           content = `<img src="${imageUrl}" alt="${altText}" title="${altText}" style="max-width: 100%; height: auto;" />`;
           
           this.editorInstance.insertContent(content);
         } else if (this.isDocument(media.mime_type) || this.isVideo(media.mime_type)) {
-          // Insert link to document/video
-          const linkUrl = media.url;
-          const linkText = media.name || media.file_name;
+          // Insert downloadable link for documents and videos
+          const linkUrl = media.download_url || `/v1/conferences/${this.conferenceId}/media/${media.id}/download`;
+          const linkText = media.file_name;
           const icon = this.getFileIcon(media.mime_type);
           
-          content = `<a href="${linkUrl}" target="_blank" title="Download ${linkText}">
-            <i class="${icon}"></i> ${linkText}
-          </a>`;
+          // Create a more styled download link
+          content = `<p><a href="${linkUrl}" target="_blank" download="${media.file_name}" class="download-link" title="Download ${linkText}">
+            <span class="download-icon">📁</span> ${linkText}
+          </a></p>`;
           
           this.editorInstance.insertContent(content);
         }
         
         // If this was called from file picker callback
         if (this.mediaCallback) {
-          this.mediaCallback(media.url, { alt: media.name || media.file_name });
+          const callbackUrl = media.download_url || `/v1/conferences/${this.conferenceId}/media/${media.id}/download`;
+          this.mediaCallback(callbackUrl, { alt: media.file_name });
           this.mediaCallback = null;
         }
       }

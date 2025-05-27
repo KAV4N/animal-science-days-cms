@@ -106,7 +106,7 @@
                   <img 
                     v-if="isImage(item.mime_type) && item.conversions.thumb"
                     :src="item.conversions.thumb"
-                    :alt="item.name"
+                    :alt="item.file_name"
                     class="w-full h-full object-cover"
                   />
                   <!-- Document Icon -->
@@ -165,8 +165,8 @@
 
                 <!-- Media Info -->
                 <div class="space-y-2">
-                  <h4 class="font-semibold text-sm truncate" :title="item.name">
-                    {{ item.name || item.file_name }}
+                  <h4 class="font-semibold text-sm truncate" :title="item.file_name">
+                    {{ item.file_name }}
                   </h4>
                   <div class="flex items-center justify-between text-xs text-gray-600">
                     <Badge 
@@ -175,9 +175,6 @@
                     />
                     <span>{{ item.size_human }}</span>
                   </div>
-                  <p class="text-xs text-gray-500 truncate" :title="item.file_name">
-                    {{ item.file_name }}
-                  </p>
                 </div>
               </div>
             </template>
@@ -257,17 +254,6 @@
                   </template>
                 </FileUpload>
               </div>
-
-              <!-- Custom Name -->
-              <div v-if="selectedFiles.length === 1">
-                <label for="uploadName" class="block text-sm font-medium mb-2">Custom Name</label>
-                <InputText
-                  id="uploadName"
-                  v-model="uploadData.name"
-                  placeholder="Leave empty to use original filename"
-                  class="w-full"
-                />
-              </div>
             </div>
 
             <div class="flex flex-col sm:flex-row justify-end gap-3 pt-4">
@@ -309,16 +295,16 @@
                 <i class="pi pi-pencil text-2xl text-green-600"></i>
               </div>
               <h3 class="text-2xl font-bold mb-4">Edit Media</h3>
-              <p class="text-gray-600">Update media information</p>
+              <p class="text-gray-600">Update file name</p>
             </div>
 
             <div class="space-y-4">
-              <!-- Name -->
+              <!-- File Name -->
               <div>
-                <label for="editName" class="block text-sm font-medium mb-2">Name</label>
+                <label for="editFileName" class="block text-sm font-medium mb-2">File Name</label>
                 <InputText
-                  id="editName"
-                  v-model="editData.name"
+                  id="editFileName"
+                  v-model="editData.file_name"
                   class="w-full"
                 />
               </div>
@@ -348,7 +334,7 @@
     <!-- View Media Dialog -->
     <Dialog 
       v-model:visible="showViewDialog" 
-      :header="viewingMedia?.name || 'View Media'" 
+      :header="viewingMedia?.file_name || 'View Media'" 
       :style="{ width: '95vw', maxWidth: '800px' }" 
       :modal="true"
       :maximizable="true"
@@ -361,7 +347,7 @@
           <img 
             v-if="isImage(viewingMedia.mime_type)"
             :src="viewingMedia.conversions.preview || viewingMedia.url"
-            :alt="viewingMedia.name"
+            :alt="viewingMedia.file_name"
             class="max-w-full max-h-96 mx-auto rounded-lg shadow-md"
           />
           <div 
@@ -372,8 +358,7 @@
               :class="getFileIcon(viewingMedia.mime_type)"
               class="text-6xl text-gray-400 mb-4"
             ></i>
-            <p class="text-lg font-medium">{{ viewingMedia.name }}</p>
-            <p class="text-sm text-gray-600">{{ viewingMedia.file_name }}</p>
+            <p class="text-lg font-medium">{{ viewingMedia.file_name }}</p>
           </div>
         </div>
 
@@ -384,10 +369,6 @@
           </template>
           <template #content>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-0">
-              <div>
-                <strong class="text-sm">Name:</strong>
-                <p class="text-sm">{{ viewingMedia.name || 'N/A' }}</p>
-              </div>
               <div>
                 <strong class="text-sm">File Name:</strong>
                 <p class="text-sm">{{ viewingMedia.file_name }}</p>
@@ -454,7 +435,7 @@
             <Card v-if="deletingMedia">
               <template #content>
                 <div class="text-center p-0">
-                  <p class="font-medium">{{ deletingMedia.name || deletingMedia.file_name }}</p>
+                  <p class="font-medium">{{ deletingMedia.file_name }}</p>
                   <p class="text-sm text-gray-600">{{ deletingMedia.size_human }} • {{ deletingMedia.collection_name }}</p>
                 </div>
               </template>
@@ -547,8 +528,7 @@ export default defineComponent({
       uploading: false,
       selectedFiles: [] as File[],
       uploadData: {
-        collection: 'general' as string,
-        name: ''
+        collection: 'general' as string
       } as MediaUploadData,
       
       // Edit Dialog
@@ -556,8 +536,12 @@ export default defineComponent({
       updating: false,
       editingMedia: null as MediaItem | null,
       editData: {
-        name: ''
+        file_name: ''
       },
+      
+      // View Dialog
+      showViewDialog: false,
+      viewingMedia: null as MediaItem | null,
       
       // Delete Dialog
       showDeleteDialog: false,
@@ -691,10 +675,6 @@ export default defineComponent({
             formData.append('file', file);
             formData.append('collection', this.uploadData.collection);
             
-            if (this.uploadData.name && this.selectedFiles.length === 1) {
-              formData.append('name', this.uploadData.name);
-            }
-            
             await apiService.post(`/v1/conferences/${this.conferenceId}/media`, formData, {
               headers: {
                 'Content-Type': 'multipart/form-data'
@@ -751,8 +731,7 @@ export default defineComponent({
       this.showUploadDialog = false;
       this.selectedFiles = [];
       this.uploadData = {
-        collection: 'general',
-        name: ''
+        collection: 'general'
       };
       if (this.$refs.fileUpload) {
         (this.$refs.fileUpload as any).clear();
@@ -761,8 +740,8 @@ export default defineComponent({
     
     async downloadMedia(media: MediaItem) {
       try {
-        // Debug: Log the URL being called
-        const downloadUrl = `/v1/conferences/${this.conferenceId}/media/${media.id}/download`;
+        // Use the download_url if available, otherwise construct it
+        const downloadUrl = media.download_url || `/v1/conferences/${this.conferenceId}/media/${media.id}/download`;
         console.log('Attempting download from:', downloadUrl);
         console.log('Media object:', media);
         console.log('Conference ID:', this.conferenceId);
@@ -793,7 +772,7 @@ export default defineComponent({
         this.$toast.add({
           severity: 'error',
           summary: 'Download Failed',
-          detail: error.response?.data?.message || `Failed to download file. URL: /v1/conferences/${this.conferenceId}/media/${media.id}/download`,
+          detail: error.response?.data?.message || `Failed to download file: ${media.file_name}`,
           life: 8000
         });
       }
@@ -802,7 +781,7 @@ export default defineComponent({
     editMedia(media: MediaItem) {
       this.editingMedia = media;
       this.editData = {
-        name: media.name || ''
+        file_name: media.file_name || ''
       };
       this.showEditDialog = true;
     },
@@ -814,7 +793,7 @@ export default defineComponent({
       
       try {
         const updateData: MediaUpdateData = {
-          name: this.editData.name
+          file_name: this.editData.file_name
         };
         
         await apiService.put(`/v1/conferences/${this.conferenceId}/media/${this.editingMedia.id}`, updateData);
@@ -846,7 +825,7 @@ export default defineComponent({
       this.showEditDialog = false;
       this.editingMedia = null;
       this.editData = {
-        name: ''
+        file_name: ''
       };
     },
     
@@ -915,6 +894,10 @@ export default defineComponent({
       if (this.isDocument(mimeType)) return 'pi pi-file';
       if (this.isVideo(mimeType)) return 'pi pi-video';
       return 'pi pi-file';
+    },
+    
+    formatDate(dateString: string): string {
+      return new Date(dateString).toLocaleDateString();
     }
   }
 });

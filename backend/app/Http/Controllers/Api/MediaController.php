@@ -38,13 +38,10 @@ class MediaController extends Controller
             $query->where('collection_name', $request->collection);
         }
 
-        // Search functionality
+        // Search functionality - only search in file_name
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('file_name', 'like', "%{$search}%");
-            });
+            $query->where('file_name', 'like', "%{$search}%");
         }
 
         // Order by most recent first
@@ -59,12 +56,12 @@ class MediaController extends Controller
                 'id' => $mediaItem->id,
                 'uuid' => $mediaItem->uuid,
                 'collection_name' => $mediaItem->collection_name,
-                'name' => $mediaItem->name,
                 'file_name' => $mediaItem->file_name,
                 'mime_type' => $mediaItem->mime_type,
                 'size' => $mediaItem->size,
                 'size_human' => $mediaItem->humanReadableSize,
                 'url' => route('api.media.serve', ['conference' => $conference->id, 'mediaId' => $mediaItem->id]),
+                'download_url' => route('api.media.download', ['conference' => $conference->id, 'mediaId' => $mediaItem->id]),
                 'conversions' => $this->getConversions($mediaItem),
                 'uploaded_by' => $mediaItem->uploaded_by,
                 'created_at' => $mediaItem->created_at,
@@ -89,7 +86,6 @@ class MediaController extends Controller
                 'string',
                 Rule::in(['images', 'documents', 'general'])
             ],
-            'name' => 'nullable|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -106,25 +102,19 @@ class MediaController extends Controller
         }
 
         try {
-            $mediaAdder = $conference->addMediaFromRequest('file');
-            
-            // Set custom name if provided
-            if ($request->filled('name')) {
-                $mediaAdder->usingName($request->name);
-            }
-            
-            $media = $mediaAdder->toMediaCollection($collection);
+            $media = $conference->addMediaFromRequest('file')
+                ->toMediaCollection($collection);
 
             $transformedMedia = [
                 'id' => $media->id,
                 'uuid' => $media->uuid,
                 'collection_name' => $media->collection_name,
-                'name' => $media->name,
                 'file_name' => $media->file_name,
                 'mime_type' => $media->mime_type,
                 'size' => $media->size,
                 'size_human' => $media->humanReadableSize,
                 'url' => route('api.media.serve', ['conference' => $conference->id, 'mediaId' => $media->id]),
+                'download_url' => route('api.media.download', ['conference' => $conference->id, 'mediaId' => $media->id]),
                 'conversions' => $this->getConversions($media),
                 'uploaded_by' => $media->uploaded_by,
                 'created_at' => $media->created_at,
@@ -152,12 +142,12 @@ class MediaController extends Controller
             'id' => $media->id,
             'uuid' => $media->uuid,
             'collection_name' => $media->collection_name,
-            'name' => $media->name,
             'file_name' => $media->file_name,
             'mime_type' => $media->mime_type,
             'size' => $media->size,
             'size_human' => $media->humanReadableSize,
             'url' => route('api.media.serve', ['conference' => $conference->id, 'mediaId' => $media->id]),
+            'download_url' => route('api.media.download', ['conference' => $conference->id, 'mediaId' => $media->id]),
             'conversions' => $this->getConversions($media),
             'uploaded_by' => $media->uploaded_by,
             'created_at' => $media->created_at,
@@ -178,7 +168,7 @@ class MediaController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'name' => 'nullable|string|max:255',
+            'file_name' => 'nullable|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -186,9 +176,9 @@ class MediaController extends Controller
         }
 
         try {
-            // Update name if provided
-            if ($request->filled('name')) {
-                $media->name = $request->name;
+            // Update file_name if provided
+            if ($request->filled('file_name')) {
+                $media->file_name = $request->file_name;
             }
 
             $media->save();
@@ -197,12 +187,12 @@ class MediaController extends Controller
                 'id' => $media->id,
                 'uuid' => $media->uuid,
                 'collection_name' => $media->collection_name,
-                'name' => $media->name,
                 'file_name' => $media->file_name,
                 'mime_type' => $media->mime_type,
                 'size' => $media->size,
                 'size_human' => $media->humanReadableSize,
                 'url' => route('api.media.serve', ['conference' => $conference->id, 'mediaId' => $media->id]),
+                'download_url' => route('api.media.download', ['conference' => $conference->id, 'mediaId' => $media->id]),
                 'conversions' => $this->getConversions($media),
                 'uploaded_by' => $media->uploaded_by,
                 'created_at' => $media->created_at,
@@ -259,10 +249,7 @@ class MediaController extends Controller
                 return $this->errorResponse('File is not readable', 500);
             }
             
-            // Get the original file name, fallback to file_name if name is empty
-            $downloadName = $media->file_name;
-            
-            return response()->download($path, $downloadName, [
+            return response()->download($path, $media->file_name, [
                 'Content-Type' => $media->mime_type,
                 'Content-Length' => $media->size,
             ]);
@@ -316,7 +303,7 @@ class MediaController extends Controller
             $headers = [
                 'Content-Type' => $media->mime_type,
                 'Content-Length' => $media->size,
-                'Content-Disposition' => 'inline; filename="' . ($media->file_name) . '"',
+                'Content-Disposition' => 'inline; filename="' . $media->file_name . '"',
                 'Cache-Control' => 'public, max-age=31536000', // Cache for 1 year
                 'Expires' => gmdate('D, d M Y H:i:s \G\M\T', time() + 31536000),
                 'Last-Modified' => gmdate('D, d M Y H:i:s \G\M\T', filemtime($path)),
