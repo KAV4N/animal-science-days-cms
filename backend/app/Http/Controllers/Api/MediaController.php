@@ -10,9 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\File;
 use Illuminate\Validation\Rule;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class MediaController extends Controller
 {
@@ -40,13 +38,10 @@ class MediaController extends Controller
             $query->where('collection_name', $request->collection);
         }
 
-        // Search functionality
+        // Search functionality - only search in file_name
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('file_name', 'like', "%{$search}%");
-            });
+            $query->where('file_name', 'like', "%{$search}%");
         }
 
         // Order by most recent first
@@ -61,7 +56,6 @@ class MediaController extends Controller
                 'id' => $mediaItem->id,
                 'uuid' => $mediaItem->uuid,
                 'collection_name' => $mediaItem->collection_name,
-                'name' => $mediaItem->name,
                 'file_name' => $mediaItem->file_name,
                 'mime_type' => $mediaItem->mime_type,
                 'size' => $mediaItem->size,
@@ -92,7 +86,6 @@ class MediaController extends Controller
                 'string',
                 Rule::in(['images', 'documents', 'general'])
             ],
-            'name' => 'nullable|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -109,20 +102,13 @@ class MediaController extends Controller
         }
 
         try {
-            $mediaAdder = $conference->addMediaFromRequest('file');
-            
-            // Set custom name if provided
-            if ($request->filled('name')) {
-                $mediaAdder->usingName($request->name);
-            }
-            
-            $media = $mediaAdder->toMediaCollection($collection);
+            $media = $conference->addMediaFromRequest('file')
+                ->toMediaCollection($collection);
 
             $transformedMedia = [
                 'id' => $media->id,
                 'uuid' => $media->uuid,
                 'collection_name' => $media->collection_name,
-                'name' => $media->name,
                 'file_name' => $media->file_name,
                 'mime_type' => $media->mime_type,
                 'size' => $media->size,
@@ -156,7 +142,6 @@ class MediaController extends Controller
             'id' => $media->id,
             'uuid' => $media->uuid,
             'collection_name' => $media->collection_name,
-            'name' => $media->name,
             'file_name' => $media->file_name,
             'mime_type' => $media->mime_type,
             'size' => $media->size,
@@ -183,7 +168,7 @@ class MediaController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'name' => 'nullable|string|max:255',
+            'file_name' => 'nullable|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -191,9 +176,9 @@ class MediaController extends Controller
         }
 
         try {
-            // Update name if provided
-            if ($request->filled('name')) {
-                $media->name = $request->name;
+            // Update file_name if provided
+            if ($request->filled('file_name')) {
+                $media->file_name = $request->file_name;
             }
 
             $media->save();
@@ -202,7 +187,6 @@ class MediaController extends Controller
                 'id' => $media->id,
                 'uuid' => $media->uuid,
                 'collection_name' => $media->collection_name,
-                'name' => $media->name,
                 'file_name' => $media->file_name,
                 'mime_type' => $media->mime_type,
                 'size' => $media->size,
@@ -241,9 +225,9 @@ class MediaController extends Controller
     }
 
     /**
-     * Download the specified media file with proper filename and extension.
+     * Download the specified media file.
      */
-    public function download(Conference $conference, $mediaId): StreamedResponse|JsonResponse
+    public function download(Conference $conference, $mediaId): mixed
     {
         // Find media by ID manually instead of relying on route model binding
         $media = $conference->media()->where('id', $mediaId)->first();
@@ -265,31 +249,9 @@ class MediaController extends Controller
                 return $this->errorResponse('File is not readable', 500);
             }
             
-            // Get the file extension from the original file
-            $extension = File::extension($path);
-            
-            // Create download filename with proper extension
-            $downloadName = $this->createDownloadFilename($media, $extension);
-            
-            // Log download attempt for debugging
-            \Log::info('Media download attempt', [
-                'media_id' => $mediaId,
-                'conference_id' => $conference->id,
-                'original_filename' => $media->file_name,
-                'download_filename' => $downloadName,
-                'extension' => $extension,
-                'mime_type' => $media->mime_type,
-                'path' => $path
-            ]);
-            
-            // Use Storage facade for better file handling
-            $relativePath = str_replace(storage_path('app/'), '', $path);
-            
-            return Storage::download($relativePath, $downloadName, [
+            return response()->download($path, $media->file_name, [
                 'Content-Type' => $media->mime_type,
                 'Content-Length' => $media->size,
-                'Cache-Control' => 'no-cache, must-revalidate',
-                'Expires' => 'Sat, 26 Jul 1997 05:00:00 GMT',
             ]);
             
         } catch (\Exception $e) {
@@ -341,7 +303,7 @@ class MediaController extends Controller
             $headers = [
                 'Content-Type' => $media->mime_type,
                 'Content-Length' => $media->size,
-                'Content-Disposition' => 'inline; filename="' . ($media->name ?: $media->file_name) . '"',
+                'Content-Disposition' => 'inline; filename="' . $media->file_name . '"',
                 'Cache-Control' => 'public, max-age=31536000', // Cache for 1 year
                 'Expires' => gmdate('D, d M Y H:i:s \G\M\T', time() + 31536000),
                 'Last-Modified' => gmdate('D, d M Y H:i:s \G\M\T', filemtime($path)),
@@ -366,85 +328,6 @@ class MediaController extends Controller
             
             return $this->errorResponse('Failed to serve media: ' . $e->getMessage(), 500);
         }
-    }
-
-    /**
-     * Create a proper download filename with extension.
-     */
-    private function createDownloadFilename(Media $media, string $extension): string
-    {
-        // Use custom name if available, otherwise use original file name
-        $baseName = $media->name ?: pathinfo($media->file_name, PATHINFO_FILENAME);
-        
-        // Clean the filename (remove special characters that might cause issues)
-        $baseName = preg_replace('/[^A-Za-z0-9\-_\s]/', '', $baseName);
-        $baseName = trim($baseName);
-        
-        // If we don't have an extension, try to determine it from mime type
-        if (empty($extension)) {
-            $extension = $this->getExtensionFromMimeType($media->mime_type);
-        }
-        
-        // Ensure we have an extension
-        if (empty($extension)) {
-            // Fallback: try to get extension from original filename
-            $extension = pathinfo($media->file_name, PATHINFO_EXTENSION);
-        }
-        
-        // Build the final filename
-        $filename = $baseName;
-        if (!empty($extension)) {
-            $filename .= '.' . $extension;
-        }
-        
-        return $filename;
-    }
-
-    /**
-     * Get file extension from MIME type.
-     */
-    private function getExtensionFromMimeType(string $mimeType): string
-    {
-        $mimeToExtension = [
-            // Images
-            'image/jpeg' => 'jpg',
-            'image/png' => 'png',
-            'image/gif' => 'gif',
-            'image/webp' => 'webp',
-            'image/svg+xml' => 'svg',
-            
-            // Documents
-            'application/pdf' => 'pdf',
-            'application/msword' => 'doc',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'docx',
-            'application/vnd.ms-excel' => 'xls',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'xlsx',
-            'application/vnd.ms-powerpoint' => 'ppt',
-            'application/vnd.openxmlformats-officedocument.presentationml.presentation' => 'pptx',
-            
-            // Text files
-            'text/plain' => 'txt',
-            'text/csv' => 'csv',
-            'application/rtf' => 'rtf',
-            
-            // Videos
-            'video/mp4' => 'mp4',
-            'video/avi' => 'avi',
-            'video/quicktime' => 'mov',
-            'video/x-msvideo' => 'avi',
-            
-            // Audio
-            'audio/mpeg' => 'mp3',
-            'audio/wav' => 'wav',
-            'audio/ogg' => 'ogg',
-            
-            // Archives
-            'application/zip' => 'zip',
-            'application/x-rar-compressed' => 'rar',
-            'application/x-7z-compressed' => '7z',
-        ];
-
-        return $mimeToExtension[$mimeType] ?? '';
     }
 
     /**
