@@ -260,7 +260,7 @@ class MediaController extends Controller
             }
             
             // Get the original file name, fallback to file_name if name is empty
-            $downloadName = $media->name ?: $media->file_name;
+            $downloadName = $media->file_name;
             
             return response()->download($path, $downloadName, [
                 'Content-Type' => $media->mime_type,
@@ -316,7 +316,7 @@ class MediaController extends Controller
             $headers = [
                 'Content-Type' => $media->mime_type,
                 'Content-Length' => $media->size,
-                'Content-Disposition' => 'inline; filename="' . ($media->name ?: $media->file_name) . '"',
+                'Content-Disposition' => 'inline; filename="' . ($media->file_name) . '"',
                 'Cache-Control' => 'public, max-age=31536000', // Cache for 1 year
                 'Expires' => gmdate('D, d M Y H:i:s \G\M\T', time() + 31536000),
                 'Last-Modified' => gmdate('D, d M Y H:i:s \G\M\T', filemtime($path)),
