@@ -79,9 +79,9 @@
                     <ProgressSpinner class="w-6 h-6" strokeWidth="4" />
                     <p class="text-sm">Loading pages...</p>
                   </div>
-                  <div v-else-if="conference.pages && conference.pages.length > 0" class="space-y-1">
+                  <div v-else-if="sortedPages && sortedPages.length > 0" class="space-y-1">
                     <Button
-                      v-for="page in conference.pages" 
+                      v-for="page in sortedPages" 
                       :key="page.id"
                       @click="selectPage(page)"
                       :label="page.title"
@@ -139,14 +139,14 @@
                       Welcome to {{ conference.title }}
                     </h2>
                     <p v-if="pagesLoading" class="opacity-75">Loading pages...</p>
-                    <p v-else-if="conference.pages?.length" class="opacity-75">
+                    <p v-else-if="sortedPages?.length" class="opacity-75">
                       Select a page from the sidebar to view its content.
                     </p>
                     <p v-else class="opacity-75">No pages are available for this conference yet.</p>
                   </div>
-                  <div v-if="conference.pages?.length" class="flex flex-wrap gap-2 justify-center">
+                  <div v-if="sortedPages?.length" class="flex flex-wrap gap-2 justify-center">
                     <Button 
-                      v-for="page in conference.pages.slice(0, 3)" 
+                      v-for="page in sortedPages.slice(0, 3)" 
                       :key="page.id"
                       :label="page.title"
                       @click="selectPage(page)"
@@ -250,6 +250,14 @@ export default defineComponent({
       error: null
     };
   },
+  computed: {
+    sortedPages(): PageMenu[] {
+      if (!this.conference?.pages) {
+        return [];
+      }
+      return [...this.conference.pages].sort((a, b) => (a.order || 0) - (b.order || 0));
+    }
+  },
   async mounted() {
     await this.loadConference();
   },
@@ -311,10 +319,9 @@ export default defineComponent({
           this.conference.pages = response.data.payload;
           console.log('Conference pages set to:', this.conference.pages);
           
-          if (this.conference.pages && this.conference.pages.length > 0) {
-            const sortedPages = [...this.conference.pages].sort((a, b) => (a.order || 0) - (b.order || 0));
-            console.log('Sorted pages:', sortedPages);
-            this.selectPage(sortedPages[0]);
+          if (this.sortedPages && this.sortedPages.length > 0) {
+            console.log('Sorted pages:', this.sortedPages);
+            this.selectPage(this.sortedPages[0]);
           }
         }
       } catch (err: any) {
