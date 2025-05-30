@@ -12,14 +12,6 @@
             v-tooltip.bottom="{ value: 'Go to public home page', pt: { text: 'px-3 py-1 text-xs rounded-2xl bg-neutral-900 text-white shadow border-none' } }"
             @click="$router.push({ name: 'HomePage' })"
           />
-          <Button
-            @click="handleLogout"
-            icon="pi pi-sign-out"
-            text
-            rounded
-            size="small"
-            v-tooltip.bottom="{ value: 'Logout from your account', pt: { text: 'px-3 py-1 text-xs rounded-2xl bg-neutral-900 text-white shadow border-none' } }"
-          ></Button>
         </div>
       </div>
     </template>
@@ -65,10 +57,6 @@ export default {
     toggleMobileMenu() {
       this.$emit('toggle-mobile-menu');
     },
-    async handleLogout() {
-      await this.authStore.logout();
-      this.$router.push({ name: 'HomePage' });
-    }
   }
 };
 </script>

@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Hash; 
 use Illuminate\Support\Facades\Log; 
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
@@ -78,30 +79,6 @@ class AuthController extends Controller
     }
 
     /**
-     * Register a new user
-     * 
-     * @param RegisterRequest $request
-     * @return JsonResponse
-     */
-    public function register(RegisterRequest $request): JsonResponse
-    {
-        $result = $this->authService->registerUser($request->validated());
-        
-        $user = $result['user'];
-        $tokens = $result['tokens'];
-        
-        $refreshTokenCookie = $this->authService->createRefreshTokenCookie(
-            $tokens['refresh_token']->plainTextToken
-        );
-
-        return $this->successResponse([
-            'user' => new UserResource($user),
-           
-            'access_token' => $tokens['access_token']->plainTextToken,
-        ], 'Registration successful', 201)->withCookie($refreshTokenCookie);
-    }
-
-    /**
      * Logout user and revoke tokens
      * 
      * @param Request $request
@@ -109,17 +86,20 @@ class AuthController extends Controller
      */
     public function logout(Request $request): JsonResponse
     {
-        $user = $request->user();
-        
-        // Release all conference locks for this user
-        $this->conferenceLockService->releaseAllUserLocks($user->id);
-        
-        // Logout user and revoke tokens
-        $this->authService->logout($user);
-        
-        $refreshTokenCookie = Cookie::forget('refresh_token');
-        
-        return $this->successResponse(null, 'Logged out successfully')->withCookie($refreshTokenCookie);
+        try {
+            $user = $request->user();
+            
+
+            $this->conferenceLockService->releaseAllUserLocks($user->id);
+
+            $request->user()->tokens()->delete();
+            
+            $refreshTokenCookie = Cookie::forget('refresh_token');
+            
+            return $this->successResponse(null, 'Logged out successfully')->withCookie($refreshTokenCookie);
+        } catch (\Exception $e) {
+            return $this->errorResponse('Log out failed', false, $e->getMessage());
+        }
     }
 
     /**
@@ -130,25 +110,33 @@ class AuthController extends Controller
      */
     public function refresh(Request $request): JsonResponse
     {
-        $refreshTokenFromCookie = $request->cookie('refresh_token');
-        
-        $result = $this->authService->refreshToken($refreshTokenFromCookie);
-        
-        if (!$result) {
-            return $this->errorResponse('Invalid refresh token', 401);
-        }
-        
-        $user = $result['user'];
-        $tokens = $result['tokens'];
-        
-        $refreshTokenCookie = $this->authService->createRefreshTokenCookie(
-            $tokens['refresh_token']->plainTextToken
-        );
+        try {
+            $refreshTokenFromCookie = $request->cookie('refresh_token');
+            
+            $tokenModel = PersonalAccessToken::findToken($refreshTokenFromCookie);
+            
+            if (!$tokenModel || !$tokenModel->can('refresh-token') || $tokenModel->expires_at->isPast()) {
+                return $this->errorResponse('Invalid refresh token', 401);
+            }
+            
+            $user = $tokenModel->tokenable;
 
-        return $this->successResponse([
-            'user' => new UserResource($user),
-            'access_token' => $tokens['access_token']->plainTextToken,
-        ], 'Token refreshed successfully')->withCookie($refreshTokenCookie);
+            $user->tokens()->delete();
+            
+            $tokens = $this->authService->createUserTokens($user);
+            
+            $refreshTokenCookie = $this->authService->createRefreshTokenCookie(
+                $tokens['refresh_token']->plainTextToken
+            );
+
+            return $this->successResponse([
+                'user' => new UserResource($user),
+                'access_token' => $tokens['access_token']->plainTextToken,
+            ], 'Token refreshed successfully')->withCookie($refreshTokenCookie);
+        } catch (\Exception $e) {
+            Log::error('Token refresh failed: ' . $e->getMessage());
+            return $this->errorResponse('Token refresh failed', 500);
+        }
     }
 
     /**

@@ -1,5 +1,10 @@
-import { AxiosError, type AxiosInstance } from 'axios';
+import { AxiosError, type AxiosInstance, type InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '@/stores/authStore';
+
+
+interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
+  _retry?: boolean;
+}
 
 const handleApiError = (error: AxiosError) => {
   if (!error.response) {
@@ -35,7 +40,7 @@ const onTokenRefreshed = (token: string) => {
 };
 
 export const responseErrorInterceptor = async (error: AxiosError, api: AxiosInstance) => {
-  const originalRequest = error.config;
+  const originalRequest = error.config as CustomAxiosRequestConfig;
 
   if (!originalRequest) {
     handleApiError(error);
@@ -46,7 +51,21 @@ export const responseErrorInterceptor = async (error: AxiosError, api: AxiosInst
     const authStore = useAuthStore();
     
     if (originalRequest.url?.includes('/auth/refresh')) {
-      console.log(originalRequest.url);
+      console.log('Refresh endpoint failed, clearing user data');
+      authStore.clearUserData();
+      handleApiError(error);
+      return Promise.reject(error);
+    }
+
+    if (originalRequest.url?.includes('/auth/login')) {
+      console.log('Login request failed, not retrying even after refresh');
+      handleApiError(error);
+      return Promise.reject(error);
+    }
+
+
+    if (originalRequest._retry) {
+      console.log('Request already retried, failing:', originalRequest.url);
       authStore.clearUserData();
       handleApiError(error);
       return Promise.reject(error);
@@ -62,6 +81,8 @@ export const responseErrorInterceptor = async (error: AxiosError, api: AxiosInst
         if (newToken) {
           onTokenRefreshed(newToken);
 
+          originalRequest._retry = true;
+          
           if (originalRequest.headers) {
             originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
           }
@@ -77,9 +98,10 @@ export const responseErrorInterceptor = async (error: AxiosError, api: AxiosInst
         isRefreshing = false;
       }
     } else {
-
       return new Promise(resolve => {
         subscribeTokenRefresh(token => {
+          originalRequest._retry = true;
+          
           if (originalRequest.headers) {
             originalRequest.headers['Authorization'] = `Bearer ${token}`;
           }

@@ -12,46 +12,29 @@
   
         <!-- Scrollable Content - Make it flex-grow to push user profile to bottom -->
         <div class="overflow-y-auto flex-grow">
-          <!-- Management Section -->
+          <!-- Navigation Items -->
           <ul class="list-none p-2 m-0">
             <li>
-              <div
-                v-ripple
-                v-styleclass="{
-                  selector: '@next',
-                  enterFromClass: 'hidden',
-                  enterActiveClass: 'animate-slidedown',
-                  leaveToClass: 'hidden',
-                  leaveActiveClass: 'animate-slideup'
-                }"
-                class="p-2 flex items-center justify-between cursor-pointer p-ripple text-sm"
-                @click="toggleSection('management')"
+              <router-link 
+                v-ripple 
+                to="/dashboard/conferences" 
+                class="flex items-center cursor-pointer p-2 rounded p-ripple text-sm"
+                :class="{ 'bg-primary-50 text-primary-600': isActiveRoute('/dashboard/conferences') }"
               >
-                <span class="font-medium">MANAGEMENT</span>
-                <i class="pi" :class="{'pi-chevron-down': sectionsExpanded.management, 'pi-chevron-right': !sectionsExpanded.management}"></i>
-              </div>
-              <ul class="list-none p-0 m-0 overflow-hidden" :class="{ 'hidden': !sectionsExpanded.management }">
-                <li>
-                  <router-link 
-                    v-ripple 
-                    to="/dashboard/conferences" 
-                    class="flex items-center cursor-pointer p-2 rounded p-ripple text-sm"
-                  >
-                    <i class="pi pi-calendar-plus mr-2"></i>
-                    <span class="font-medium">Conference Management</span>
-                  </router-link>
-                </li>
-                <li>
-                  <router-link 
-                    v-ripple 
-                    to="/dashboard/users" 
-                    class="flex items-center cursor-pointer p-2 rounded p-ripple text-sm"
-                  >
-                    <i class="pi pi-user-edit mr-2"></i>
-                    <span class="font-medium">User Management</span>
-                  </router-link>
-                </li>
-              </ul>
+                <i class="pi pi-calendar-plus mr-2"></i>
+                <span class="font-medium">Conference Management</span>
+              </router-link>
+            </li>
+            <li v-if="hasAdminAccess">
+              <router-link 
+                v-ripple 
+                to="/dashboard/users" 
+                class="flex items-center cursor-pointer p-2 rounded p-ripple text-sm"
+                :class="{ 'bg-primary-50 text-primary-600': isActiveRoute('/dashboard/users') }"
+              >
+                <i class="pi pi-user-edit mr-2"></i>
+                <span class="font-medium">User Management</span>
+              </router-link>
             </li>
           </ul>
         </div>
@@ -59,8 +42,18 @@
         <!-- User Profile - Explicitly at the bottom -->
         <div class="mt-auto shrink-0">
           <hr class="mb-2 mx-2 border-t border-0" />
-          <a v-ripple class="flex items-center cursor-pointer p-2 gap-2 rounded p-ripple text-sm" @click="handleLogout">
-            <Avatar icon="pi pi-sign-out" size="small" shape="circle" />
+          <!-- User Info Display -->
+          <div class="px-2 py-1 mb-2">
+            <div class="flex items-center gap-2 text-xs text-gray-600">
+              <Avatar :label="getUserInitials" size="small" shape="circle" class="bg-primary-100 text-primary-600" />
+              <div class="flex-1 min-w-0">
+                <div class="font-medium truncate">{{ currentUser?.name || 'User' }}</div>
+                <div class="text-xs text-gray-500 truncate">{{ getUserRole }}</div>
+              </div>
+            </div>
+          </div>
+          <a v-ripple class="flex items-center cursor-pointer p-2 gap-2 rounded p-ripple text-sm hover:bg-gray-50" @click="handleLogout">
+            <Avatar icon="pi pi-sign-out" size="small" shape="circle" class="bg-red-100 text-red-600" />
             <span class="font-medium">Logout</span>
           </a>
         </div>
@@ -84,48 +77,36 @@
         
         <!-- Scrollable Content -->
         <div class="overflow-y-auto flex-grow">
-          <!-- Management Section -->
+          <!-- Navigation Items -->
           <ul class="list-none p-2 m-0">
-            <li>
-              <div
-                v-ripple
-                v-styleclass="{
-                  selector: '@next',
-                  enterFromClass: 'hidden',
-                  enterActiveClass: 'animate-slidedown',
-                  leaveToClass: 'hidden',
-                  leaveActiveClass: 'animate-slideup'
-                }"
-                class="p-2 flex items-center justify-between cursor-pointer p-ripple text-sm"
-                @click="toggleMobileSection('management')"
+            <li v-if="hasAdminAccess">
+              <router-link 
+                v-ripple 
+                to="/dashboard/conferences" 
+                class="flex items-center cursor-pointer p-2 rounded p-ripple text-sm"
+                :class="{ 'bg-primary-50 text-primary-600': isActiveRoute('/dashboard/conferences') }"
+                @click="closeMobileDrawer"
               >
-                <span class="font-medium">MANAGEMENT</span>
-                <i class="pi" :class="{'pi-chevron-down': mobileSectionsExpanded.management, 'pi-chevron-right': !mobileSectionsExpanded.management}"></i>
-              </div>
-              <ul class="list-none p-0 m-0 overflow-hidden">
-                <li>
-                  <router-link 
-                    v-ripple 
-                    to="/dashboard/conferences" 
-                    class="flex items-center cursor-pointer p-2 rounded p-ripple text-sm"
-                    @click="closeMobileDrawer"
-                  >
-                    <i class="pi pi-calendar-plus mr-2"></i>
-                    <span class="font-medium">Conference Management</span>
-                  </router-link>
-                </li>
-                <li>
-                  <router-link 
-                    v-ripple 
-                    to="/dashboard/users" 
-                    class="flex items-center cursor-pointer p-2 rounded p-ripple text-sm"
-                    @click="closeMobileDrawer"
-                  >
-                    <i class="pi pi-user-edit mr-2"></i>
-                    <span class="font-medium">User Management</span>
-                  </router-link>
-                </li>
-              </ul>
+                <i class="pi pi-calendar-plus mr-2"></i>
+                <span class="font-medium">Conference Management</span>
+              </router-link>
+            </li>
+            <li v-if="hasAdminAccess">
+              <router-link 
+                v-ripple 
+                to="/dashboard/users" 
+                class="flex items-center cursor-pointer p-2 rounded p-ripple text-sm"
+                :class="{ 'bg-primary-50 text-primary-600': isActiveRoute('/dashboard/users') }"
+                @click="closeMobileDrawer"
+              >
+                <i class="pi pi-user-edit mr-2"></i>
+                <span class="font-medium">User Management</span>
+              </router-link>
+            </li>
+            <!-- Show message if no admin access -->
+            <li v-if="!hasAdminAccess" class="p-2 text-sm text-gray-500">
+              <i class="pi pi-lock mr-2"></i>
+              <span>Admin access required</span>
             </li>
           </ul>
         </div>
@@ -133,8 +114,18 @@
         <!-- User Profile -->
         <div class="mt-auto shrink-0">
           <hr class="mb-2 mx-2 border-t border-0"/>
-          <a v-ripple class="flex items-center cursor-pointer p-2 gap-2 rounded p-ripple text-sm" @click="handleLogout">
-            <Avatar icon="pi pi-sign-out" size="small" shape="circle" />
+          <!-- User Info Display -->
+          <div class="px-2 py-1 mb-2">
+            <div class="flex items-center gap-2 text-xs text-gray-600">
+              <Avatar :label="getUserInitials" size="small" shape="circle" class="bg-primary-100 text-primary-600" />
+              <div class="flex-1 min-w-0">
+                <div class="font-medium truncate">{{ currentUser?.name || 'User' }}</div>
+                <div class="text-xs text-gray-500 truncate">{{ getUserRole }}</div>
+              </div>
+            </div>
+          </div>
+          <a v-ripple class="flex items-center cursor-pointer p-2 gap-2 rounded p-ripple text-sm hover:bg-gray-50" @click="handleLogout">
+            <Avatar icon="pi pi-sign-out" size="small" shape="circle" class="bg-red-100 text-red-600" />
             <span class="font-medium">Logout</span>
           </a>
         </div>
@@ -171,12 +162,6 @@ export default {
   data() {
     return {
       mobileDrawerVisible: false,
-      sectionsExpanded: {
-        management: true
-      },
-      mobileSectionsExpanded: {
-        management: true
-      },
       isMobileView: false,
       cardPt: {
         // Pass through props to remove padding and set proper styling
@@ -185,6 +170,38 @@ export default {
         root: { class: 'border-none' }
       }
     };
+  },
+  computed: {
+    hasAdminAccess() {
+      return this.authStore.hasAdminAccess;
+    },
+    currentUser() {
+      return this.authStore.getUser;
+    },
+    getUserInitials() {
+      if (!this.currentUser?.name) return 'U';
+      return this.currentUser.name
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase())
+        .slice(0, 2)
+        .join('');
+    },
+    getUserRole() {
+      if (!this.currentUser?.roles?.length) return 'User';
+      
+      // Prioritize role display: super_admin > admin > editor > other roles
+      const roleHierarchy = ['super_admin', 'admin', 'editor'];
+      const userRoleNames = this.currentUser.roles.map(role => role.name);
+      
+      for (const role of roleHierarchy) {
+        if (userRoleNames.includes(role)) {
+          return role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+      }
+      
+      // Return first role if none match hierarchy
+      return this.currentUser.roles[0].name.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
   },
   setup() {
     const authStore = useAuthStore();
@@ -211,12 +228,6 @@ export default {
   methods: {
     checkViewport() {
       this.isMobileView = window.innerWidth < 768;
-    },
-    toggleSection(section) {
-      this.sectionsExpanded[section] = !this.sectionsExpanded[section];
-    },
-    toggleMobileSection(section) {
-      this.mobileSectionsExpanded[section] = !this.mobileSectionsExpanded[section];
     },
     isActiveRoute(path) {
       return this.$route.path === path || this.$route.path.startsWith(`${path}/`);

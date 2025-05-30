@@ -79,6 +79,14 @@ export const useAuthStore = defineStore('auth', {
       this.error = null;
 
       try {
+        console.log('Checking if user is already authenticated...');
+        const refreshSuccess = await this.tryRefreshToken();
+        
+        if (refreshSuccess) {
+          return true;
+        }
+
+        console.log('User not authenticated, proceeding with login');
         const response = await apiService.auth.login(credentials.email, credentials.password);
         const authData = response.data.payload;
         console.log(response);
@@ -94,7 +102,7 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    async register(credentials: RegisterRequest) {
+    async regFister(credentials: RegisterRequest) {
       this.isLoading = true;
       this.error = null;
 
@@ -148,6 +156,18 @@ export const useAuthStore = defineStore('auth', {
         return false;
       } finally {
         this.isLoading = false;
+      }
+    },
+
+    async tryRefreshToken() {
+      try {
+        const response = await apiService.auth.refresh();
+        const authData = response.data.payload;
+        this.setUserData(authData);
+        return true;
+      } catch (error: any) {
+        console.log('Silent refresh failed:', error.response?.data?.message || 'Session expired');
+        return false;
       }
     },
 
