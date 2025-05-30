@@ -6,7 +6,7 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-import ConferenceEditor from '@/components/dashboard/ConferenceEditor.vue';
+import ConferenceEditor from '@/components/dashboard/PageEditor/ConferenceEditor.vue';
 
 export default defineComponent({
   name: 'ConferenceEditorView',

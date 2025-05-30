@@ -875,9 +875,9 @@ import { defineComponent } from 'vue';
 import { usePageMenuStore } from '@/stores/pageMenuStore';
 import { useRoute } from 'vue-router';
 import apiService from '@/services/apiService';
-import EditorComponent from '@/components/dashboard/ConferenceManagement/EditorComponents/EditorComponent.vue';
-import ContactComponent from '@/components/dashboard/ConferenceManagement/EditorComponents/ContactComponent.vue';
-import MediaManager from '@/components/dashboard/ConferenceManagement/EditorComponents/MediaManager.vue';
+import EditorComponent from '@/components/dashboard/PageEditor/EditorComponents/Editor.vue';
+import ContactComponent from '@/components/dashboard/PageEditor/EditorComponents/Contact.vue';
+import MediaManager from '@/components/dashboard/PageEditor/MediaManager.vue';
 
 export default defineComponent({
   name: 'ConferenceEditor',
