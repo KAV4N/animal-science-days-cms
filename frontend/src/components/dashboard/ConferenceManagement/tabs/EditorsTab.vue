@@ -24,7 +24,7 @@
           />
         </span>
 
-        <Dropdown
+        <Select
           v-model="filters.university_id"
           :options="universities"
           optionLabel="full_name"
@@ -111,7 +111,7 @@
             />
           </span>
 
-          <Dropdown
+          <Select
             v-model="unattachedFilters.university_id"
             :options="universities"
             optionLabel="full_name"

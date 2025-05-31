@@ -99,7 +99,7 @@
                 <!-- Collection Filter -->
                 <div class="flex items-center gap-2">
                   <label class="text-sm font-medium whitespace-nowrap">Collection:</label>
-                  <Dropdown
+                  <Select
                     v-model="mediaSelectedCollection"
                     :options="mediaCollectionOptions"
                     option-label="label"

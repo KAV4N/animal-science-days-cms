@@ -15,7 +15,6 @@ import Avatar from 'primevue/avatar'
 import Badge from 'primevue/badge'
 import Breadcrumb from 'primevue/breadcrumb'
 import Button from 'primevue/button'
-import Calendar from 'primevue/calendar'
 import Card from 'primevue/card'
 import Checkbox from 'primevue/checkbox'
 import CheckboxGroup from 'primevue/checkboxgroup'
@@ -73,6 +72,8 @@ import router from './router'
 
 import { useAuthStore } from '@/stores/authStore'
 import './plugins/axios'
+import DatePicker from 'primevue/datepicker'
+import Select from 'primevue/select'
 
 startApp()
 
@@ -108,7 +109,7 @@ async function startApp() {
   app.component('Badge', Badge)
   app.component('Breadcrumb', Breadcrumb)
   app.component('Button', Button)
-  app.component('Calendar', Calendar)
+  app.component('DatePicker', DatePicker)
   app.component('Card', Card)
   app.component('Checkbox', Checkbox)
   app.component('CheckboxGroup', CheckboxGroup)
@@ -120,7 +121,7 @@ async function startApp() {
   app.component('Dialog', Dialog)
   app.component('Divider', Divider)
   app.component('Drawer', Drawer)
-  app.component('Dropdown', Dropdown)
+  app.component('Select', Select)
   app.component('FileUpload', FileUpload)
   app.component('IconField', IconField)
   app.component('InputGroup', InputGroup)

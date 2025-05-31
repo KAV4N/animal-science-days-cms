@@ -54,14 +54,14 @@
       
       <div>
         <label for="role" class="block font-bold mb-2">Role</label>
-        <Dropdown id="role" v-model="userData.role" :options="availableRoles" optionLabel="label" optionValue="value" 
+        <Select id="role" v-model="userData.role" :options="availableRoles" optionLabel="label" optionValue="value" 
           placeholder="Select a Role" :invalid="submitted && !userData.role" class="w-full" />
         <small v-if="submitted && !userData.role" class="text-red-500">Role is required.</small>
       </div>
       
       <div>
         <label for="university" class="block font-bold mb-2">University</label>
-        <Dropdown id="university" v-model="userData.university_id" :options="universities" optionLabel="full_name" 
+        <Select id="university" v-model="userData.university_id" :options="universities" optionLabel="full_name" 
           optionValue="id" placeholder="Select a University" :invalid="submitted && !userData.university_id" class="w-full" />
         <small v-if="submitted && !userData.university_id" class="text-red-500">University is required.</small>
       </div>

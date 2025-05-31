@@ -35,7 +35,7 @@
             <div class="flex flex-column md:flex-row md:justify-between md:items-center gap-2">
               <h4 class="m-0">Manage Users</h4>
               <div class="flex items-center gap-2">
-                <Dropdown v-model="filters.roles" :options="getRoleFilterOptions()" optionLabel="label" 
+                <Select v-model="filters.roles" :options="getRoleFilterOptions()" optionLabel="label" 
                   optionValue="value" placeholder="Filter by Role" class="w-48" @change="onRoleFilterChange" />
                 
                 <InputGroup class="w-full md:w-auto">

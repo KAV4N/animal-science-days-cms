@@ -340,7 +340,7 @@ export default defineComponent({
       localVisible: false
     };
   },
-      watch: {
+  watch: {
     visible: {
       handler(newVal) {
         this.localVisible = newVal;
@@ -380,13 +380,9 @@ export default defineComponent({
     initializeData() {
       this.localComponentName = this.componentName;
       
-      // Handle both raw data and data with content wrapper
+      // Handle both direct data and wrapped data structures
       let contactData;
-      if (this.componentData?.rawData) {
-        // Editing existing component with rawData
-        contactData = this.componentData.rawData;
-      } else if (this.componentData && typeof this.componentData === 'object' && !this.componentData.content) {
-        // Direct contact data object
+      if (this.componentData && typeof this.componentData === 'object') {
         contactData = this.componentData;
       } else {
         // Default data for new component
@@ -434,129 +430,16 @@ export default defineComponent({
       this.localPublished = this.isPublished;
     },
     handleSave() {
-      // Convert contact data to HTML format for database storage
-      const htmlContent = this.generateContactHTML();
-      
+      // Save only the raw contact data - no HTML generation
       this.$emit('save', {
         name: this.localComponentName,
-        data: { 
-          content: htmlContent,
-          rawData: this.localContactData // Keep raw data for editing
-        },
+        data: this.localContactData,
         isPublished: this.localPublished
       });
     },
     handleCancel() {
       this.$emit('cancel');
       this.$emit('update:visible', false);
-    },
-    generateContactHTML(): string {
-      const data = this.localContactData;
-      
-      let html = `<div class="contact-section">`;
-      
-      if (data.title) {
-        html += `<h2 class="text-2xl font-bold mb-4">${data.title}</h2>`;
-      }
-      
-      if (data.description) {
-        html += `<p class="mb-6">${data.description}</p>`;
-      }
-      
-      html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-6">`;
-      
-      // Contact Information
-      html += `<div class="space-y-4">`;
-      html += `<h3 class="text-lg font-semibold mb-4">Contact Information</h3>`;
-      
-      if (data.email) {
-        html += `<div class="flex items-center gap-3">
-          <i class="pi pi-envelope"></i>
-          <a href="mailto:${data.email}" class="text-blue-600 hover:underline">${data.email}</a>
-        </div>`;
-      }
-      
-      if (data.phone) {
-        html += `<div class="flex items-center gap-3">
-          <i class="pi pi-phone"></i>
-          <a href="tel:${data.phone}" class="text-blue-600 hover:underline">${data.phone}</a>
-        </div>`;
-      }
-      
-      if (data.website) {
-        html += `<div class="flex items-center gap-3">
-          <i class="pi pi-globe"></i>
-          <a href="${data.website}" target="_blank" class="text-blue-600 hover:underline">${data.website}</a>
-        </div>`;
-      }
-      
-      if (data.hours) {
-        html += `<div class="flex items-center gap-3">
-          <i class="pi pi-clock"></i>
-          <span>${data.hours}</span>
-        </div>`;
-      }
-      
-      html += `</div>`;
-      
-      // Address Information
-      const hasAddress = data.address || data.city || data.state || data.zip || data.country;
-      if (hasAddress) {
-        html += `<div class="space-y-4">`;
-        html += `<h3 class="text-lg font-semibold mb-4">Address</h3>`;
-        html += `<div class="flex items-start gap-3">`;
-        html += `<i class="pi pi-map-marker mt-1"></i>`;
-        html += `<div>`;
-        
-        if (data.address) html += `<div>${data.address}</div>`;
-        
-        const cityStateZip = [data.city, data.state, data.zip].filter(Boolean).join(', ');
-        if (cityStateZip) html += `<div>${cityStateZip}</div>`;
-        
-        if (data.country) html += `<div>${data.country}</div>`;
-        
-        html += `</div></div></div>`;
-      }
-      
-      html += `</div>`;
-      
-      // Social Media
-      const hasSocial = Object.values(data.social).some(url => url);
-      if (hasSocial) {
-        html += `<div class="mt-8">`;
-        html += `<h3 class="text-lg font-semibold mb-4">Follow Us</h3>`;
-        html += `<div class="flex gap-4">`;
-        
-        if (data.social.facebook) {
-          html += `<a href="${data.social.facebook}" target="_blank" class="text-blue-600 hover:text-blue-800">
-            <i class="pi pi-facebook text-xl"></i>
-          </a>`;
-        }
-        
-        if (data.social.twitter) {
-          html += `<a href="${data.social.twitter}" target="_blank" class="text-blue-400 hover:text-blue-600">
-            <i class="pi pi-twitter text-xl"></i>
-          </a>`;
-        }
-        
-        if (data.social.linkedin) {
-          html += `<a href="${data.social.linkedin}" target="_blank" class="text-blue-700 hover:text-blue-900">
-            <i class="pi pi-linkedin text-xl"></i>
-          </a>`;
-        }
-        
-        if (data.social.instagram) {
-          html += `<a href="${data.social.instagram}" target="_blank" class="text-pink-600 hover:text-pink-800">
-            <i class="pi pi-instagram text-xl"></i>
-          </a>`;
-        }
-        
-        html += `</div></div>`;
-      }
-      
-      html += `</div>`;
-      
-      return html;
     }
   }
 });

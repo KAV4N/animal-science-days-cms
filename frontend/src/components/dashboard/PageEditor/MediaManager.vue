@@ -17,7 +17,7 @@
               <!-- Collection Filter -->
               <div class="flex items-center gap-2">
                 <label class="text-sm font-medium whitespace-nowrap">Collection:</label>
-                <Dropdown
+                <Select
                   v-model="selectedCollection"
                   :options="collectionOptions"
                   option-label="label"
@@ -218,7 +218,7 @@
               <!-- Collection Selection -->
               <div>
                 <label for="uploadCollection" class="block text-sm font-medium mb-2">Collection *</label>
-                <Dropdown
+                <Select
                   id="uploadCollection"
                   v-model="uploadData.collection"
                   :options="uploadCollectionOptions"

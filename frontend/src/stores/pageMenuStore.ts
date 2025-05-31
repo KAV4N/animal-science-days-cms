@@ -6,10 +6,12 @@ import type {
   PageMenuResponse, 
   PageMenuListResponse,
   PageDataResponse,
+  PageDataListResponse,
   PageMenuStoreRequest,
   PageMenuUpdateRequest,
   PageDataStoreRequest,
-  PageDataUpdateRequest
+  PageDataUpdateRequest,
+  ApiResponse
 } from '@/types/pageMenu';
 
 interface PageMenuState {
@@ -22,6 +24,15 @@ interface PageMenuState {
     isLocked: boolean;
     lockInfo: any | null;
   };
+  // Pagination state
+  menusLoading: boolean;
+  menusHasMore: boolean;
+  menusCurrentPage: number;
+  menusTotalPages: number;
+  pageDataLoading: { [menuId: number]: boolean };
+  pageDataHasMore: { [menuId: number]: boolean };
+  pageDataCurrentPage: { [menuId: number]: number };
+  pageDataTotalPages: { [menuId: number]: number };
 }
 
 export const usePageMenuStore = defineStore('pageMenu', {
@@ -34,7 +45,16 @@ export const usePageMenuStore = defineStore('pageMenu', {
     lockStatus: {
       isLocked: false,
       lockInfo: null,
-    }
+    },
+    // Pagination state initialization
+    menusLoading: false,
+    menusHasMore: true,
+    menusCurrentPage: 0,
+    menusTotalPages: 1,
+    pageDataLoading: {},
+    pageDataHasMore: {},
+    pageDataCurrentPage: {},
+    pageDataTotalPages: {},
   }),
 
   getters: {
@@ -48,12 +68,32 @@ export const usePageMenuStore = defineStore('pageMenu', {
     
     isLocked: (state) => {
       return state.lockStatus.isLocked;
+    },
+
+    isMenusLoading: (state) => {
+      return state.menusLoading;
+    },
+
+    isPageDataLoading: (state) => (menuId: number) => {
+      return state.pageDataLoading[menuId] || false;
     }
   },
 
   actions: {
     setConferenceId(id: number) {
       this.conferenceId = id;
+      // Reset pagination state when conference changes
+      this.resetPaginationState();
+    },
+
+    resetPaginationState() {
+      this.menusCurrentPage = 0;
+      this.menusTotalPages = 1;
+      this.menusHasMore = true;
+      this.pageDataLoading = {};
+      this.pageDataHasMore = {};
+      this.pageDataCurrentPage = {};
+      this.pageDataTotalPages = {};
     },
     
     sortMenusByOrder() {
@@ -113,19 +153,19 @@ export const usePageMenuStore = defineStore('pageMenu', {
         this.loading = false;
       }
     },
-    
-    async fetchMenus() {
+
+    async fetchAllMenus(params: Record<string, any> = {}) {
       if (!this.conferenceId) return;
       
       try {
-        this.loading = true;
+        this.menusLoading = true;
         this.error = null;
+        this.menus = []; // Reset menus for fresh load
+        this.menusCurrentPage = 0;
+        this.menusHasMore = true;
+
+        await this.loadAllMenusPages(params);
         
-        const response = await apiService.get<PageMenuListResponse>(
-          `/v1/conferences/${this.conferenceId}/menus`
-        );
-        
-        this.menus = response.data.payload;
         this.sortMenusByOrder();
         
         if (this.menus.length > 0 && !this.selectedMenu) {
@@ -134,8 +174,37 @@ export const usePageMenuStore = defineStore('pageMenu', {
       } catch (error: any) {
         this.error = error.response?.data?.message || 'Failed to fetch menus';
       } finally {
-        this.loading = false;
+        this.menusLoading = false;
       }
+    },
+
+    async loadAllMenusPages(params: Record<string, any> = {}) {
+      while (this.menusHasMore && !this.error) {
+        const nextPage = this.menusCurrentPage + 1;
+        
+        const response = await apiService.get<PageMenuListResponse>(
+          `/v1/conferences/${this.conferenceId}/menus`,
+          { 
+            params: { 
+              ...params,
+              page: nextPage 
+            } 
+          }
+        );
+
+        const newMenus = response.data.payload;
+        this.menus.push(...newMenus);
+        
+        // Update pagination state
+        this.menusCurrentPage = response.data.meta.current_page;
+        this.menusTotalPages = response.data.meta.last_page;
+        this.menusHasMore = this.menusCurrentPage < this.menusTotalPages;
+      }
+    },
+    
+    // Legacy method for backward compatibility
+    async fetchMenus() {
+      return this.fetchAllMenus();
     },
     
     async fetchMenu(menuId: number) {
@@ -151,8 +220,16 @@ export const usePageMenuStore = defineStore('pageMenu', {
         
         const fetchedMenu = response.data.payload;
         
+        // Load all page data for this menu
         if (fetchedMenu.page_data) {
           fetchedMenu.page_data.sort((a, b) => a.order - b.order);
+        } else {
+          // If page_data is not included, fetch it separately
+          await this.fetchAllPageData(menuId);
+          const menuWithData = this.menus.find(m => m.id === menuId);
+          if (menuWithData) {
+            fetchedMenu.page_data = menuWithData.page_data;
+          }
         }
         
         const index = this.menus.findIndex(m => m.id === menuId);
@@ -170,6 +247,69 @@ export const usePageMenuStore = defineStore('pageMenu', {
         return null;
       } finally {
         this.loading = false;
+      }
+    },
+
+    async fetchAllPageData(menuId: number, params: Record<string, any> = {}) {
+      if (!this.conferenceId) return;
+      
+      try {
+        this.pageDataLoading[menuId] = true;
+        this.error = null;
+        
+        // Reset page data pagination state for this menu
+        this.pageDataCurrentPage[menuId] = 0;
+        this.pageDataHasMore[menuId] = true;
+        
+        // Find the menu and reset its page_data
+        const menu = this.menus.find(m => m.id === menuId);
+        if (menu) {
+          menu.page_data = [];
+        }
+
+        await this.loadAllPageDataPages(menuId, params);
+        
+        // Sort page data by order
+        if (menu && menu.page_data) {
+          menu.page_data.sort((a, b) => a.order - b.order);
+        }
+        
+      } catch (error: any) {
+        this.error = error.response?.data?.message || 'Failed to fetch page data';
+      } finally {
+        this.pageDataLoading[menuId] = false;
+      }
+    },
+
+    async loadAllPageDataPages(menuId: number, params: Record<string, any> = {}) {
+      while (this.pageDataHasMore[menuId] && !this.error) {
+        const nextPage = (this.pageDataCurrentPage[menuId] || 0) + 1;
+        
+        const response = await apiService.get<PageDataListResponse>(
+          `/v1/conferences/${this.conferenceId}/menus/${menuId}/data`,
+          { 
+            params: { 
+              ...params,
+              page: nextPage 
+            } 
+          }
+        );
+
+        const newPageData = response.data.payload;
+        
+        // Find the menu and add the new page data
+        const menu = this.menus.find(m => m.id === menuId);
+        if (menu) {
+          if (!menu.page_data) {
+            menu.page_data = [];
+          }
+          menu.page_data.push(...newPageData);
+        }
+        
+        // Update pagination state
+        this.pageDataCurrentPage[menuId] = response.data.meta.current_page;
+        this.pageDataTotalPages[menuId] = response.data.meta.last_page;
+        this.pageDataHasMore[menuId] = this.pageDataCurrentPage[menuId] < this.pageDataTotalPages[menuId];
       }
     },
     
@@ -292,6 +432,12 @@ export const usePageMenuStore = defineStore('pageMenu', {
           }
         }
         
+        // Clean up pagination state for deleted menu
+        delete this.pageDataLoading[menuId];
+        delete this.pageDataHasMore[menuId];
+        delete this.pageDataCurrentPage[menuId];
+        delete this.pageDataTotalPages[menuId];
+        
         return true;
       } catch (error: any) {
         this.error = error.response?.data?.message || 'Failed to delete menu';
@@ -321,6 +467,7 @@ export const usePageMenuStore = defineStore('pageMenu', {
           menu.page_data.sort((a, b) => a.order - b.order);
         }
         
+        // Optionally refresh the full menu to ensure consistency
         await this.fetchMenu(menuId);
         
         return newPageData;
@@ -455,6 +602,7 @@ export const usePageMenuStore = defineStore('pageMenu', {
         isLocked: false,
         lockInfo: null
       };
+      this.resetPaginationState();
     }
   }
 });

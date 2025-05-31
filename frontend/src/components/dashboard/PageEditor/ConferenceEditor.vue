@@ -738,7 +738,7 @@
                 
                 <div>
                   <label for="componentType" class="block text-sm font-medium mb-2">Component Type</label>
-                  <Dropdown
+                  <Select
                     id="componentType"
                     v-model="newComponentType"
                     :options="availableComponentTypes"
@@ -1167,7 +1167,6 @@ export default defineComponent({
             }
           };
           componentData = {
-            content: this.generateContactHTML(defaultContactData),
             rawData: defaultContactData
           };
         } else {
@@ -1318,112 +1317,6 @@ export default defineComponent({
       const menus = this.pageMenuStore.menus;
       if (menus.length === 0) return false;
       return menuId === menus[menus.length - 1].id;
-    },
-    generateContactHTML(data: any): string {
-      let html = `<div class="contact-section">`;
-      
-      if (data.title) {
-        html += `<h2 class="text-2xl font-bold mb-4">${data.title}</h2>`;
-      }
-      
-      if (data.description) {
-        html += `<p class="mb-6">${data.description}</p>`;
-      }
-      
-      html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-6">`;
-      
-      // Contact Information
-      html += `<div class="space-y-4">`;
-      html += `<h3 class="text-lg font-semibold mb-4">Contact Information</h3>`;
-      
-      if (data.email) {
-        html += `<div class="flex items-center gap-3">
-          <i class="pi pi-envelope"></i>
-          <a href="mailto:${data.email}" class="text-blue-600 hover:underline">${data.email}</a>
-        </div>`;
-      }
-      
-      if (data.phone) {
-        html += `<div class="flex items-center gap-3">
-          <i class="pi pi-phone"></i>
-          <a href="tel:${data.phone}" class="text-blue-600 hover:underline">${data.phone}</a>
-        </div>`;
-      }
-      
-      if (data.website) {
-        html += `<div class="flex items-center gap-3">
-          <i class="pi pi-globe"></i>
-          <a href="${data.website}" target="_blank" class="text-blue-600 hover:underline">${data.website}</a>
-        </div>`;
-      }
-      
-      if (data.hours) {
-        html += `<div class="flex items-center gap-3">
-          <i class="pi pi-clock"></i>
-          <span>${data.hours}</span>
-        </div>`;
-      }
-      
-      html += `</div>`;
-      
-      // Address Information
-      const hasAddress = data.address || data.city || data.state || data.zip || data.country;
-      if (hasAddress) {
-        html += `<div class="space-y-4">`;
-        html += `<h3 class="text-lg font-semibold mb-4">Address</h3>`;
-        html += `<div class="flex items-start gap-3">`;
-        html += `<i class="pi pi-map-marker mt-1"></i>`;
-        html += `<div>`;
-        
-        if (data.address) html += `<div>${data.address}</div>`;
-        
-        const cityStateZip = [data.city, data.state, data.zip].filter(Boolean).join(', ');
-        if (cityStateZip) html += `<div>${cityStateZip}</div>`;
-        
-        if (data.country) html += `<div>${data.country}</div>`;
-        
-        html += `</div></div></div>`;
-      }
-      
-      html += `</div>`;
-      
-      // Social Media
-      const hasSocial = Object.values(data.social).some((url: any) => url);
-      if (hasSocial) {
-        html += `<div class="mt-8">`;
-        html += `<h3 class="text-lg font-semibold mb-4">Follow Us</h3>`;
-        html += `<div class="flex gap-4">`;
-        
-        if (data.social.facebook) {
-          html += `<a href="${data.social.facebook}" target="_blank" class="text-blue-600 hover:text-blue-800">
-            <i class="pi pi-facebook text-xl"></i>
-          </a>`;
-        }
-        
-        if (data.social.twitter) {
-          html += `<a href="${data.social.twitter}" target="_blank" class="text-blue-400 hover:text-blue-600">
-            <i class="pi pi-twitter text-xl"></i>
-          </a>`;
-        }
-        
-        if (data.social.linkedin) {
-          html += `<a href="${data.social.linkedin}" target="_blank" class="text-blue-700 hover:text-blue-900">
-            <i class="pi pi-linkedin text-xl"></i>
-          </a>`;
-        }
-        
-        if (data.social.instagram) {
-          html += `<a href="${data.social.instagram}" target="_blank" class="text-pink-600 hover:text-pink-800">
-            <i class="pi pi-instagram text-xl"></i>
-          </a>`;
-        }
-        
-        html += `</div></div>`;
-      }
-      
-      html += `</div>`;
-      
-      return html;
     }
   }
 });

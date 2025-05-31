@@ -1,10 +1,10 @@
-const componentRegistry = {
-    'wysiwyg': {
-      edit: () => import('./components/editor/WysiwygEditor.vue'),
-      public: () => import('./components/public/WysiwygDisplay.vue')
-    },
-    'banner': {
-      edit: () => import('./components/editor/BannerEditor.vue'),
-      public: () => import('./components/public/BannerDisplay.vue')
-    },
-  }
+export const componentRegistry = {
+  'wysiwyg': {
+    edit: () => import('@/components/dashboard/PageEditor/EditorComponents/Editor.vue'),
+    public: () => import('@/components/site/SiteComponents/Editor.vue')
+  },
+  'contact': {
+    edit: () => import('@/components/dashboard/PageEditor/EditorComponents/Contact.vue'),
+    public: () => import('@/components/site/SiteComponents/Contact.vue')
+  },
+}

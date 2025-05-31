@@ -4,7 +4,7 @@
     <div class="grid md:grid-cols-2 gap-6">
       <div class="space-y-2">
         <label for="start_date" class="text-sm font-medium text-gray-700">Start Date *</label>
-        <Calendar
+        <DatePicker 
           id="start_date"
           v-model="v$.formData.start_date.$model"
           dateFormat="yy-mm-dd"
@@ -27,7 +27,7 @@
               <i class="pi pi-calendar text-gray-500 ml-2"></i>
             </div>
           </template>
-        </Calendar>
+        </DatePicker>
         <small v-if="v$.formData.start_date.$error" class="text-red-500 text-xs flex items-center gap-1 mt-1">
           <i class="pi pi-info-circle text-xs"></i>
           {{ v$.formData.start_date.$errors[0]?.$message }}
@@ -36,7 +36,7 @@
 
       <div class="space-y-2">
         <label for="end_date" class="text-sm font-medium text-gray-700">End Date *</label>
-        <Calendar
+        <DatePicker 
           id="end_date"
           v-model="v$.formData.end_date.$model"
           dateFormat="yy-mm-dd"
@@ -60,7 +60,7 @@
               <i class="pi pi-calendar text-gray-500 ml-2"></i>
             </div>
           </template>
-        </Calendar>
+        </DatePicker >
         <small v-if="v$.formData.end_date.$error" class="text-red-500 text-xs flex items-center gap-1 mt-1">
           <i class="pi pi-info-circle text-xs"></i>
           {{ v$.formData.end_date.$errors[0]?.$message }}

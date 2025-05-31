@@ -12,31 +12,49 @@ class UniversitySeeder extends Seeder
      */
     public function run(): void
     {
-        // Create 4 universities
         $universities = [
             [
-                'full_name' => 'Massachusetts Institute of Technology',
-                'country' => 'United States',
-                'city' => 'Cambridge'
+                'full_name' => 'University of Ljubljana, Biotechnical Faculty, Department of Animal Science',
+                'country' => 'Slovenia',
+                'city' => 'Ljubljana',
             ],
             [
-                'full_name' => 'University of Oxford',
-                'country' => 'United Kingdom',
-                'city' => 'Oxford'
+                'full_name' => 'University of Zagreb, Faculty of Agriculture',
+                'country' => 'Croatia',
+                'city' => 'Zagreb',
             ],
             [
-                'full_name' => 'University of Tokyo',
-                'country' => 'Japan',
-                'city' => 'Tokyo'
+                'full_name' => 'Josip Juraj Strossmayer University of Osijek, Faculty of Agrobiotechnical Sciences Osijek',
+                'country' => 'Croatia',
+                'city' => 'Osijek',
             ],
             [
-                'full_name' => 'University of Toronto',
-                'country' => 'Canada',
-                'city' => 'Toronto'
-            ]
+                'full_name' => 'BOKU University',
+                'country' => 'Austria',
+                'city' => 'Vienna',
+            ],
+            [
+                'full_name' => 'University of Padua',
+                'country' => 'Italy',
+                'city' => 'Padua',
+            ],
+            [
+                'full_name' => 'Czech University of Life Sciences Prague',
+                'country' => 'Czech Republic',
+                'city' => 'Prague',
+            ],
+            [
+                'full_name' => 'Hungarian University of Agricultural and Life Sciences',
+                'country' => 'Hungary',
+                'city' => 'Budapest', 
+            ],
+            [
+                'full_name' => 'Slovak University of Agriculture in Nitra',
+                'country' => 'Slovakia',
+                'city' => 'Nitra',
+            ],
         ];
 
-        // Insert universities into database
         foreach ($universities as $university) {
             University::create($university);
         }

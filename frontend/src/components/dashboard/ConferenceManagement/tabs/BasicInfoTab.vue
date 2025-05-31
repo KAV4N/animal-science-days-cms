@@ -55,7 +55,7 @@
 
       <div class="space-y-2">
         <label for="university" class="text-sm font-medium text-gray-700">University *</label>
-        <Dropdown
+        <Select
           id="university"
           v-model="v$.formData.university_id.$model"
           :options="universities"
@@ -75,7 +75,7 @@
               <span>{{ slotProps.option.full_name }}</span>
             </div>
           </template>
-        </Dropdown>
+        </Select>
         <small v-if="v$.formData.university_id.$error" class="text-red-500 text-xs flex items-center gap-1 mt-1">
           <i class="pi pi-info-circle text-xs"></i>
           {{ v$.formData.university_id.$errors[0]?.$message }}
