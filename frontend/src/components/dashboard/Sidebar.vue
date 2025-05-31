@@ -52,7 +52,7 @@
               </div>
             </div>
           </div>
-          <a v-ripple class="flex items-center cursor-pointer p-2 gap-2 rounded p-ripple text-sm hover:bg-gray-50" @click="handleLogout">
+          <a v-ripple class="flex items-center cursor-pointer p-2 gap-2 rounded p-ripple text-sm hover:bg-gray-50" @click="confirmLogout">
             <Avatar icon="pi pi-sign-out" size="small" shape="circle" class="bg-red-100 text-red-600" />
             <span class="font-medium">Logout</span>
           </a>
@@ -124,7 +124,7 @@
               </div>
             </div>
           </div>
-          <a v-ripple class="flex items-center cursor-pointer p-2 gap-2 rounded p-ripple text-sm hover:bg-gray-50" @click="handleLogout">
+          <a v-ripple class="flex items-center cursor-pointer p-2 gap-2 rounded p-ripple text-sm hover:bg-gray-50" @click="confirmLogout">
             <Avatar icon="pi pi-sign-out" size="small" shape="circle" class="bg-red-100 text-red-600" />
             <span class="font-medium">Logout</span>
           </a>
@@ -132,6 +132,8 @@
       </div>
     </template>
   </Drawer>
+  
+  <ConfirmDialog />
 </template>
 
 <script>
@@ -140,6 +142,7 @@ import Button from 'primevue/button';
 import Drawer from 'primevue/drawer';
 import Card from 'primevue/card';
 import { useAuthStore } from '@/stores/authStore';
+import { useConfirm } from 'primevue/useconfirm';
 
 export default {
   name: 'DashboardSidebar',
@@ -205,7 +208,8 @@ export default {
   },
   setup() {
     const authStore = useAuthStore();
-    return { authStore };
+    const confirm = useConfirm();
+    return { authStore, confirm };
   },
   created() {
     this.checkViewport();
@@ -234,6 +238,25 @@ export default {
     },
     closeMobileDrawer() {
       this.mobileDrawerVisible = false;
+    },
+    confirmLogout() {
+      this.confirm.require({
+        message: 'Naozaj sa chcete odhlásiť?',
+        header: 'Potvrdenie odhlásenia',
+        icon: 'pi pi-exclamation-triangle',
+        rejectProps: {
+          label: 'Zrušiť',
+          severity: 'secondary',
+          outlined: true
+        },
+        acceptProps: {
+          label: 'Odhlásiť',
+          severity: 'danger'
+        },
+        accept: () => {
+          this.handleLogout();
+        }
+      });
     },
     async handleLogout() {
       await this.authStore.logout();

@@ -2,15 +2,18 @@
 import { defineComponent } from 'vue';
 import Button from 'primevue/button';
 import Avatar from 'primevue/avatar';
+import ConfirmDialog from 'primevue/confirmdialog'; // Add this import
 import LoginCard from '../auth/LoginCard.vue';
 import Tooltip from 'primevue/tooltip';
 import { useAuthStore } from '@/stores/authStore';
+import { useConfirm } from 'primevue/useconfirm';
 
 export default defineComponent({
   name: 'Navbar',
   components: {
     Button,
     Avatar,
+    ConfirmDialog, // Add this component
     LoginCard
   },
   data() {
@@ -90,6 +93,25 @@ export default defineComponent({
     showLogin(): void {
       this.loginCardVisible = true;
     },
+    confirmLogout(): void {
+      this.confirm.require({
+        message: 'Naozaj sa chcete odhlásiť?',
+        header: 'Potvrdenie odhlásenia',
+        icon: 'pi pi-exclamation-triangle',
+        rejectProps: {
+          label: 'Zrušiť',
+          severity: 'secondary',
+          outlined: true
+        },
+        acceptProps: {
+          label: 'Odhlásiť',
+          severity: 'danger'
+        },
+        accept: () => {
+          this.handleLogout();
+        }
+      });
+    },
     async handleLogout(): Promise<void> {
       await this.authStore.logout();
       this.$router.push({ name: 'HomePage' });
@@ -119,7 +141,8 @@ export default defineComponent({
   },
   setup() {
     const authStore = useAuthStore();
-    return { authStore };
+    const confirm = useConfirm();
+    return { authStore, confirm };
   }
 });
 </script>
@@ -180,7 +203,7 @@ export default defineComponent({
             :class="{ 'border-none hover:bg-white/20': !isScrolled, 'bg-white/60 hover:bg-gray-200': isScrolled }">
             <i class="pi pi-key text-sm"></i>
           </Button>
-          <Button v-else @click="handleLogout" variant="outlined"
+          <Button v-else @click="confirmLogout" variant="outlined"
             class="flex items-center rounded-full transition-all duration-200 flex-shrink-0"
             :class="{ 'border-none hover:bg-white/20': !isScrolled, 'bg-white/60 hover:bg-gray-200': isScrolled }"
             v-tooltip.bottom="{ value: 'Logout from your account', pt: { text: 'px-3 py-1 text-xs rounded-2xl bg-neutral-900 text-white shadow border-none' } }">
@@ -234,7 +257,7 @@ export default defineComponent({
               <i class="pi pi-th-large mr-2"></i>
               Go to dashboard
             </button>
-            <button v-if="isAuthenticated" @click="handleLogout"
+            <button v-if="isAuthenticated" @click="confirmLogout"
               class="flex items-center py-2 px-4 w-full rounded-lg hover:bg-white/20 transition-all text-left">
               <i class="pi pi-sign-out mr-2"></i>
               Logout
@@ -243,6 +266,9 @@ export default defineComponent({
         </div>
       </div>
     </div>
+    
+    <!-- Add ConfirmDialog component -->
+    <ConfirmDialog />
     <LoginCard v-model:visible="loginCardVisible" @login="handleLoginSubmit" />
   </nav>
 </template>
