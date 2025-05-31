@@ -1,7 +1,7 @@
 <template>
   <div class="conference-editor h-screen flex flex-col">
     <!-- Top Header -->
-    <Card class="header shadow-sm p-4 flex-none rounded-none">
+    <Card class="header shadow-sm p-4 flex-none rounded mb-2">
       <template #content>
         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 p-0">
           <div class="min-w-0">
@@ -74,7 +74,7 @@
     <div class="flex-1 flex overflow-hidden relative">
       <!-- Conference Overview Panel (Left) -->
       <div :class="[
-        'flex flex-col transition-all duration-300 z-20',
+        'flex flex-col transition-all duration-300 z-20 bg-surface-100 rounded shadow',
         'lg:w-80 lg:relative lg:translate-x-0',
         'absolute inset-y-0 left-0 w-80 max-w-[90vw]',
         showLeftPanel ? 'translate-x-0 shadow-lg' : '-translate-x-full'
@@ -98,41 +98,41 @@
           </template>
         </Card>
 
-     <Card class="m-4 flex-none">
-        <template #title>
-          <h3 class="text-base font-semibold">Actions</h3>
-        </template>
-        <template #content>
-          <div class="space-y-3 p-0">
-            <Button 
-              label="Create New Page" 
-              icon="pi pi-plus" 
-              @click="openAddMenuDialog"
-              :disabled="!pageMenuStore.isLocked"
-              class="w-full text-sm"
-              size="small"
-            />
-            <Button 
-              label="Add Component" 
-              icon="pi pi-plus-circle" 
-              @click="openAddComponentDialog"
-              :disabled="!pageMenuStore.selectedMenu || !pageMenuStore.isLocked"
-              outlined
-              class="w-full text-sm"
-              size="small"
-            />
-            <Button 
-              label="Manage Media" 
-              icon="pi pi-images" 
-              @click="showMediaManager = true"
-              :disabled="!pageMenuStore.isLocked"
-              outlined
-              class="w-full text-sm"
-              size="small"
-            />
-          </div>
-        </template>
-      </Card>
+        <Card class="m-4 flex-none">
+          <template #title>
+            <h3 class="text-base font-semibold">Actions</h3>
+          </template>
+          <template #content>
+            <div class="space-y-3 p-0">
+              <Button 
+                label="Create New Page" 
+                icon="pi pi-plus" 
+                @click="openAddMenuDialog"
+                :disabled="!pageMenuStore.isLocked"
+                class="w-full text-sm"
+                size="small"
+              />
+              <Button 
+                label="Add Component" 
+                icon="pi pi-plus-circle" 
+                @click="openAddComponentDialog"
+                :disabled="!pageMenuStore.selectedMenu || !pageMenuStore.isLocked"
+                outlined
+                class="w-full text-sm"
+                size="small"
+              />
+              <Button 
+                label="Manage Media" 
+                icon="pi pi-images" 
+                @click="showMediaManager = true"
+                :disabled="!pageMenuStore.isLocked"
+                outlined
+                class="w-full text-sm"
+                size="small"
+              />
+            </div>
+          </template>
+        </Card>
 
         <!-- Loading State -->
         <div v-if="pageMenuStore.loading && !loadingSelectedMenu" class="flex-1 flex items-center justify-center p-4">
@@ -201,13 +201,13 @@
       </div>
 
       <!-- Main Editor Area (Center) -->
-      <div class="flex-1 flex flex-col min-w-0">
+      <div class="flex-1 flex flex-col min-w-0 bg-surface-100 rounded mx-2 shadow">
         <!-- Error State -->
         <div v-if="pageMenuStore.error" class="m-4">
-          <Card>
+          <Card class="border-l-4 border-red-500 bg-red-50">
             <template #content>
-              <div class="flex items-center gap-2 text-sm p-0">
-                <i class="pi pi-exclamation-triangle"></i>
+              <div class="flex items-center gap-2 text-sm text-red-700 p-4">
+                <i class="pi pi-exclamation-triangle text-red-500"></i>
                 <span>{{ pageMenuStore.error }}</span>
               </div>
             </template>
@@ -241,9 +241,9 @@
         </div>
 
         <!-- Selected Page Editor -->
-        <div v-else-if="pageMenuStore.selectedMenu" class="flex-1 flex flex-col min-h-0">
+        <div v-else-if="pageMenuStore.selectedMenu" class="flex-1 flex flex-col min-h-0 p-4 gap-2">
           <!-- Page Header Card -->
-          <Card class="m-4 flex-none">
+          <Card class="flex-none">
             <template #content>
               <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-0">
                 <div class="min-w-0">
@@ -251,6 +251,7 @@
                   <div class="flex flex-wrap items-center gap-4 mt-3">
                     <Badge 
                       :value="pageMenuStore.selectedMenu.is_published ? 'Published' : 'Draft'" 
+                      :severity="pageMenuStore.selectedMenu.is_published ? 'success' : 'warning'"
                     />
                     <span class="text-sm">Slug: /{{ pageMenuStore.selectedMenu.slug }}</span>
                     <span class="text-sm">Order: {{ pageMenuStore.selectedMenu.order }}</span>
@@ -265,7 +266,6 @@
                   outlined
                   size="small"
                 />
-               
               </div>
             </template>
           </Card>
@@ -273,7 +273,7 @@
           <!-- Components Section -->
           <div class="flex-1 overflow-hidden flex flex-col min-h-0">
             <!-- Components Header Card -->
-            <Card class="m-4 flex-none">
+            <Card class="flex-none">
               <template #content>
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-0">
                   <h3 class="text-lg font-semibold">Page Components</h3>
@@ -321,9 +321,10 @@
                 </template>
               </Card>
             </div>
-
+            
             <!-- Components List -->
-            <div v-else class="flex-1 overflow-y-auto p-4">
+            <div v-else class="flex-1 overflow-y-auto">
+              <Divider />
               <div class="space-y-4">
                 <Card v-for="(component, index) in pageMenuStore.selectedMenu.page_data" 
                      :key="component.id"
@@ -331,7 +332,7 @@
                   
                   <!-- Component Header -->
                   <template #header>
-                    <div class="p-4">
+                    <div class="p-2">
                       <div class="flex items-start justify-between gap-4">
                         <div class="flex items-start gap-4 min-w-0 flex-1">
                           <div class="rounded-lg p-2 flex-shrink-0">
@@ -339,11 +340,12 @@
                           </div>
                           <div class="min-w-0 flex-1">
                             <h4 class="font-semibold text-base truncate">
-                              {{ component.component_type }}: {{ component.tag || 'Unnamed Component' }}
+                              {{ getComponentName(component.component_type) }}: {{ component.tag || 'Unnamed Component' }}
                             </h4>
                             <div class="flex flex-wrap items-center gap-3 mt-2">
                               <Badge 
                                 :value="component.is_published ? 'Published' : 'Draft'" 
+                                :severity="component.is_published ? 'success' : 'warning'"
                                 class="text-xs"
                               />
                               <span class="text-xs">Position: {{ index + 1 }}</span>
@@ -352,7 +354,7 @@
                         </div>
                         
                         <!-- Component Actions -->
-                        <div class="flex items-center gap-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity flex-shrink-0">
+                        <div class="flex items-center gap-2 opacity-100 transition-opacity flex-shrink-0">
                           <div class="flex flex-col sm:flex-row gap-2">
                             <div class="flex gap-2">
                               <Button 
@@ -394,29 +396,7 @@
                         </div>
                       </div>
                     </div>
-                  </template>
-                  
-                  <!-- Component Content Preview -->
-                  <template #content>
-                    <div v-if="component.component_type === 'Editor'" class="p-0">
-                      <div class="text-sm mb-3">Content Preview:</div>
-                      <div 
-                        class="prose prose-sm max-w-none line-clamp-3 text-sm p-4 rounded" 
-                        v-html="component.data?.content || 'No content'"
-                      ></div>
-                    </div>
-                    <div v-else-if="component.component_type === 'Contact'" class="p-0">
-                      <div class="text-sm mb-3">Contact Information Preview:</div>
-                      <div 
-                        class="prose prose-sm max-w-none line-clamp-3 text-sm p-4 rounded" 
-                        v-html="component.data?.content || 'No contact information'"
-                      ></div>
-                    </div>
-                    <div v-else class="p-0">
-                      <div class="text-sm mb-3">Component Data</div>
-                      <pre class="text-xs p-4 rounded overflow-hidden break-all">{{ JSON.stringify(component.data, null, 2) }}</pre>
-                    </div>
-                  </template>
+                  </template>              
                 </Card>
               </div>
             </div>
@@ -426,7 +406,7 @@
 
       <!-- Pages Sidebar (Right) -->
       <div :class="[
-        'flex flex-col transition-all duration-300 z-10',
+        'flex flex-col transition-all duration-300 z-10 bg-surface-100 rounded shadow',
         'lg:w-96 lg:relative lg:translate-x-0',
         'absolute inset-y-0 right-0 w-80 max-w-[90vw]',
         showRightPanel ? 'translate-x-0 shadow-lg' : 'translate-x-full'
@@ -449,7 +429,7 @@
             <p class="text-sm">Manage your conference pages</p>
           </template>
         </Card>
-
+        <Divider />
         <!-- Pages List -->
         <div class="flex-1 overflow-y-auto p-4">
           <div v-if="pageMenuStore.loading && !loadingSelectedMenu" class="flex items-center justify-center h-32">
@@ -492,7 +472,7 @@
                       <h4 class="font-semibold truncate text-base">{{ menu.title }}</h4>
                       <p class="text-sm mt-2 truncate">/{{ menu.slug }}</p>
                     </div>
-                    <div class="flex items-center gap-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity ml-4 flex-shrink-0">
+                    <div class="flex items-center gap-2 opacity-100  transition-opacity ml-4 flex-shrink-0">
                       <Button 
                         icon="pi pi-pencil" 
                         size="small"
@@ -516,6 +496,7 @@
                     <div class="flex flex-wrap items-center gap-3">
                       <Badge 
                         :value="menu.is_published ? 'Published' : 'Draft'" 
+                        :severity="menu.is_published ? 'success' : 'warning'"
                         class="text-xs"
                       />
                       <span class="text-xs">{{ menu.page_data?.length || 0 }} components</span>
@@ -742,9 +723,19 @@
                     id="componentType"
                     v-model="newComponentType"
                     :options="availableComponentTypes"
+                    option-label="label"
+                    option-value="value"
                     placeholder="Select component type"
                     class="w-full"
-                  />
+                    @change="updateComponentData"
+                  >
+                    <template #option="slotProps">
+                      <div class="flex items-center gap-2">
+                        <i :class="slotProps.option.icon"></i>
+                        <span>{{ slotProps.option.label }}</span>
+                      </div>
+                    </template>
+                  </Select>
                 </div>
                 
                 <Card>
@@ -760,7 +751,7 @@
                 </Card>
               </div>
               
-              <div v-if="newComponentType === 'Editor'" class="space-y-4">
+              <div v-if="newComponentType === 'wysiwyg'" class="space-y-4">
                 <label for="initialContent" class="block text-sm font-medium">Initial Content</label>
                 <Textarea
                   id="initialContent"
@@ -841,25 +832,17 @@
       </Card>
     </Dialog>
 
-    <!-- Editor Component Dialog -->
-    <EditorComponent
-      v-model:visible="showEditorComponentDialog"
+    <!-- Dynamic Component Dialog -->
+    <component 
+      :is="currentComponentEditor"
+      v-if="currentComponentEditor"
+      v-model:visible="showComponentDialog"
       :component-name="editComponentName"
       :component-data="editComponentData"
       :is-published="editComponentPublished"
       :conference-id="conferenceId"
-      @save="handleSaveEditorComponent"
-      @cancel="handleCancelEditorComponent"
-    />
-
-    <!-- Contact Component Dialog -->
-    <ContactComponent
-      v-model:visible="showContactComponentDialog"
-      :component-name="editComponentName"
-      :component-data="editComponentData.rawData || editComponentData"
-      :is-published="editComponentPublished"
-      @save="handleSaveContactComponent"
-      @cancel="handleCancelContactComponent"
+      @save="handleSaveComponent"
+      @cancel="handleCancelComponent"
     />
 
     <MediaManager
@@ -871,24 +854,34 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue';
+import { defineComponent, ref, shallowRef } from 'vue';
 import { usePageMenuStore } from '@/stores/pageMenuStore';
 import { useRoute } from 'vue-router';
 import apiService from '@/services/apiService';
-import EditorComponent from '@/components/dashboard/PageEditor/EditorComponents/Editor.vue';
-import ContactComponent from '@/components/dashboard/PageEditor/EditorComponents/Contact.vue';
 import MediaManager from '@/components/dashboard/PageEditor/MediaManager.vue';
+import { 
+  componentRegistry, 
+  getAvailableComponentTypes, 
+  getComponentIcon as getRegistryComponentIcon,
+  getComponentDefaultData,
+  getComponentDefinition
+} from '@/utils/componentRegistry';
 
 export default defineComponent({
   name: 'ConferenceEditor',
   components: {
-    EditorComponent,
-    ContactComponent,
     MediaManager
+  },
+  setup() {
+    const currentComponentEditor = shallowRef(null);
+    
+    return {
+      currentComponentEditor
+    };
   },
   data() {
     return {
-      availableComponentTypes: ['Editor', 'Contact'],
+      availableComponentTypes: getAvailableComponentTypes(),
       
       showAddMenuDialog: false,
       newMenuTitle: '',
@@ -905,14 +898,11 @@ export default defineComponent({
       showAddComponentDialog: false,
       newComponentType: '',
       newComponentName: '',
-      newComponentData: {
-        content: '<p>Enter content here...</p>'
-      },
+      newComponentData: {} as any,
       newComponentPublished: false,
       
-      // Component editing dialogs
-      showEditorComponentDialog: false,
-      showContactComponentDialog: false,
+      // Component editing
+      showComponentDialog: false,
       editComponentId: 0,
       editComponentType: '',
       editComponentName: '',
@@ -947,11 +937,9 @@ export default defineComponent({
     this.fetchMenus();
   },
   mounted() {
-    window.addEventListener('beforeunload', this.handleBeforeUnload);
     window.addEventListener('resize', this.handleResize);
   },
   beforeUnmount() {
-    window.removeEventListener('beforeunload', this.handleBeforeUnload);
     window.removeEventListener('resize', this.handleResize);
     if (this.pageMenuStore.isLocked) {
       this.pageMenuStore.releaseLock();
@@ -959,15 +947,13 @@ export default defineComponent({
   },
   methods: {
     handleResize() {
-      // Close mobile panels when screen becomes large
-      if (window.innerWidth >= 1024) { // lg breakpoint
+      if (window.innerWidth >= 1024) {
         this.showLeftPanel = false;
         this.showRightPanel = false;
       }
     },
     async fetchMenus() {
       await this.pageMenuStore.fetchMenus();
-      // Remove any pre-selected menu to ensure no page is selected on load
       this.pageMenuStore.selectedMenu = null;
       if (!this.pageMenuStore.isLocked) {
         await this.checkLock();
@@ -991,13 +977,6 @@ export default defineComponent({
     async acquireLock() {
       await this.pageMenuStore.acquireLock();
     },
-    handleBeforeUnload(event: BeforeUnloadEvent) {
-      if (this.pageMenuStore.isLocked) {
-        event.preventDefault();
-        event.returnValue = 'You are currently editing this conference. Are you sure you want to leave?';
-        return event.returnValue;
-      }
-    },
     async handleExit() {
       if (this.pageMenuStore.isLocked) {
         await this.pageMenuStore.releaseLock();
@@ -1013,13 +992,15 @@ export default defineComponent({
         .trim();
     },
     getComponentIcon(componentType: string): string {
-      switch (componentType) {
-        case 'Editor':
-          return 'pi pi-file-edit';
-        case 'Contact':
-          return 'pi pi-phone';
-        default:
-          return 'pi pi-code';
+      return getRegistryComponentIcon(componentType);
+    },
+    getComponentName(componentType: string): string {
+      const definition = getComponentDefinition(componentType);
+      return definition?.name || componentType;
+    },
+    updateComponentData() {
+      if (this.newComponentType) {
+        this.newComponentData = { ...getComponentDefaultData(this.newComponentType) };
       }
     },
     openAddMenuDialog() {
@@ -1103,7 +1084,6 @@ export default defineComponent({
     },
     async selectMenu(menuId: number) {
       this.loadingSelectedMenu = true;
-      // Close mobile panels when selecting a menu
       this.showLeftPanel = false;
       this.showRightPanel = false;
       try {
@@ -1124,9 +1104,9 @@ export default defineComponent({
     },
     openAddComponentDialog() {
       if (!this.pageMenuStore.selectedMenu) return;
-      this.newComponentType = 'Editor';
+      this.newComponentType = 'wysiwyg';
       this.newComponentName = '';
-      this.newComponentData = { content: '<p>Enter content here...</p>' };
+      this.updateComponentData();
       this.newComponentPublished = false;
       this.showAddComponentDialog = true;
       this.showLeftPanel = false;
@@ -1144,42 +1124,13 @@ export default defineComponent({
           ? Math.max(...currentComponents.map(c => c.order))
           : -1;
 
-        let componentData;
-        if (this.newComponentType === 'Contact') {
-          // Create default contact data and convert to HTML
-          const defaultContactData = {
-            title: 'Contact Us',
-            description: '',
-            email: '',
-            phone: '',
-            website: '',
-            hours: '',
-            address: '',
-            city: '',
-            state: '',
-            zip: '',
-            country: '',
-            social: {
-              facebook: '',
-              twitter: '',
-              linkedin: '',
-              instagram: ''
-            }
-          };
-          componentData = {
-            rawData: defaultContactData
-          };
-        } else {
-          componentData = { content: this.newComponentData.content };
-        }
-
         await this.pageMenuStore.createPageData(
           this.pageMenuStore.selectedMenu.id,
           {
             component_type: this.newComponentType,
             order: maxOrder + 1,
             tag: this.newComponentName,
-            data: componentData,
+            data: this.newComponentData,
             is_published: this.newComponentPublished
           }
         );
@@ -1189,46 +1140,39 @@ export default defineComponent({
         console.error('Error adding component:', error);
       }
     },
-    editComponent(componentId: number) {
+    async editComponent(componentId: number) {
       const component = this.pageMenuStore.selectedMenu?.page_data.find(c => c.id === componentId);
       if (component) {
-        console.log('Editing component:', component); // Debug log
         this.editComponentId = componentId;
         this.editComponentType = component.component_type;
         this.editComponentName = component.tag || '';
         this.editComponentData = { ...component.data };
         this.editComponentPublished = component.is_published;
         
-        // Open the appropriate dialog based on component type
-        if (component.component_type === 'Editor') {
-          this.showEditorComponentDialog = true;
-        } else if (component.component_type === 'Contact') {
-          console.log('Opening contact dialog with data:', this.editComponentData); // Debug log
-          this.showContactComponentDialog = true;
+        const definition = getComponentDefinition(component.component_type);
+        if (definition?.edit) {
+          try {
+            const componentModule = await definition.edit();
+            this.currentComponentEditor = componentModule.default;
+            this.showComponentDialog = true;
+          } catch (error) {
+            console.error('Error loading component editor:', error);
+          }
         }
       }
     },
-    handleSaveEditorComponent(componentData: any) {
-      this.saveComponent({
-        tag: componentData.name,
-        data: { content: componentData.data.content },
-        is_published: componentData.isPublished
-      });
-      this.showEditorComponentDialog = false;
-    },
-    handleCancelEditorComponent() {
-      this.showEditorComponentDialog = false;
-    },
-    handleSaveContactComponent(componentData: any) {
+    handleSaveComponent(componentData: any) {
       this.saveComponent({
         tag: componentData.name,
         data: componentData.data,
         is_published: componentData.isPublished
       });
-      this.showContactComponentDialog = false;
+      this.showComponentDialog = false;
+      this.currentComponentEditor = null;
     },
-    handleCancelContactComponent() {
-      this.showContactComponentDialog = false;
+    handleCancelComponent() {
+      this.showComponentDialog = false;
+      this.currentComponentEditor = null;
     },
     async saveComponent(updateData: any) {
       if (!this.pageMenuStore.selectedMenu) return;

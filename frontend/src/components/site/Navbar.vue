@@ -83,7 +83,7 @@ export default defineComponent({
     },
     allItems() {
       // Combine regular items with admin items if user has admin access
-      return this.hasAdminAccess ? [...this.regularItems, ...this.adminItems] : this.regularItems;
+      return this.regularItems;
     }
   },
   methods: {

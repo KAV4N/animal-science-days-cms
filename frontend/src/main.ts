@@ -100,7 +100,10 @@ async function startApp() {
   app.directive('ripple', Ripple)
   app.directive('tooltip', Tooltip)
   app.directive('styleclass', StyleClass)
-  
+
+
+  app.component('dropdown', Dropdown) 
+
   // Register PrimeVue components
   app.component('Accordion', Accordion)
   app.component('AccordionTab', AccordionTab)

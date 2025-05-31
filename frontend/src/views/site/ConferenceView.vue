@@ -1,12 +1,12 @@
 <template>
-  <div class="min-h-screen p-2">
-    <div class="max-w-7xl mx-auto">
+  <div class="min-h-screen">
+    <div class="max-w-7xl mx-auto px-1 py-1">
 
       <!-- Loading State -->
-      <div v-if="loading" class="flex flex-col items-center justify-center min-h-[60vh] space-y-6">
+      <div v-if="loading" class="flex flex-col items-center justify-center min-h-[60vh] space-y-1">
         <Card class="w-full max-w-md mx-auto">
           <template #content>
-            <div class="flex flex-col items-center space-y-4 p-4">
+            <div class="flex flex-col items-center space-y-1 p-1">
               <ProgressSpinner class="w-12 h-12" strokeWidth="3" />
               <p class="text-lg font-medium">Loading conference...</p>
             </div>
@@ -15,19 +15,19 @@
       </div>
 
       <!-- Error State -->
-      <div v-else-if="error" class="flex flex-col items-center justify-center min-h-[60vh] space-y-6">
+      <div v-else-if="error" class="flex flex-col items-center justify-center min-h-[60vh] space-y-1">
         <Card class="w-full max-w-md text-center">
           <template #content>
-            <div class="flex flex-col items-center space-y-4 p-4">
-              <div class="w-16 h-16 rounded-full flex items-center justify-center">
-                <i class="pi pi-exclamation-triangle text-2xl"></i>
+            <div class="flex flex-col items-center space-y-1 p-1">
+              <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+                <i class="pi pi-exclamation-triangle text-2xl text-red-600"></i>
               </div>
-              <h2 class="text-2xl font-bold">Something went wrong</h2>
-              <p>{{ error }}</p>
+              <h2 class="text-2xl font-bold text-gray-900">Something went wrong</h2>
+              <p class="text-gray-600">{{ error }}</p>
               <Button 
                 label="Try Again" 
                 @click="loadConference" 
-                class="mt-2"
+                class="mt-1"
                 icon="pi pi-refresh"
               />
             </div>
@@ -35,172 +35,174 @@
         </Card>
       </div>
 
-      <!-- Main Layout -->
-      <div v-else-if="conference" class="space-y-2">
+      <!-- Main Content -->
+      <div v-else-if="conference" class="space-y-1">
         
-        <!-- Conference Header Card -->
-        <Card class="w-full">
-          <template #content>
-            <div class="p-6">
-              <h1 class="text-3xl font-bold mb-4 text-center">{{ conference.title }}</h1>
-              <div class="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-8">
-                <div class="flex items-center space-x-2">
-                  <i class="pi pi-map-marker"></i>
-                  <span>{{ conference.location }}</span>
-                </div>
-                <div class="flex items-center space-x-2">
-                  <i class="pi pi-calendar"></i>
-                  <span>
-                    {{ formatDate(conference.start_date) }} - {{ formatDate(conference.end_date) }}
-                  </span>
+        <!-- Conference Header -->
+        <div class="bg-white rounded-lg shadow-sm p-2">
+          <div class="px-1 py-1 text-center">
+            <h1 class="text-4xl font-bold text-gray-900 mb-1">{{ conference.title }}</h1>
+            <div class="flex flex-col sm:flex-row items-center justify-center space-y-1 sm:space-y-0 sm:space-x-8 text-gray-600">
+              <div class="flex items-center space-x-1">
+                <i class="pi pi-map-marker text-primary"></i>
+                <span>{{ conference.location }}</span>
+              </div>
+              <div class="flex items-center space-x-1">
+                <i class="pi pi-calendar text-primary"></i>
+                <span>
+                  {{ formatDate(conference.start_date) }} - {{ formatDate(conference.end_date) }}
+                </span>
+              </div>
+            </div>
+            <div v-if="conference.description" class="mt-1 text-gray-700 max-w-3xl mx-auto">
+              <p>{{ conference.description }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Navigation & Content Layout -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-1">
+          
+          <!-- Sidebar Navigation -->
+          <div class="lg:col-span-1">
+            <div class="bg-white rounded-lg shadow-sm p-1 sticky top-1">
+              <h2 class="text-lg font-semibold text-gray-900 mb-1 flex items-center">
+                <i class="pi pi-list mr-1 text-primary p-4"></i>
+                Pages
+              </h2>
+              
+              <div v-if="pagesLoading" class="flex flex-col items-center space-y-1 py-1">
+                <ProgressSpinner class="w-6 h-6" strokeWidth="4" />
+                <p class="text-sm text-gray-600">Loading pages...</p>
+              </div>
+              
+              <nav v-else-if="sortedPages?.length > 0" class="space-y-1">
+                <button
+                  v-for="page in sortedPages" 
+                  :key="page.id"
+                  @click="selectPage(page)"
+                  :class="[
+                    'w-full text-left px-3 py-3 text-sm font-medium transition-colors duration-200 cursor-pointer block',
+                    activePageId === page.id
+                      ? 'bg-primary-50 text-primary-700 border-l-4 border-primary-600'
+                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                  ]"
+                >
+                  <div class="flex items-center space-x-1">
+                    <i class="pi pi-file text-xs"></i>
+                    <span>{{ page.title }}</span>
+                  </div>
+                </button>
+              </nav>
+              
+              <div v-else class="text-center py-1">
+                <div class="flex flex-col items-center space-y-1">
+                  <i class="pi pi-inbox text-3xl text-gray-400"></i>
+                  <p class="text-sm text-gray-600">No pages available</p>
                 </div>
               </div>
             </div>
-          </template>
-        </Card>
-
-        <!-- Layout -->
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-2">
-          
-          <!-- Sidebar -->
-          <div class="lg:col-span-1 space-y-2">
-            <Card class="h-fit">
-              <template #header>
-                <div class="p-4 pb-2">
-                  <h2 class="text-lg font-semibold flex items-center space-x-2">
-                    <i class="pi pi-list"></i>
-                    <span>Pages</span>
-                  </h2>
-                </div>
-              </template>
-              <template #content>
-                <div class="p-4 pt-0">
-                  <div v-if="pagesLoading" class="flex flex-col items-center space-y-3 py-8">
-                    <ProgressSpinner class="w-6 h-6" strokeWidth="4" />
-                    <p class="text-sm">Loading pages...</p>
-                  </div>
-                  <div v-else-if="sortedPages && sortedPages.length > 0" class="space-y-1">
-                    <Button
-                      v-for="page in sortedPages" 
-                      :key="page.id"
-                      @click="selectPage(page)"
-                      :label="page.title"
-                      :outlined="activePageId !== page.id"
-                      :severity="activePageId === page.id ? 'primary' : 'secondary'"
-                      class="w-full justify-start"
-                      size="small"
-                    >
-                      <template #icon>
-                        <i class="pi pi-file mr-2"></i>
-                      </template>
-                    </Button>
-                  </div>
-                  <div v-else class="text-center py-8">
-                    <div class="flex flex-col items-center space-y-3">
-                      <i class="pi pi-inbox text-3xl opacity-50"></i>
-                      <p class="text-sm opacity-75">No pages available</p>
-                    </div>
-                  </div>
-                </div>
-              </template>
-            </Card>
           </div>
 
-          <!-- Page Content -->
-          <div class="lg:col-span-3 space-y-2">
+          <!-- Main Content Area -->
+          <div class="lg:col-span-3 space-y-1">
 
-            <Card v-if="activePage" class="w-full">
-              <template #content>
-                <div class="p-6">
-                  <div class="flex items-start justify-between">
-                    <div class="flex-1">
-                      <h2 class="text-2xl font-bold mb-2">{{ activePage.title }}</h2>
-                      <div class="flex items-center space-x-4 text-sm opacity-75">
-                        <span class="flex items-center space-x-1">
-                          <i class="pi pi-clock"></i>
-                          <span>Last updated {{ formatDate(activePage.updated_at || activePage.created_at) }}</span>
-                        </span>
-                      </div>
+            <!-- Active Page Header -->
+            <div v-if="activePage" class="p-4 bg-white rounded-lg shadow-sm">
+              <div class="px-1 py-1">
+                <div class="flex items-start justify-between">
+                  <div class="flex-1">
+                    <h2 class="text-3xl font-bold text-gray-900 mb-1">{{ activePage.title }}</h2>
+                    <div class="flex items-center space-x-1 text-sm text-gray-500">
+                      <span class="flex items-center space-x-1">
+                        <i class="pi pi-clock"></i>
+                        <span>Last updated {{ formatDate(activePage.updated_at || activePage.created_at) }}</span>
+                      </span>
                     </div>
-                    <Chip :label="`Page ${activePage.order || 1}`" />
                   </div>
-                </div>
-              </template>
-            </Card>
-
-            <Card v-else class="w-full">
-              <template #content>
-                <div class="text-center space-y-6 p-12">
-                  <div class="w-20 h-20 rounded-full flex items-center justify-center mx-auto opacity-50">
-                    <i class="pi pi-home text-3xl"></i>
-                  </div>
-                  <div>
-                    <h2 class="text-2xl font-bold mb-2">
-                      Welcome to {{ conference.title }}
-                    </h2>
-                    <p v-if="pagesLoading" class="opacity-75">Loading pages...</p>
-                    <p v-else-if="sortedPages?.length" class="opacity-75">
-                      Select a page from the sidebar to view its content.
-                    </p>
-                    <p v-else class="opacity-75">No pages are available for this conference yet.</p>
-                  </div>
-                  <div v-if="sortedPages?.length" class="flex flex-wrap gap-2 justify-center">
-                    <Button 
-                      v-for="page in sortedPages.slice(0, 3)" 
-                      :key="page.id"
-                      :label="page.title"
-                      @click="selectPage(page)"
-                      outlined
-                      size="small"
+                  <div class="flex items-center space-x-1">
+                    <Chip 
+                      :label="`Page ${activePage.order || 1}`" 
+                      class="bg-primary-100 text-primary-800"
                     />
                   </div>
                 </div>
-              </template>
-            </Card>
+              </div>
+            </div>
 
+            <!-- Welcome/Default State -->
+            <div v-else class="bg-white rounded-lg shadow-sm">
+              <div class="text-center space-y-1 p-1">
+                <div class="w-20 h-20 bg-primary-100 rounded-full flex items-center justify-center mx-auto">
+                  <i class="pi pi-home text-3xl text-primary-600"></i>
+                </div>
+                <div>
+                  <h2 class="text-3xl font-bold text-gray-900 mb-1">
+                    Welcome to {{ conference.title }}
+                  </h2>
+                  <p v-if="pagesLoading" class="text-gray-600">Loading pages...</p>
+                  <p v-else-if="sortedPages?.length" class="text-gray-600">
+                    Select a page from the sidebar to view its content.
+                  </p>
+                  <p v-else class="text-gray-600">No pages are available for this conference yet.</p>
+                </div>
+                <div v-if="sortedPages?.length" class="flex flex-wrap gap-1 justify-center">
+                  <Button 
+                    v-for="page in sortedPages.slice(0, 3)" 
+                    :key="page.id"
+                    :label="page.title"
+                    @click="selectPage(page)"
+                    outlined
+                    size="small"
+                    class="rounded-full"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Page Components -->
             <template v-if="activePage?.page_data?.length">
-              <Card 
-                v-for="pageData in activePage.page_data" 
+              <div 
+                v-for="(pageData, index) in publishedPageData" 
                 :key="pageData.id"
-                class="w-full"
+                class="bg-white rounded-lg shadow-sm overflow-hidden"
               >
-                <template #content>
-                  <div class="p-4 pt-0">
-                   <div 
-                      v-if="pageData.component_type === 'Editor' && pageData.data?.content"
-                      class="editor-content"
-                      v-html="pageData.data.content"
-                    ></div>
-
-                    <div v-else-if="pageData.component_type === 'Text'" class="prose prose-lg max-w-none">
-                      <p class="leading-relaxed">
-                        {{ pageData.data?.text || 'No text content available' }}
-                      </p>
-                    </div>
-
-                    <div v-else>
-                      <div class="rounded-lg p-4 border">
-                        <pre class="text-sm overflow-x-auto whitespace-pre-wrap opacity-75">
-                          {{ JSON.stringify(pageData.data, null, 2) }}
-                        </pre>
-                      </div>
+                <div class="p-1">
+                  <!-- Dynamic Component Rendering -->
+                  <component
+                    :is="getPublicComponent(pageData.component_type)"
+                    :data="pageData.data"
+                    :component-name="pageData.name"
+                    :conference-id="conference.id"
+                    v-if="getPublicComponent(pageData.component_type)"
+                  />
+                  
+                  <!-- Fallback for unknown component types -->
+                  <div v-else class="bg-gray-50 rounded-lg p-1 border-2 border-dashed border-gray-300">
+                    <div class="text-center">
+                      <i class="pi pi-code text-2xl text-gray-400 mb-1"></i>
+                      <h3 class="text-lg font-medium text-gray-900 mb-1">Unknown Component</h3>
+                      <p class="text-gray-600 mb-1">Component type "{{ pageData.component_type }}" is not recognized.</p>
+                      <details class="text-left">
+                        <summary class="cursor-pointer text-sm text-gray-500 hover:text-gray-700">View Raw Data</summary>
+                        <pre class="mt-1 p-1 bg-white rounded border text-xs overflow-x-auto">{{ JSON.stringify(pageData.data, null, 2) }}</pre>
+                      </details>
                     </div>
                   </div>
-                </template>
-              </Card>
+                </div>
+              </div>
             </template>
 
-            <Card v-else-if="activePage" class="w-full">
-              <template #content>
-                <div class="text-center space-y-4 p-12">
-                  <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto opacity-50">
-                    <i class="pi pi-file-o text-2xl"></i>
-                  </div>
-                  <h3 class="text-xl font-semibold">No content available</h3>
-                  <p class="opacity-75">This page doesn't have any content yet.</p>
+            <!-- Empty Page State -->
+            <div v-else-if="activePage && !activePage.page_data?.length" class="bg-white rounded-lg shadow-sm">
+              <div class="text-center space-y-1 p-1">
+                <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
+                  <i class="pi pi-file-o text-2xl text-gray-400"></i>
                 </div>
-              </template>
-            </Card>
+                <h3 class="text-xl font-semibold text-gray-900">No content available</h3>
+                <p class="text-gray-600">This page doesn't have any content yet.</p>
+              </div>
+            </div>
 
           </div>
         </div>
@@ -210,11 +212,10 @@
   </div>
 </template>
 
-
-
 <script lang="ts">
-import { defineComponent } from 'vue';
+import { defineComponent, defineAsyncComponent } from 'vue';
 import apiService from '@/services/apiService';
+import { getComponentDefinition } from '@/utils/componentRegistry';
 import type { Conference } from '@/types/conference';
 import type { PageMenu } from '@/types/pageMenu';
 
@@ -229,6 +230,7 @@ interface ComponentData {
   loading: boolean;
   pagesLoading: boolean;
   error: string | null;
+  loadedComponents: Map<string, any>;
 }
 
 export default defineComponent({
@@ -247,7 +249,8 @@ export default defineComponent({
       activePageId: null,
       loading: false,
       pagesLoading: false,
-      error: null
+      error: null,
+      loadedComponents: new Map()
     };
   },
   computed: {
@@ -255,7 +258,16 @@ export default defineComponent({
       if (!this.conference?.pages) {
         return [];
       }
-      return [...this.conference.pages].sort((a, b) => (a.order || 0) - (b.order || 0));
+      return [...this.conference.pages]
+        .filter(page => page.is_published)
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
+    },
+    
+    publishedPageData() {
+      if (!this.activePage?.page_data) {
+        return [];
+      }
+      return this.activePage.page_data.filter(component => component.is_published);
     }
   },
   async mounted() {
@@ -295,7 +307,7 @@ export default defineComponent({
           conferenceSlug = latestConference.slug;
         }
 
-        // Always load pages separately to ensure we get the most up-to-date data
+        // Load pages separately to ensure fresh data
         if (conferenceSlug) {
           await this.loadPages(conferenceSlug);
         }
@@ -311,22 +323,19 @@ export default defineComponent({
     async loadPages(slug: string): Promise<void> {
       this.pagesLoading = true;
       try {
-        console.log('Loading pages for slug:', slug);
         const response = await apiService.get<{ payload: PageMenu[] }>(`/v1/public/conferences/${slug}/pages`);
-        console.log('Pages response:', response.data);
         
         if (this.conference) {
           this.conference.pages = response.data.payload;
-          console.log('Conference pages set to:', this.conference.pages);
           
-          if (this.sortedPages && this.sortedPages.length > 0) {
-            console.log('Sorted pages:', this.sortedPages);
-            this.selectPage(this.sortedPages[0]);
+          // Auto-select first published page
+          const firstPublishedPage = this.sortedPages[0];
+          if (firstPublishedPage) {
+            this.selectPage(firstPublishedPage);
           }
         }
       } catch (err: any) {
         console.error('Error loading pages:', err);
-        // Only set error if we don't have a conference loaded
         if (!this.conference) {
           this.error = err.response?.data?.message || 'Failed to load pages';
         }
@@ -336,9 +345,54 @@ export default defineComponent({
     },
 
     selectPage(page: PageMenu): void {
-      console.log('Selecting page:', page);
       this.activePage = page;
       this.activePageId = page.id;
+    },
+
+    getPublicComponent(componentType: string) {
+      // Check if component is already loaded
+      if (this.loadedComponents.has(componentType)) {
+        return this.loadedComponents.get(componentType);
+      }
+
+      // Get component definition
+      const definition = getComponentDefinition(componentType);
+      if (!definition) {
+        return null;
+      }
+
+      // Create async component
+      const asyncComponent = defineAsyncComponent({
+        loader: definition.public,
+        loadingComponent: {
+          template: `
+            <div class="flex items-center justify-center p-1">
+              <div class="flex items-center space-x-1">
+                <i class="pi pi-spin pi-spinner text-primary-600"></i>
+                <span class="text-gray-600">Loading component...</span>
+              </div>
+            </div>
+          `
+        },
+        errorComponent: {
+          template: `
+            <div class="bg-red-50 border border-red-200 rounded-lg p-1">
+              <div class="flex items-center space-x-1 text-red-800">
+                <i class="pi pi-exclamation-triangle"></i>
+                <span class="font-medium">Failed to load component</span>
+              </div>
+              <p class="text-red-700 text-sm mt-1">Component type: {{ componentType }}</p>
+            </div>
+          `,
+          props: ['componentType']
+        },
+        delay: 200,
+        timeout: 10000
+      });
+
+      // Cache the component
+      this.loadedComponents.set(componentType, asyncComponent);
+      return asyncComponent;
     },
 
     formatDate(dateStr: string): string {
@@ -356,174 +410,3 @@ export default defineComponent({
   }
 });
 </script>
-
-<style scoped>
-
-.editor-content :deep(h1) {
-  font-size: 2rem;
-  font-weight: 700;
-  margin-top: 1.5rem;
-  margin-bottom: 1rem;
-  line-height: 1.2;
-}
-
-.editor-content :deep(h2) {
-  font-size: 1.75rem;
-  font-weight: 600;
-  margin-top: 1.25rem;
-  margin-bottom: 0.75rem;
-  line-height: 1.3;
-}
-
-.editor-content :deep(h3) {
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin-top: 1rem;
-  margin-bottom: 0.5rem;
-  line-height: 1.4;
-}
-
-.editor-content :deep(h4) {
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin-top: 0.75rem;
-  margin-bottom: 0.5rem;
-  line-height: 1.4;
-}
-
-.editor-content :deep(h5) {
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin-top: 0.75rem;
-  margin-bottom: 0.25rem;
-  line-height: 1.4;
-}
-
-.editor-content :deep(h6) {
-  font-size: 1rem;
-  font-weight: 600;
-  margin-top: 0.5rem;
-  margin-bottom: 0.25rem;
-  line-height: 1.4;
-}
-
-.editor-content :deep(p) {
-  line-height: 1.7;
-  margin-bottom: 1rem;
-}
-
-.editor-content :deep(a) {
-  text-decoration: underline;
-}
-
-.editor-content :deep(strong) {
-  font-weight: 600;
-}
-
-.editor-content :deep(em) {
-  font-style: italic;
-}
-
-.editor-content :deep(ul) {
-  margin-bottom: 1rem;
-  padding-left: 1.5rem;
-  list-style-type: disc;
-}
-
-.editor-content :deep(ol) {
-  margin-bottom: 1rem;
-  padding-left: 1.5rem;
-  list-style-type: decimal;
-}
-
-.editor-content :deep(li) {
-  margin-bottom: 0.25rem;
-  line-height: 1.6;
-}
-
-.editor-content :deep(blockquote) {
-  border-left: 4px solid #3b82f6;
-  padding-left: 1rem;
-  font-style: italic;
-  color: #6b7280;
-  margin: 1rem 0;
-}
-
-.editor-content :deep(pre) {
-  padding: 1rem;
-  border-radius: 0.5rem;
-  overflow-x: auto;
-  margin: 1rem 0;
-}
-
-.editor-content :deep(pre code) {
-  background-color: transparent;
-  padding: 0;
-}
-
-.editor-content :deep(table) {
-  border-collapse: collapse;
-  width: 100%;
-  margin-bottom: 1rem;
-}
-
-.editor-content :deep(th),
-.editor-content :deep(td) {
-  padding: 0.75rem 1rem;
-  text-align: left;
-}
-
-.editor-content :deep(th) {
-  font-weight: 600;
-}
-
-.editor-content :deep(img) {
-  max-width: 100%;
-  height: auto;
-  border-radius: 0.5rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  margin: 1rem 0;
-}
-
-.editor-content :deep(hr) {
-  border: none;
-  margin: 2rem 0;
-}
-
-.editor-content :deep(> *:first-child) {
-  margin-top: 0;
-}
-
-.editor-content :deep(> *:last-child) {
-  margin-bottom: 0;
-}
-
-.editor-content :deep(table) {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 1rem;
-  border: 1px ;
-}
-
-.editor-content :deep(th),
-.editor-content :deep(td) {
-  border: 1px solid #ccc;
-  padding: 0.75rem 1rem;
-  text-align: left;
-  vertical-align: top;
-  font-size: 1rem;
-  line-height: 1.5;
-}
-
-.editor-content :deep(th) {
-  font-weight: bold;
-}
-
-.editor-content :deep(caption) {
-  caption-side: bottom;
-  text-align: center;
-  font-size: 0.875rem;
-  color: #666;
-  margin-top: 0.5rem;
-}
-</style>

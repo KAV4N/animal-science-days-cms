@@ -2,6 +2,7 @@
   <Dialog 
     v-model:visible="localVisible" 
     header="Edit Text Content" 
+
     :style="{ width: '95vw', maxWidth: '1400px', height: '90vh' }" 
     :modal="true"
     :maximizable="false"
@@ -307,7 +308,6 @@ export default defineComponent({
         { label: 'General', value: 'general' }
       ],
       
-      // TinyMCE editor instance
       editorInstance: null as any,
       mediaCallback: null as Function | null
     };
@@ -336,7 +336,6 @@ export default defineComponent({
         setup: (editor: any) => {
           this.editorInstance = editor;
           
-          // Add custom menu item for media library under Insert menu
           editor.ui.registry.addMenuItem('media_library', {
             text: 'Media Library...',
             icon: 'browse',
@@ -345,7 +344,6 @@ export default defineComponent({
             }
           });
 
-          // Add custom menu item for downloadable files under Media submenu
           editor.ui.registry.addMenuItem('downloadable_files', {
             text: 'Downloadable Files...',
             icon: 'download',
@@ -354,7 +352,6 @@ export default defineComponent({
             }
           });
           
-          // Customize the Insert menu to include our media library
           editor.ui.registry.addMenuButton('insert', {
             text: 'Insert',
             fetch: (callback: Function) => {
@@ -374,7 +371,6 @@ export default defineComponent({
             }
           });
 
-          // Customize the Media menu to include downloadable files
           editor.ui.registry.addNestedMenuItem('media_files', {
             text: 'Media Files',
             icon: 'embed',
@@ -384,7 +380,6 @@ export default defineComponent({
             ]
           });
           
-          // Override default image button to use our media browser
           editor.ui.registry.addButton('image', {
             icon: 'image',
             tooltip: 'Insert/Edit Image',
@@ -393,19 +388,14 @@ export default defineComponent({
             }
           });
         },
-        // Override default image upload and use our media browser
         images_upload_handler: (blobInfo: any, success: Function, failure: Function) => {
-          // For now, we'll handle uploads through our media browser
-          // You could implement direct upload here if needed
           failure('Please use the Media Library to upload and insert images');
         },
-        // Customize image dialog to use our media browser
         file_picker_callback: (callback: Function, value: string, meta: any) => {
           if (meta.filetype === 'image' || meta.filetype === 'media') {
             this.openMediaBrowser(callback);
           }
         },
-        // Add custom menu configuration
         menu: {
           insert: {
             title: 'Insert',
@@ -463,7 +453,6 @@ export default defineComponent({
     },
     localVisible(newVal) {
       if (!newVal && this.visible) {
-        // Dialog was closed by X button or ESC
         this.handleCancel();
       }
     },
@@ -509,10 +498,9 @@ export default defineComponent({
       this.$emit('update:visible', false);
     },
     
-    // Media browser methods
     openMediaBrowser(callback?: Function) {
       this.showMediaBrowser = true;
-      this.mediaCallback = callback; // Store callback for file picker
+      this.mediaCallback = callback;
       this.fetchMediaForBrowser();
     },
     
@@ -592,7 +580,6 @@ export default defineComponent({
         let content = '';
         
         if (this.isImage(media.mime_type)) {
-          // Insert image using the download URL for better performance
           const imageUrl = media.download_url || `/v1/conferences/${this.conferenceId}/media/${media.id}/download`;
           const altText = media.file_name;
           
@@ -600,12 +587,9 @@ export default defineComponent({
           
           this.editorInstance.insertContent(content);
         } else if (this.isDocument(media.mime_type) || this.isVideo(media.mime_type)) {
-          // Insert downloadable link for documents and videos
           const linkUrl = media.download_url || `/v1/conferences/${this.conferenceId}/media/${media.id}/download`;
           const linkText = media.file_name;
-          const icon = this.getFileIcon(media.mime_type);
           
-          // Create a more styled download link
           content = `<p><a href="${linkUrl}" target="_blank" download="${media.file_name}" class="download-link" title="Download ${linkText}">
             <span class="download-icon">📁</span> ${linkText}
           </a></p>`;
@@ -613,7 +597,6 @@ export default defineComponent({
           this.editorInstance.insertContent(content);
         }
         
-        // If this was called from file picker callback
         if (this.mediaCallback) {
           const callbackUrl = media.download_url || `/v1/conferences/${this.conferenceId}/media/${media.id}/download`;
           this.mediaCallback(callbackUrl, { alt: media.file_name });
@@ -624,7 +607,6 @@ export default defineComponent({
       this.showMediaBrowser = false;
     },
     
-    // Media type checking methods
     isImage(mimeType: string): boolean {
       return mimeType.startsWith('image/');
     },

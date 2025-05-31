@@ -1,0 +1,63 @@
+// utils/componentRegistry.ts
+export interface ComponentDefinition {
+  edit: () => Promise<any>;
+  public: () => Promise<any>;
+  defaultData: any;
+  name: string;
+  icon: string;
+}
+
+export const componentRegistry: Record<string, ComponentDefinition> = {
+  'wysiwyg': {
+    edit: () => import('@/components/dashboard/PageEditor/EditorComponents/Editor.vue'),
+    public: () => import('@/components/site/SiteComponents/Editor.vue'),
+    defaultData: {
+      content: '<p>Enter content here...</p>'
+    },
+    name: 'WYSIWYG Editor',
+    icon: 'pi pi-file-edit'
+  },
+  'speaker': {
+    edit: () => import('@/components/dashboard/PageEditor/EditorComponents/Speaker.vue'),
+    public: () => import('@/components/site/SiteComponents/Speaker.vue'),
+    defaultData: {
+      name: '',
+      title: '',
+      company: '',
+      email: '',
+      phone: '',
+      website: '',
+      bio: '',
+      avatar: '',
+      social: {
+        linkedin: '',
+        twitter: '',
+        github: ''
+      }
+    },
+    name: 'Speaker Card',
+    icon: 'pi pi-user'
+  }
+};
+
+export function getComponentDefinition(type: string): ComponentDefinition | null {
+  return componentRegistry[type] || null;
+}
+
+export function getAvailableComponentTypes(): Array<{ label: string; value: string; icon: string }> {
+  return Object.entries(componentRegistry).map(([key, definition]) => ({
+    label: definition.name,
+    value: key,
+    icon: definition.icon
+  }));
+}
+
+export function getComponentIcon(type: string): string {
+  const definition = getComponentDefinition(type);
+  return definition?.icon || 'pi pi-code';
+}
+
+export function getComponentDefaultData(type: string): any {
+  const definition = getComponentDefinition(type);
+  return definition?.defaultData || {};
+}
