@@ -37,6 +37,22 @@ export const componentRegistry: Record<string, ComponentDefinition> = {
     },
     name: 'Speaker Card',
     icon: 'pi pi-user'
+  },
+  'gallery': {
+    edit: () => import('@/components/dashboard/PageEditor/EditorComponents/Gallery.vue'),
+    public: () => import('@/components/site/SiteComponents/Gallery.vue'),
+    defaultData: {
+      title: 'Photo Gallery',
+      description: 'Browse through our collection of images',
+      columns: 3,
+      spacing: 'normal',
+      aspectRatio: 'square',
+      showCaptions: true,
+      enableLightbox: true,
+      images: []
+    },
+    name: 'Image Gallery',
+    icon: 'pi pi-images'
   }
 };
 
