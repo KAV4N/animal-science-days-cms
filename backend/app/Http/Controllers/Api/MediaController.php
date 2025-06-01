@@ -309,12 +309,7 @@ class MediaController extends Controller
                 'Last-Modified' => gmdate('D, d M Y H:i:s \G\M\T', filemtime($path)),
                 'ETag' => '"' . md5_file($path) . '"',
             ];
-            
-            // Add CORS headers if needed for cross-origin requests
-            $headers['Access-Control-Allow-Origin'] = '*';
-            $headers['Access-Control-Allow-Methods'] = 'GET, HEAD, OPTIONS';
-            $headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization';
-            
+                        
             return response($fileContent, 200, $headers);
             
         } catch (\Exception $e) {

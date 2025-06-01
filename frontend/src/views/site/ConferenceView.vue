@@ -82,7 +82,7 @@
                   :key="page.id"
                   @click="selectPage(page)"
                   :class="[
-                    'w-full text-left px-3 py-3 text-sm font-medium transition-colors duration-200 cursor-pointer block',
+                    'w-full text-left px-3 py-3  transition-colors duration-200 cursor-pointer block',
                     activePageId === page.id
                       ? 'bg-primary-50 text-primary-700 border-l-4 border-primary-600'
                       : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'

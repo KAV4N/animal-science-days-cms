@@ -2,7 +2,6 @@
   <Dialog 
     v-model:visible="localVisible" 
     header="Edit Text Content" 
-
     :style="{ width: '95vw', maxWidth: '1400px', height: '90vh' }" 
     :modal="true"
     :maximizable="false"
@@ -80,177 +79,23 @@
         </div>
       </template>
     </Card>
-
-    <!-- Media Browser Dialog -->
-    <Dialog 
-      v-model:visible="showMediaBrowser" 
-      header="Select Media" 
-      :style="{ width: '95vw', maxWidth: '1000px', height: '80vh' }" 
-      :modal="true"
-      :maximizable="true"
-      :closable="true"
-      :breakpoints="{ '640px': '95vw' }"
-    >
-      <div class="h-full flex flex-col">
-        <!-- Media Browser Header -->
-        <Card class="mb-4 flex-shrink-0">
-          <template #content>
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-0">
-              <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-1">
-                <!-- Collection Filter -->
-                <div class="flex items-center gap-2">
-                  <label class="text-sm font-medium whitespace-nowrap">Collection:</label>
-                  <Select
-                    v-model="mediaSelectedCollection"
-                    :options="mediaCollectionOptions"
-                    option-label="label"
-                    option-value="value"
-                    placeholder="All Collections"
-                    class="w-40"
-                    @change="fetchMediaForBrowser"
-                  />
-                </div>
-                
-                <!-- Search -->
-                <div class="flex items-center gap-2 flex-1 min-w-0">
-                  <label class="text-sm font-medium whitespace-nowrap">Search:</label>
-                  <InputText
-                    v-model="mediaSearchTerm"
-                    placeholder="Search files..."
-                    class="flex-1"
-                    @keyup.enter="fetchMediaForBrowser"
-                  />
-                  <Button
-                    icon="pi pi-search"
-                    @click="fetchMediaForBrowser"
-                    outlined
-                    size="small"
-                  />
-                </div>
-              </div>
-            </div>
-          </template>
-        </Card>
-
-        <!-- Media Grid -->
-        <div class="flex-1 overflow-y-auto">
-          <!-- Loading State -->
-          <div v-if="mediaLoading" class="flex items-center justify-center h-64">
-            <Card>
-              <template #content>
-                <div class="text-center p-0">
-                  <i class="pi pi-spin pi-spinner text-4xl mb-4"></i>
-                  <p class="text-lg">Loading media files...</p>
-                </div>
-              </template>
-            </Card>
-          </div>
-
-          <!-- Empty State -->
-          <div v-else-if="browserMedia.length === 0" class="flex items-center justify-center h-64">
-            <Card>
-              <template #content>
-                <div class="text-center p-0">
-                  <i class="pi pi-images text-6xl mb-4 text-gray-400"></i>
-                  <h3 class="text-xl font-medium mb-4">No Media Files</h3>
-                  <p class="mb-6">No media files found matching your criteria</p>
-                </div>
-              </template>
-            </Card>
-          </div>
-
-          <!-- Media Grid -->
-          <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            <Card 
-              v-for="item in browserMedia" 
-              :key="item.id"
-              class="group hover:shadow-lg transition-all duration-200 cursor-pointer"
-              @click="selectMediaItem(item)"
-            >
-              <template #content>
-                <div class="p-0">
-                  <!-- Media Preview -->
-                  <div class="aspect-square bg-gray-100 rounded-lg mb-4 overflow-hidden relative">
-                    <!-- Image Preview -->
-                    <img 
-                      v-if="isImage(item.mime_type) && item.conversions.thumb"
-                      :src="item.conversions.thumb"
-                      :alt="item.file_name"
-                      class="w-full h-full object-cover"
-                    />
-                    <!-- Document Icon -->
-                    <div 
-                      v-else-if="isDocument(item.mime_type)"
-                      class="w-full h-full flex items-center justify-center"
-                    >
-                      <i class="pi pi-file-pdf text-6xl text-red-500" v-if="item.mime_type === 'application/pdf'"></i>
-                      <i class="pi pi-file text-6xl text-blue-500" v-else></i>
-                    </div>
-                    <!-- Video Icon -->
-                    <div 
-                      v-else-if="isVideo(item.mime_type)"
-                      class="w-full h-full flex items-center justify-center"
-                    >
-                      <i class="pi pi-video text-6xl text-purple-500"></i>
-                    </div>
-                    <!-- Generic File Icon -->
-                    <div 
-                      v-else
-                      class="w-full h-full flex items-center justify-center"
-                    >
-                      <i class="pi pi-file text-6xl text-gray-500"></i>
-                    </div>
-                    
-                    <!-- Selection Indicator -->
-                    <div class="absolute top-2 right-2">
-                      <Button
-                        icon="pi pi-check"
-                        class="rounded-full"
-                        size="small"
-                        severity="success"
-                      />
-                    </div>
-                  </div>
-
-                  <!-- Media Info -->
-                  <div class="space-y-2">
-                    <h4 class="font-semibold text-sm truncate" :title="item.file_name">
-                      {{ item.file_name }}
-                    </h4>
-                    <div class="flex items-center justify-between text-xs text-gray-600">
-                      <Badge 
-                        :value="item.collection_name" 
-                        class="text-xs"
-                      />
-                      <span>{{ item.size_human }}</span>
-                    </div>
-                  </div>
-                </div>
-              </template>
-            </Card>
-          </div>
-
-          <!-- Load More Button -->
-          <div v-if="hasMoreMediaPages" class="text-center mt-6">
-            <Button
-              label="Load More"
-              icon="pi pi-chevron-down"
-              @click="loadMoreMedia"
-              :loading="mediaLoadingMore"
-              outlined
-            />
-          </div>
-        </div>
-      </div>
-    </Dialog>
   </Dialog>
+  
+  <!-- MediaManager Integration -->
+  <MediaManager
+    v-model:visible="showMediaManager"
+    :selectionMode="mediaSelectionMode"
+    :allowedMimeTypes="allowedMimeTypes"
+    @select="handleMediaSelect"
+    :conferenceId="conferenceId"
+  />
 </template>
 
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue';
 import Editor from '@hugerte/hugerte-vue';
+import MediaManager from '@/components/dashboard/PageEditor/MediaManager.vue'; 
 import apiService from '@/services/apiService';
-import type { MediaItem } from '@/types/media';
 
 interface ComponentData {
   content: string;
@@ -259,7 +104,8 @@ interface ComponentData {
 export default defineComponent({
   name: 'EditorComponent',
   components: {
-    'editor': Editor
+    Editor,
+    MediaManager
   },
   props: {
     visible: {
@@ -290,26 +136,11 @@ export default defineComponent({
       localContent: '<p>Enter content here...</p>',
       localPublished: false,
       localVisible: false,
-      
-      // Media browser state
-      showMediaBrowser: false,
-      browserMedia: [] as MediaItem[],
-      mediaLoading: false,
-      mediaLoadingMore: false,
-      mediaCurrentPage: 1,
-      hasMoreMediaPages: false,
-      mediaSearchTerm: '',
-      mediaSelectedCollection: '',
-      
-      mediaCollectionOptions: [
-        { label: 'All Collections', value: '' },
-        { label: 'Images', value: 'images' },
-        { label: 'Documents', value: 'documents' },
-        { label: 'General', value: 'general' }
-      ],
-      
+      showMediaManager: false,
+      mediaSelectionMode: 'single' as 'single' | 'multiple',
+      allowedMimeTypes: [] as string[],
       editorInstance: null as any,
-      mediaCallback: null as Function | null
+      filePickerCallback: null as Function | null
     };
   },
   computed: {
@@ -318,10 +149,10 @@ export default defineComponent({
         height: '100%',
         menubar: true,
         plugins: [
-          'accordion', 'advlist', 'anchor', 'autolink', 'autoresize', 'autosave', 
+          'accordion', 'advlist', 'anchor', 'autolink', 'autoresize', 
           'charmap', 'code', 'codesample', 'directionality', 'fullscreen', 
-          'image', 'insertdatetime', 'link', 'lists', 'media', 'nonbreaking', 
-          'pagebreak', 'preview', 'quickbars', 'save', 'searchreplace', 
+          'insertdatetime', 'lists', 'nonbreaking',
+          'pagebreak', 
           'table', 'template', 'visualblocks', 'visualchars', 'wordcount', 
           'emoticons', 'help'
         ].join(' '),
@@ -333,30 +164,47 @@ export default defineComponent({
           menubar: false,
           toolbar: 'undo redo | bold italic | bullist numlist | insert'
         },
+        // Disable image upload functionality
+        images_upload_url: false,
+        images_upload_handler: (blobInfo: any, success: Function, failure: Function) => {
+          failure('Direct image upload is not allowed. Please use the Media Library or insert images by URL.');
+        },
+        // Disable automatic uploads
+        automatic_uploads: false,
+        // Disable paste data images
+        paste_data_images: false,
+        // Disable drag and drop file uploads
+        paste_block_drop: true,
         setup: (editor: any) => {
           this.editorInstance = editor;
           
+          // Custom Media Library button
           editor.ui.registry.addMenuItem('media_library', {
             text: 'Media Library...',
             icon: 'browse',
             onAction: () => {
-              this.openMediaBrowser();
+              this.showMediaManager = true;
+              this.mediaSelectionMode = 'single';
+              this.allowedMimeTypes = [];
             }
           });
 
+          // Custom Downloadable Files button
           editor.ui.registry.addMenuItem('downloadable_files', {
             text: 'Downloadable Files...',
             icon: 'download',
             onAction: () => {
-              this.openMediaBrowser();
+              this.showMediaManager = true;
+              this.mediaSelectionMode = 'single';
+              this.allowedMimeTypes = [];
             }
           });
           
+          // Custom Insert menu
           editor.ui.registry.addMenuButton('insert', {
             text: 'Insert',
             fetch: (callback: Function) => {
               const items = [
-                'image',
                 'media_library',
                 '|',
                 'link',
@@ -371,39 +219,79 @@ export default defineComponent({
             }
           });
 
+          // Custom Media Files submenu
           editor.ui.registry.addNestedMenuItem('media_files', {
             text: 'Media Files',
             icon: 'embed',
             getSubmenuItems: () => [
-              'media',
+              'media_library',
               'downloadable_files'
             ]
           });
           
+          // Override default image button to use Media Library
           editor.ui.registry.addButton('image', {
             icon: 'image',
-            tooltip: 'Insert/Edit Image',
+            tooltip: 'Insert Image from Media Library',
             onAction: () => {
-              this.openMediaBrowser();
+              this.showMediaManager = true;
+              this.mediaSelectionMode = 'single';
+              this.allowedMimeTypes = ['image/*'];
+            }
+          });
+
+          // Block drag and drop uploads
+          editor.on('dragover dragenter', (e: Event) => {
+            e.preventDefault();
+            e.stopPropagation();
+          });
+
+          editor.on('drop', (e: any) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Check if files are being dropped
+            if (e.dataTransfer?.files?.length > 0) {
+              editor.notificationManager.open({
+                text: 'Direct file uploads are not allowed. Please use the Media Library to insert images and files.',
+                type: 'warning',
+                timeout: 5000
+              });
+              return false;
+            }
+          });
+
+          // Block paste with files
+          editor.on('paste', (e: any) => {
+            const clipboardData = e.clipboardData || e.originalEvent?.clipboardData;
+            if (clipboardData?.files?.length > 0) {
+              e.preventDefault();
+              editor.notificationManager.open({
+                text: 'Pasting files directly is not allowed. Please use the Media Library or insert images by URL.',
+                type: 'warning',
+                timeout: 5000
+              });
+              return false;
             }
           });
         },
-        images_upload_handler: (blobInfo: any, success: Function, failure: Function) => {
-          failure('Please use the Media Library to upload and insert images');
-        },
+        // Custom file picker that only allows Media Library
         file_picker_callback: (callback: Function, value: string, meta: any) => {
           if (meta.filetype === 'image' || meta.filetype === 'media') {
-            this.openMediaBrowser(callback);
+            this.filePickerCallback = callback;
+            this.showMediaManager = true;
+            this.mediaSelectionMode = 'single';
+            this.allowedMimeTypes = meta.filetype === 'image' ? ['image/*'] : [];
           }
         },
         menu: {
           insert: {
             title: 'Insert',
-            items: 'image media_library | link anchor | insertdatetime nonbreakingspace pagebreak horizontalrule'
+            items: 'media_library | link anchor | insertdatetime nonbreakingspace pagebreak horizontalrule'
           },
           media: {
             title: 'Media',
-            items: 'media downloadable_files'
+            items: 'media_library downloadable_files'
           }
         },
         content_style: `
@@ -415,27 +303,6 @@ export default defineComponent({
           img {
             max-width: 100%;
             height: auto;
-          }
-          .download-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            background: #f3f4f6;
-            border: 1px solid #d1d5db;
-            border-radius: 0.375rem;
-            text-decoration: none;
-            color: #374151;
-            font-weight: 500;
-            transition: all 0.2s;
-          }
-          .download-link:hover {
-            background: #e5e7eb;
-            border-color: #9ca3af;
-            text-decoration: none;
-          }
-          .download-icon {
-            font-size: 1.2em;
           }
         `
       };
@@ -498,113 +365,25 @@ export default defineComponent({
       this.$emit('update:visible', false);
     },
     
-    openMediaBrowser(callback?: Function) {
-      this.showMediaBrowser = true;
-      this.mediaCallback = callback;
-      this.fetchMediaForBrowser();
-    },
-    
-    async fetchMediaForBrowser(reset = true) {
-      if (reset) {
-        this.mediaCurrentPage = 1;
-        this.browserMedia = [];
-      }
-      
-      this.mediaLoading = reset;
-      this.mediaLoadingMore = !reset;
-      
-      try {
-        const params: any = {
-          page: this.mediaCurrentPage,
-          per_page: 20
-        };
-        
-        if (this.mediaSelectedCollection) {
-          params.collection = this.mediaSelectedCollection;
-        }
-        
-        if (this.mediaSearchTerm) {
-          params.search = this.mediaSearchTerm;
-        }
-        
-        const response = await apiService.get(`/v1/conferences/${this.conferenceId}/media`, { params });
-        
-        let newMedia: MediaItem[] = [];
-        let paginationInfo: any = {};
-        
-        if (response.data.payload && Array.isArray(response.data.payload)) {
-          newMedia = response.data.payload;
-        } else if (response.data.payload && response.data.payload.data) {
-          newMedia = response.data.payload.data;
-        } else if (response.data.payload) {
-          newMedia = response.data.payload;
-        }
-        
-        if (response.data.meta) {
-          paginationInfo = response.data.meta;
-        }
-        
-        if (reset) {
-          this.browserMedia = newMedia || [];
-        } else {
-          this.browserMedia.push(...(newMedia || []));
-        }
-        
-        if (paginationInfo.current_page && paginationInfo.last_page) {
-          this.hasMoreMediaPages = paginationInfo.current_page < paginationInfo.last_page;
-        } else {
-          this.hasMoreMediaPages = false;
-        }
-        
-      } catch (error) {
-        console.error('Error fetching media:', error);
-        this.$toast?.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: 'Failed to fetch media files',
-          life: 3000
-        });
-      } finally {
-        this.mediaLoading = false;
-        this.mediaLoadingMore = false;
-      }
-    },
-    
-    async loadMoreMedia() {
-      this.mediaCurrentPage++;
-      await this.fetchMediaForBrowser(false);
-    },
-    
-    selectMediaItem(media: MediaItem) {
-      if (this.editorInstance) {
-        let content = '';
-        
-        if (this.isImage(media.mime_type)) {
-          const imageUrl = media.download_url || `/v1/conferences/${this.conferenceId}/media/${media.id}/download`;
-          const altText = media.file_name;
-          
-          content = `<img src="${imageUrl}" alt="${altText}" title="${altText}" style="max-width: 100%; height: auto;" />`;
-          
-          this.editorInstance.insertContent(content);
-        } else if (this.isDocument(media.mime_type) || this.isVideo(media.mime_type)) {
-          const linkUrl = media.download_url || `/v1/conferences/${this.conferenceId}/media/${media.id}/download`;
-          const linkText = media.file_name;
-          
-          content = `<p><a href="${linkUrl}" target="_blank" download="${media.file_name}" class="download-link" title="Download ${linkText}">
-            <span class="download-icon">📁</span> ${linkText}
-          </a></p>`;
-          
+    handleMediaSelect(selectedItem: any) {
+      if (selectedItem) {
+        const url = selectedItem.download_url || `/v1/conferences/${this.conferenceId}/media/${selectedItem.id}/download`;
+        if (this.filePickerCallback) {
+          this.filePickerCallback(url, { alt: selectedItem.file_name });
+          this.filePickerCallback = null;
+        } else if (this.editorInstance) {
+          let content = '';
+          if (this.isImage(selectedItem.mime_type)) {
+            content = `<img src="${url}" alt="${selectedItem.file_name}" style="max-width: 100%; height: auto;" />`;
+          } else {
+            content = `<p><a href="${url}" target="_blank" download="${selectedItem.file_name}" title="Download ${selectedItem.file_name}">
+              📁 ${selectedItem.file_name}
+            </a></p>`;
+          }
           this.editorInstance.insertContent(content);
         }
-        
-        if (this.mediaCallback) {
-          const callbackUrl = media.download_url || `/v1/conferences/${this.conferenceId}/media/${media.id}/download`;
-          this.mediaCallback(callbackUrl, { alt: media.file_name });
-          this.mediaCallback = null;
-        }
       }
-      
-      this.showMediaBrowser = false;
+      this.showMediaManager = false;
     },
     
     isImage(mimeType: string): boolean {
@@ -623,14 +402,6 @@ export default defineComponent({
     
     isVideo(mimeType: string): boolean {
       return mimeType.startsWith('video/');
-    },
-    
-    getFileIcon(mimeType: string): string {
-      if (this.isImage(mimeType)) return 'pi pi-image';
-      if (mimeType === 'application/pdf') return 'pi pi-file-pdf';
-      if (this.isDocument(mimeType)) return 'pi pi-file';
-      if (this.isVideo(mimeType)) return 'pi pi-video';
-      return 'pi pi-file';
     }
   }
 });

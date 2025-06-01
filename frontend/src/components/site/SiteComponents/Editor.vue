@@ -149,6 +149,7 @@ export default defineComponent({
 
 .editor-content :deep(a) {
   color: #3b82f6;
+  font-size: 1rem;
   text-decoration: underline;
   text-underline-offset: 2px;
   transition: color 0.2s ease;

@@ -1,31 +1,3 @@
-// Common API response structures (matching your Laravel ApiResponse trait)
-export interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  payload: T;
-}
-
-export interface ApiPaginatedResponse<T> extends ApiResponse<T> {
-  meta: {
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
-  };
-  links: {
-    first: string;
-    last: string;
-    prev: string | null;
-    next: string | null;
-  };
-}
-
-export interface ApiErrorResponse {
-  success: boolean;
-  message: string;
-  errors?: Record<string, string[]>;
-}
-
 // Media-specific interfaces
 
 export interface MediaConversions {

@@ -46,14 +46,22 @@
               </div>
             </div>
             
-            <!-- Upload Button -->
-            <Button
-              label="Upload Files"
-              icon="pi pi-upload"
-              @click="showUploadDialog = true"
-              :disabled="!isLocked"
-              size="small"
-            />
+            <div class="flex gap-2">
+              <Button
+                v-if="selectionMode === 'none'"
+                :label="isBatchDeleteMode ? 'Cancel' : 'Select for Delete'"
+                :icon="isBatchDeleteMode ? 'pi pi-times' : 'pi pi-check-square'"
+                @click="toggleBatchDeleteMode"
+                outlined
+                size="small"
+              />
+              <Button
+                label="Upload Files"
+                icon="pi pi-upload"
+                @click="showUploadDialog = true"
+                size="small"
+              />
+            </div>
           </div>
         </template>
       </Card>
@@ -84,7 +92,6 @@
                   label="Upload Files"
                   icon="pi pi-upload"
                   @click="showUploadDialog = true"
-                  :disabled="!isLocked"
                 />
               </div>
             </template>
@@ -97,19 +104,63 @@
             v-for="item in media" 
             :key="item.id"
             class="group hover:shadow-lg transition-all duration-200"
+            :class="{ 
+              'ring-2 ring-blue-500': isItemSelected(item),
+              'cursor-pointer': selectionMode === 'single' || selectionMode === 'multiple' || isBatchDeleteMode 
+            }"
           >
             <template #content>
-              <div class="p-0">
+              <div 
+                class="p-0 relative" 
+                @click="handleCardClick(item, $event)"
+              >
+                <!-- Checkbox for multiple selection or batch delete -->
+                <div v-if="selectionMode === 'multiple' || (selectionMode === 'none' && isBatchDeleteMode)" class="absolute top-2 left-2 z-10">
+                  <Checkbox 
+                    :model-value="isItemSelected(item)"
+                    @update:model-value="toggleItemSelection(item)"
+                    @click.stop
+                    binary
+                  />
+                </div>
+                
+                <!-- Action Buttons -->
+                <div v-if="!isBatchDeleteMode && selectionMode === 'none'" class="absolute top-2 right-2 flex gap-1 z-10">
+                  <Button
+                    icon="pi pi-download"
+                    @click.stop="downloadMedia(item)"
+                    text
+                    severity="secondary"
+                    size="small"
+                    class="text-white bg-black bg-opacity-50 hover:bg-opacity-75"
+                  />
+                  <Button
+                    icon="pi pi-pencil"
+                    @click.stop="editMedia(item)"
+                    text
+                    severity="secondary"
+                    size="small"
+                    class="text-white bg-black bg-opacity-50 hover:bg-opacity-75"
+                  />
+                  <Button
+                    icon="pi pi-trash"
+                    @click.stop="confirmDeleteMedia(item)"
+                    text
+                    severity="danger"
+                    size="small"
+                    class="text-white bg-black bg-opacity-75 hover:bg-opacity-75"
+                  />
+                </div>
+                
                 <!-- Media Preview -->
-                <div class="aspect-square bg-gray-100 rounded-lg mb-4 overflow-hidden relative">
-                  <!-- Image Preview -->
+                <div class="aspect-square bg-gray-100 rounded-lg mb-4 overflow-hidden">
                   <img 
-                    v-if="isImage(item.mime_type) && item.conversions.thumb"
-                    :src="item.conversions.thumb"
+                    v-if="isImage(item.mime_type)"
+                    :src="item.conversions?.thumb || item.url"
                     :alt="item.file_name"
                     class="w-full h-full object-cover"
+                    loading="lazy"
                   />
-                  <!-- Document Icon -->
                   <div 
                     v-else-if="isDocument(item.mime_type)"
                     class="w-full h-full flex items-center justify-center"
@@ -117,52 +168,20 @@
                     <i class="pi pi-file-pdf text-6xl text-red-500" v-if="item.mime_type === 'application/pdf'"></i>
                     <i class="pi pi-file text-6xl text-blue-500" v-else></i>
                   </div>
-                  <!-- Video Icon -->
                   <div 
                     v-else-if="isVideo(item.mime_type)"
                     class="w-full h-full flex items-center justify-center"
                   >
                     <i class="pi pi-video text-6xl text-purple-500"></i>
                   </div>
-                  <!-- Generic File Icon -->
                   <div 
                     v-else
                     class="w-full h-full flex items-center justify-center"
                   >
                     <i class="pi pi-file text-6xl text-gray-500"></i>
                   </div>
-                  
-                  <!-- Actions Overlay -->
-                  <div class="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    <Button
-                      icon="pi pi-download"
-                      @click="downloadMedia(item)"
-                      text
-                      severity="secondary"
-                      size="large"
-                      class="text-white hover:bg-white hover:bg-opacity-20"
-                    />
-                    <Button
-                      icon="pi pi-pencil"
-                      @click="editMedia(item)"
-                      :disabled="!isLocked"
-                      text
-                      severity="secondary"
-                      size="large"
-                      class="text-white hover:bg-white hover:bg-opacity-20"
-                    />
-                    <Button
-                      icon="pi pi-trash"
-                      @click="confirmDeleteMedia(item)"
-                      :disabled="!isLocked"
-                      text
-                      severity="danger"
-                      size="large"
-                      class="text-white hover:bg-white hover:bg-opacity-20"
-                    />
-                  </div>
                 </div>
-
+                
                 <!-- Media Info -->
                 <div class="space-y-2">
                   <h4 class="font-semibold text-sm truncate" :title="item.file_name">
@@ -179,6 +198,33 @@
               </div>
             </template>
           </Card>
+        </div>
+
+        <!-- Select Button for Multiple Selection -->
+        <div v-if="selectionMode === 'multiple'" class="flex justify-center mt-4">
+          <Button
+            label="Select"
+            icon="pi pi-check"
+            @click="selectMultiple"
+            :disabled="selectedMedia.length === 0"
+          />
+        </div>
+
+        <!-- Batch Delete Controls -->
+        <div v-if="selectionMode === 'none' && isBatchDeleteMode" class="flex justify-center mt-4 gap-2">
+          <Button
+            label="Delete Selected"
+            icon="pi pi-trash"
+            @click="confirmBatchDelete"
+            severity="danger"
+            :disabled="selectedMedia.length === 0"
+          />
+          <Button
+            label="Cancel"
+            icon="pi pi-times"
+            @click="toggleBatchDeleteMode"
+            outlined
+          />
         </div>
 
         <!-- Load More Button -->
@@ -213,9 +259,7 @@
               <h3 class="text-2xl font-bold mb-4">Upload Files</h3>
               <p class="text-gray-600">Select files to upload to your conference</p>
             </div>
-
             <div class="space-y-4">
-              <!-- Collection Selection -->
               <div>
                 <label for="uploadCollection" class="block text-sm font-medium mb-2">Collection *</label>
                 <Select
@@ -228,8 +272,6 @@
                   class="w-full"
                 />
               </div>
-
-              <!-- File Upload -->
               <div>
                 <label class="block text-sm font-medium mb-2">Files *</label>
                 <FileUpload
@@ -255,7 +297,6 @@
                 </FileUpload>
               </div>
             </div>
-
             <div class="flex flex-col sm:flex-row justify-end gap-3 pt-4">
               <Button
                 label="Cancel"
@@ -297,9 +338,7 @@
               <h3 class="text-2xl font-bold mb-4">Edit Media</h3>
               <p class="text-gray-600">Update file name</p>
             </div>
-
             <div class="space-y-4">
-              <!-- File Name -->
               <div>
                 <label for="editFileName" class="block text-sm font-medium mb-2">File Name</label>
                 <InputText
@@ -309,7 +348,6 @@
                 />
               </div>
             </div>
-
             <div class="flex flex-col sm:flex-row justify-end gap-3 pt-4">
               <Button
                 label="Cancel"
@@ -342,11 +380,10 @@
       @hide="showViewDialog = false; viewingMedia = null"
     >
       <div v-if="viewingMedia" class="space-y-4">
-        <!-- Media Display -->
         <div class="text-center">
           <img 
             v-if="isImage(viewingMedia.mime_type)"
-            :src="viewingMedia.conversions.preview || viewingMedia.url"
+            :src="viewingMedia.conversions?.preview || viewingMedia.url"
             :alt="viewingMedia.file_name"
             class="max-w-full max-h-96 mx-auto rounded-lg shadow-md"
           />
@@ -361,39 +398,20 @@
             <p class="text-lg font-medium">{{ viewingMedia.file_name }}</p>
           </div>
         </div>
-
-        <!-- Media Details -->
         <Card>
           <template #title>
             <h4 class="text-lg font-semibold">File Details</h4>
           </template>
           <template #content>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-0">
-              <div>
-                <strong class="text-sm">File Name:</strong>
-                <p class="text-sm">{{ viewingMedia.file_name }}</p>
-              </div>
-              <div>
-                <strong class="text-sm">Collection:</strong>
-                <p class="text-sm">{{ viewingMedia.collection_name }}</p>
-              </div>
-              <div>
-                <strong class="text-sm">Size:</strong>
-                <p class="text-sm">{{ viewingMedia.size_human }}</p>
-              </div>
-              <div>
-                <strong class="text-sm">Type:</strong>
-                <p class="text-sm">{{ viewingMedia.mime_type }}</p>
-              </div>
-              <div>
-                <strong class="text-sm">Uploaded:</strong>
-                <p class="text-sm">{{ formatDate(viewingMedia.created_at) }}</p>
-              </div>
+              <div><strong class="text-sm">File Name:</strong><p class="text-sm">{{ viewingMedia.file_name }}</p></div>
+              <div><strong class="text-sm">Collection:</strong><p class="text-sm">{{ viewingMedia.collection_name }}</p></div>
+              <div><strong class="text-sm">Size:</strong><p class="text-sm">{{ viewingMedia.size_human }}</p></div>
+              <div><strong class="text-sm">Type:</strong><p class="text-sm">{{ viewingMedia.mime_type }}</p></div>
+              <div><strong class="text-sm">Uploaded:</strong><p class="text-sm">{{ formatDate(viewingMedia.created_at) }}</p></div>
             </div>
           </template>
         </Card>
-
-        <!-- Actions -->
         <div class="flex justify-center gap-3">
           <Button
             label="Download"
@@ -405,7 +423,6 @@
             label="Edit"
             icon="pi pi-pencil"
             @click="editMedia(viewingMedia); showViewDialog = false"
-            :disabled="!isLocked"
             outlined
           />
         </div>
@@ -431,7 +448,6 @@
               <h3 class="text-2xl font-bold mb-4">Delete Media</h3>
               <p class="text-gray-600">Are you sure you want to delete this file? This action cannot be undone.</p>
             </div>
-
             <Card v-if="deletingMedia">
               <template #content>
                 <div class="text-center p-0">
@@ -440,7 +456,6 @@
                 </div>
               </template>
             </Card>
-
             <div class="flex flex-col sm:flex-row justify-center gap-3">
               <Button
                 label="Cancel"
@@ -466,9 +481,11 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue';
+import { defineComponent, type PropType } from 'vue';
 import apiService from '@/services/apiService';
 import mediaService from '@/services/mediaService';
+
+import type { ApiResponse, ApiPaginatedResponse } from '@/types/common';
 import type { 
   MediaItem, 
   MediaPaginatedData, 
@@ -478,27 +495,22 @@ import type {
   MediaCollectionOption,
   FileUploadEvent,
   FileRemoveEvent,
-  ApiResponse,
-  ApiPaginatedResponse
 } from '@/types/media';
 
 export default defineComponent({
   name: 'MediaManager',
   props: {
-    visible: {
-      type: Boolean,
-      required: true
+    visible: { type: Boolean, required: true },
+    conferenceId: { type: Number, required: true },
+    isLocked: { type: Boolean, default: false },
+    selectionMode: {
+      type: String,
+      default: 'none',
+      validator: (value: string) => ['none', 'single', 'multiple'].includes(value)
     },
-    conferenceId: {
-      type: Number,
-      required: true
-    },
-    isLocked: {
-      type: Boolean,
-      default: false
-    }
+    allowedMimeTypes: { type: Array as PropType<string[]>, default: () => [] }
   },
-  emits: ['update:visible'],
+  emits: ['update:visible', 'select'],
   data() {
     return {
       dialogVisible: false,
@@ -509,60 +521,48 @@ export default defineComponent({
       hasMorePages: false,
       searchTerm: '',
       selectedCollection: '',
-      
+      isBatchDeleteMode: false,
+      selectedMedia: [] as MediaItem[],
       collectionOptions: [
         { label: 'All Collections', value: '' },
         { label: 'Images', value: 'images' },
         { label: 'Documents', value: 'documents' },
         { label: 'General', value: 'general' }
       ] as MediaCollectionOption[],
-      
       uploadCollectionOptions: [
         { label: 'Images', value: 'images' },
         { label: 'Documents', value: 'documents' },
         { label: 'General', value: 'general' }
       ] as MediaCollectionOption[],
-      
-      // Upload Dialog
       showUploadDialog: false,
       uploading: false,
       selectedFiles: [] as File[],
-      uploadData: {
-        collection: 'general' as string
-      } as MediaUploadData,
-      
-      // Edit Dialog
+      uploadData: { collection: 'general' } as MediaUploadData,
       showEditDialog: false,
       updating: false,
       editingMedia: null as MediaItem | null,
-      editData: {
-        file_name: ''
-      },
-      
-      // View Dialog
+      editData: { file_name: '' },
       showViewDialog: false,
       viewingMedia: null as MediaItem | null,
-      
-      // Delete Dialog
       showDeleteDialog: false,
       deleting: false,
       deletingMedia: null as MediaItem | null,
     };
   },
-  computed: {
-    // No computed properties needed for now
-  },
   watch: {
     visible: {
       immediate: true,
-      handler(newVal) {
-        this.dialogVisible = newVal;
+      handler(newVal) { 
+        this.dialogVisible = newVal; 
       }
     },
     dialogVisible(newVal) {
       this.$emit('update:visible', newVal);
       if (newVal) {
         this.fetchMedia();
+      } else {
+        this.selectedMedia = [];
+        this.isBatchDeleteMode = false;
       }
     }
   },
@@ -572,97 +572,160 @@ export default defineComponent({
         this.currentPage = 1;
         this.media = [];
       }
-      
       this.loading = reset;
       this.loadingMore = !reset;
       
       try {
-        const params: MediaFilterParams = {
-          page: this.currentPage,
-          per_page: 20
+        const params: MediaFilterParams = { 
+          page: this.currentPage, 
+          per_page: 20 
         };
         
-        if (this.selectedCollection) {
-          params.collection = this.selectedCollection;
-        }
-        
-        if (this.searchTerm) {
-          params.search = this.searchTerm;
-        }
+        if (this.selectedCollection) params.collection = this.selectedCollection;
+        if (this.searchTerm) params.search = this.searchTerm;
+        if (this.allowedMimeTypes.length > 0) params.mime_types = this.allowedMimeTypes;
         
         const response = await apiService.get(`/v1/conferences/${this.conferenceId}/media`, { params });
         
-        // Debug: Log the response structure
-        console.log('API Response:', response.data);
-        
-        // Handle Laravel pagination structure from your ApiResponse trait
         let newMedia: MediaItem[] = [];
         let paginationInfo: any = {};
         
         if (response.data.payload && Array.isArray(response.data.payload)) {
-          // Direct array response
           newMedia = response.data.payload;
         } else if (response.data.payload && response.data.payload.data) {
-          // Paginated response with data property
           newMedia = response.data.payload.data;
         } else if (response.data.payload) {
-          // Paginated response where payload is the paginated collection
           newMedia = response.data.payload;
         }
         
-        // Get pagination meta from response
-        if (response.data.meta) {
-          paginationInfo = response.data.meta;
-        }
-        
-        // Debug: Log what we extracted
-        console.log('Extracted media:', newMedia);
-        console.log('Pagination info:', paginationInfo);
+        if (response.data.meta) paginationInfo = response.data.meta;
         
         if (reset) {
           this.media = newMedia || [];
+          // Clear selection when refreshing
+          this.selectedMedia = [];
         } else {
           this.media.push(...(newMedia || []));
         }
         
-        // Update pagination state
-        if (paginationInfo.current_page && paginationInfo.last_page) {
-          this.hasMorePages = paginationInfo.current_page < paginationInfo.last_page;
-        } else {
-          this.hasMorePages = false;
-        }
-        
+        this.hasMorePages = paginationInfo.current_page < paginationInfo.last_page;
       } catch (error) {
         console.error('Error fetching media:', error);
-        this.$toast.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: 'Failed to fetch media files',
-          life: 3000
+        this.$toast.add({ 
+          severity: 'error', 
+          summary: 'Error', 
+          detail: 'Failed to fetch media files', 
+          life: 3000 
         });
       } finally {
         this.loading = false;
         this.loadingMore = false;
       }
     },
-    
+
     async loadMore() {
       this.currentPage++;
       await this.fetchMedia(false);
     },
-    
+
+    toggleBatchDeleteMode() {
+      this.isBatchDeleteMode = !this.isBatchDeleteMode;
+      if (!this.isBatchDeleteMode) {
+        this.selectedMedia = [];
+      }
+    },
+
+    isItemSelected(item: MediaItem): boolean {
+      return this.selectedMedia.some(media => media.id === item.id);
+    },
+
+    toggleItemSelection(item: MediaItem) {
+      const index = this.selectedMedia.findIndex(media => media.id === item.id);
+      if (index === -1) {
+        this.selectedMedia.push(item);
+      } else {
+        this.selectedMedia.splice(index, 1);
+      }
+    },
+
+    selectSingle(item: MediaItem) {
+      this.$emit('select', item);
+      this.dialogVisible = false;
+    },
+
+    selectMultiple() {
+      this.$emit('select', this.selectedMedia);
+      this.dialogVisible = false;
+    },
+
+    handleCardClick(item: MediaItem, event: Event) {
+      // Prevent card click when clicking on action buttons or checkboxes
+      const target = event.target as HTMLElement;
+      if (target.closest('button') || target.closest('.p-checkbox')) {
+        return;
+      }
+
+      if (this.selectionMode === 'single') {
+        this.selectSingle(item);
+      } else if (this.selectionMode === 'multiple' || this.isBatchDeleteMode) {
+        this.toggleItemSelection(item);
+      } else {
+        // Default view mode
+        this.viewingMedia = item;
+        this.showViewDialog = true;
+      }
+    },
+
+    async confirmBatchDelete() {
+      if (this.selectedMedia.length === 0) return;
+      
+      this.$confirm.require({
+        message: `Are you sure you want to delete ${this.selectedMedia.length} media item${this.selectedMedia.length > 1 ? 's' : ''}?`,
+        header: 'Confirm Delete',
+        icon: 'pi pi-exclamation-triangle',
+        accept: async () => {
+          this.deleting = true;
+          try {
+            const deletePromises = this.selectedMedia.map(item => 
+              apiService.delete(`/v1/conferences/${this.conferenceId}/media/${item.id}`)
+            );
+            await Promise.all(deletePromises);
+            
+            this.$toast.add({ 
+              severity: 'success', 
+              summary: 'Success', 
+              detail: `${this.selectedMedia.length} media item${this.selectedMedia.length > 1 ? 's' : ''} deleted`, 
+              life: 3000 
+            });
+            
+            this.selectedMedia = [];
+            this.isBatchDeleteMode = false;
+            await this.fetchMedia();
+          } catch (error) {
+            console.error('Error deleting media:', error);
+            this.$toast.add({ 
+              severity: 'error', 
+              summary: 'Error', 
+              detail: 'Failed to delete some media items', 
+              life: 5000 
+            });
+          } finally {
+            this.deleting = false;
+          }
+        }
+      });
+    },
+
     onFileSelect(event: FileUploadEvent) {
       this.selectedFiles = Array.from(event.files);
     },
-    
+
     onFileRemove(event: FileRemoveEvent) {
       this.selectedFiles = this.selectedFiles.filter(file => file !== event.file);
     },
-    
+
     async handleUpload() {
-      if (this.selectedFiles.length === 0 || !this.uploadData.collection || this.uploading) {
-        return;
-      }
+      if (this.selectedFiles.length === 0 || !this.uploadData.collection || this.uploading) return;
       
       this.uploading = true;
       let successCount = 0;
@@ -676,218 +739,136 @@ export default defineComponent({
             formData.append('collection', this.uploadData.collection);
             
             await apiService.post(`/v1/conferences/${this.conferenceId}/media`, formData, {
-              headers: {
-                'Content-Type': 'multipart/form-data'
-              }
+              headers: { 'Content-Type': 'multipart/form-data' }
             });
-            
             successCount++;
-            
-          } catch (error: any) {
+          } catch (error) {
             console.error('Error uploading file:', file.name, error);
             errorCount++;
           }
         }
         
-        // Show results
         if (successCount > 0) {
-          this.$toast.add({
-            severity: 'success',
-            summary: 'Upload Complete',
-            detail: `${successCount} file(s) uploaded successfully${errorCount > 0 ? `, ${errorCount} failed` : ''}`,
-            life: 5000
+          this.$toast.add({ 
+            severity: 'success', 
+            summary: 'Upload Complete', 
+            detail: `${successCount} file(s) uploaded successfully${errorCount > 0 ? `, ${errorCount} failed` : ''}`, 
+            life: 5000 
           });
         }
         
         if (errorCount > 0 && successCount === 0) {
-          this.$toast.add({
-            severity: 'error',
-            summary: 'Upload Failed',
-            detail: `Failed to upload ${errorCount} file(s)`,
-            life: 5000
+          this.$toast.add({ 
+            severity: 'error', 
+            summary: 'Upload Failed', 
+            detail: `Failed to upload ${errorCount} file(s)`, 
+            life: 5000 
           });
         }
         
-        // Close dialog and refresh if any uploads succeeded
         if (successCount > 0) {
           this.cancelUpload();
-          this.fetchMedia();
+          await this.fetchMedia();
         }
-        
-      } catch (error: any) {
+      } catch (error) {
         console.error('Error during upload process:', error);
-        this.$toast.add({
-          severity: 'error',
-          summary: 'Upload Error',
-          detail: 'An unexpected error occurred during upload',
-          life: 5000
+        this.$toast.add({ 
+          severity: 'error', 
+          summary: 'Upload Error', 
+          detail: 'An unexpected error occurred during upload', 
+          life: 5000 
         });
       } finally {
         this.uploading = false;
       }
     },
-    
+
     cancelUpload() {
       this.showUploadDialog = false;
       this.selectedFiles = [];
-      this.uploadData = {
-        collection: 'general'
-      };
+      this.uploadData = { collection: 'general' };
       if (this.$refs.fileUpload) {
         (this.$refs.fileUpload as any).clear();
       }
     },
-    
+
     async downloadMedia(media: MediaItem) {
       try {
-        // Use the download_url if available, otherwise construct it
-        const downloadUrl = media.download_url || `/v1/conferences/${this.conferenceId}/media/${media.id}/download`;
-        console.log('Attempting download from:', downloadUrl);
-        console.log('Media object:', media);
-        console.log('Conference ID:', this.conferenceId);
-        
         await mediaService.downloadMediaFile(this.conferenceId, media);
-        
-        this.$toast.add({
-          severity: 'success',
-          summary: 'Download Started',
-          detail: `Downloading ${media.file_name}`,
-          life: 3000
+        this.$toast.add({ 
+          severity: 'success', 
+          summary: 'Download Started', 
+          detail: `Downloading ${media.file_name}`, 
+          life: 3000 
         });
-        
       } catch (error: any) {
         console.error('Download error:', error);
-        console.error('Error response:', error.response);
-        
-        // Try to read the error response as text if it's a blob
-        if (error.response?.data instanceof Blob) {
-          try {
-            const errorText = await error.response.data.text();
-            console.error('Error response text:', errorText);
-          } catch (e) {
-            console.error('Could not read error response as text');
-          }
-        }
-        
-        this.$toast.add({
-          severity: 'error',
-          summary: 'Download Failed',
-          detail: error.response?.data?.message || `Failed to download file: ${media.file_name}`,
-          life: 8000
+        this.$toast.add({ 
+          severity: 'error', 
+          summary: 'Download Failed', 
+          detail: error.response?.data?.message || `Failed to download file: ${media.file_name}`, 
+          life: 8000 
         });
       }
     },
-    
     editMedia(media: MediaItem) {
       this.editingMedia = media;
-      this.editData = {
-        file_name: media.file_name || ''
-      };
+      this.editData = { file_name: media.file_name || '' };
       this.showEditDialog = true;
     },
-    
     async saveEdit() {
       if (!this.editingMedia) return;
-      
       this.updating = true;
-      
       try {
-        const updateData: MediaUpdateData = {
-          file_name: this.editData.file_name
-        };
-        
+        const updateData: MediaUpdateData = { file_name: this.editData.file_name };
         await apiService.put(`/v1/conferences/${this.conferenceId}/media/${this.editingMedia.id}`, updateData);
-        
-        this.$toast.add({
-          severity: 'success',
-          summary: 'Success',
-          detail: 'Media updated successfully',
-          life: 3000
-        });
-        
+        this.$toast.add({ severity: 'success', summary: 'Success', detail: 'Media updated successfully', life: 3000 });
         this.cancelEdit();
         this.fetchMedia();
-        
       } catch (error: any) {
         console.error('Error updating media:', error);
-        this.$toast.add({
-          severity: 'error',
-          summary: 'Update Failed',
-          detail: error.response?.data?.message || 'Failed to update media',
-          life: 5000
-        });
+        this.$toast.add({ severity: 'error', summary: 'Update Failed', detail: error.response?.data?.message || 'Failed to update media', life: 5000 });
       } finally {
         this.updating = false;
       }
     },
-    
     cancelEdit() {
       this.showEditDialog = false;
       this.editingMedia = null;
-      this.editData = {
-        file_name: ''
-      };
+      this.editData = { file_name: '' };
     },
-    
     confirmDeleteMedia(media: MediaItem) {
       this.deletingMedia = media;
       this.showDeleteDialog = true;
     },
-    
     async deleteMedia() {
       if (!this.deletingMedia) return;
-      
       this.deleting = true;
-      
       try {
         await apiService.delete(`/v1/conferences/${this.conferenceId}/media/${this.deletingMedia.id}`);
-        
-        this.$toast.add({
-          severity: 'success',
-          summary: 'Success',
-          detail: 'Media deleted successfully',
-          life: 3000
-        });
-        
+        this.$toast.add({ severity: 'success', summary: 'Success', detail: 'Media deleted successfully', life: 3000 });
         this.cancelDelete();
         this.fetchMedia();
-        
       } catch (error: any) {
         console.error('Error deleting media:', error);
-        this.$toast.add({
-          severity: 'error',
-          summary: 'Delete Failed',
-          detail: error.response?.data?.message || 'Failed to delete media',
-          life: 5000
-        });
+        this.$toast.add({ severity: 'error', summary: 'Delete Failed', detail: error.response?.data?.message || 'Failed to delete media', life: 5000 });
       } finally {
         this.deleting = false;
       }
     },
-    
     cancelDelete() {
       this.showDeleteDialog = false;
       this.deletingMedia = null;
     },
-    
     isImage(mimeType: string): boolean {
       return mimeType.startsWith('image/');
     },
-    
     isDocument(mimeType: string): boolean {
-      return [
-        'application/pdf',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      ].includes(mimeType);
+      return ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'].includes(mimeType);
     },
-    
     isVideo(mimeType: string): boolean {
       return mimeType.startsWith('video/');
     },
-    
     getFileIcon(mimeType: string): string {
       if (this.isImage(mimeType)) return 'pi pi-image';
       if (mimeType === 'application/pdf') return 'pi pi-file-pdf';
@@ -895,7 +876,6 @@ export default defineComponent({
       if (this.isVideo(mimeType)) return 'pi pi-video';
       return 'pi pi-file';
     },
-    
     formatDate(dateString: string): string {
       return new Date(dateString).toLocaleDateString();
     }

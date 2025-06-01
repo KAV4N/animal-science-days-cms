@@ -1,4 +1,3 @@
-<!-- Gallery.vue - Editor Component -->
 <template>
   <Dialog 
     v-model:visible="localVisible" 
@@ -137,7 +136,7 @@
                 <Button
                   label="Add Images"
                   icon="pi pi-plus"
-                  @click="openMediaBrowser"
+                  @click="openMediaManager"
                   size="small"
                 />
               </div>
@@ -152,14 +151,13 @@
                   <Button
                     label="Browse Media"
                     icon="pi pi-images"
-                    @click="openMediaBrowser"
+                    @click="openMediaManager"
                     outlined
                   />
                 </div>
 
                 <!-- Images Grid -->
                 <div v-else class="space-y-4">
-                  <!-- Images List -->
                   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     <Card 
                       v-for="(image, index) in localGalleryData.images" 
@@ -284,183 +282,14 @@
       </template>
     </Card>
 
-    <!-- Media Browser Dialog -->
-    <Dialog 
-      v-model:visible="showMediaBrowser" 
-      header="Select Gallery Images" 
-      :style="{ width: '95vw', maxWidth: '1200px', height: '80vh' }" 
-      :modal="true"
-      :maximizable="true"
-      :closable="true"
-      :breakpoints="{ '640px': '95vw' }"
-    >
-      <div class="h-full flex flex-col">
-        <!-- Media Browser Header -->
-        <Card class="mb-4 flex-shrink-0">
-          <template #content>
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-0">
-              <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-1">
-                <!-- Collection Filter -->
-                <div class="flex items-center gap-2">
-                  <label class="text-sm font-medium whitespace-nowrap">Collection:</label>
-                  <Select
-                    v-model="mediaSelectedCollection"
-                    :options="mediaCollectionOptions"
-                    option-label="label"
-                    option-value="value"
-                    placeholder="All Collections"
-                    class="w-40"
-                    @change="fetchMediaForBrowser"
-                  />
-                </div>
-                
-                <!-- Search -->
-                <div class="flex items-center gap-2 flex-1 min-w-0">
-                  <label class="text-sm font-medium whitespace-nowrap">Search:</label>
-                  <InputText
-                    v-model="mediaSearchTerm"
-                    placeholder="Search images..."
-                    class="flex-1"
-                    @keyup.enter="fetchMediaForBrowser"
-                  />
-                  <Button
-                    icon="pi pi-search"
-                    @click="fetchMediaForBrowser"
-                    outlined
-                    size="small"
-                  />
-                </div>
-              </div>
-              
-              <!-- Selection Info -->
-              <div class="text-sm text-gray-600">
-                {{ selectedImages.length }} selected
-              </div>
-            </div>
-          </template>
-        </Card>
-
-        <!-- Media Grid -->
-        <div class="flex-1 overflow-y-auto">
-          <!-- Loading State -->
-          <div v-if="mediaLoading" class="flex items-center justify-center h-64">
-            <Card>
-              <template #content>
-                <div class="text-center p-0">
-                  <i class="pi pi-spin pi-spinner text-4xl mb-4"></i>
-                  <p class="text-lg">Loading media files...</p>
-                </div>
-              </template>
-            </Card>
-          </div>
-
-          <!-- Empty State -->
-          <div v-else-if="browserMedia.length === 0" class="flex items-center justify-center h-64">
-            <Card>
-              <template #content>
-                <div class="text-center p-0">
-                  <i class="pi pi-images text-6xl mb-4 text-gray-400"></i>
-                  <h3 class="text-xl font-medium mb-4">No Images Found</h3>
-                  <p class="mb-6">No images found matching your criteria</p>
-                </div>
-              </template>
-            </Card>
-          </div>
-
-          <!-- Media Grid -->
-          <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
-            <Card 
-              v-for="item in imageMedia" 
-              :key="item.id"
-              class="group hover:shadow-lg transition-all duration-200 cursor-pointer relative"
-              :class="{ 'ring-2 ring-blue-500': isImageSelected(item) }"
-              @click="toggleImageSelection(item)"
-            >
-              <template #content>
-                <div class="p-0">
-                  <!-- Image Preview -->
-                  <div class="aspect-square bg-gray-100 rounded-lg mb-4 overflow-hidden relative">
-                    <img 
-                      v-if="item.conversions && item.conversions.thumb"
-                      :src="item.conversions.thumb"
-                      :alt="item.file_name"
-                      class="w-full h-full object-cover"
-                    />
-                    <div 
-                      v-else
-                      class="w-full h-full flex items-center justify-center"
-                    >
-                      <i class="pi pi-image text-6xl text-gray-400"></i>
-                    </div>
-                    
-                    <!-- Selection Indicator -->
-                    <div class="absolute top-2 right-2">
-                      <div 
-                        v-if="isImageSelected(item)"
-                        class="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center"
-                      >
-                        <i class="pi pi-check text-white text-xs"></i>
-                      </div>
-                      <div 
-                        v-else
-                        class="w-6 h-6 bg-white bg-opacity-80 rounded-full border-2 border-gray-300 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Image Info -->
-                  <div class="space-y-2">
-                    <h4 class="font-semibold text-sm truncate" :title="item.file_name">
-                      {{ item.file_name }}
-                    </h4>
-                    <div class="flex items-center justify-between text-xs text-gray-600">
-                      <Badge 
-                        :value="item.collection_name || 'General'" 
-                        class="text-xs"
-                      />
-                      <span>{{ item.size_human }}</span>
-                    </div>
-                  </div>
-                </div>
-              </template>
-            </Card>
-          </div>
-
-          <!-- Load More Button -->
-          <div v-if="hasMoreMediaPages" class="text-center mb-4">
-            <Button
-              label="Load More"
-              icon="pi pi-chevron-down"
-              @click="loadMoreMedia"
-              :loading="mediaLoadingMore"
-              outlined
-            />
-          </div>
-        </div>
-
-        <!-- Media Browser Actions -->
-        <div class="flex-shrink-0 pt-4 border-t">
-          <div class="flex justify-between items-center">
-            <span class="text-sm text-gray-600">
-              {{ selectedImages.length }} image(s) selected
-            </span>
-            <div class="flex gap-2">
-              <Button
-                label="Cancel"
-                @click="showMediaBrowser = false"
-                outlined
-              />
-              <Button
-                label="Add Selected"
-                @click="addSelectedImages"
-                :disabled="selectedImages.length === 0"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-    </Dialog>
+    <!-- MediaManager Integration -->
+    <MediaManager
+      v-model:visible="showMediaManager"
+      selectionMode="multiple"
+      :allowedMimeTypes="['image/*']"
+      @select="handleMediaSelect"
+      :conferenceId="conferenceId"
+    />
 
     <!-- Image Edit Dialog -->
     <Dialog 
@@ -523,8 +352,8 @@
 
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue';
+import MediaManager from '@/components/dashboard/PageEditor/MediaManager.vue'; // Adjust path as needed
 import apiService from '@/services/apiService';
-import type { MediaItem } from '@/types/media';
 
 interface GalleryImage {
   id?: string | number;
@@ -534,7 +363,7 @@ interface GalleryImage {
   alt?: string;
   filename?: string;
   size?: string;
-  isMissing?: boolean; // Added for handling missing images
+  isMissing?: boolean;
 }
 
 interface GalleryData {
@@ -550,6 +379,9 @@ interface GalleryData {
 
 export default defineComponent({
   name: 'GalleryEditor',
+  components: {
+    MediaManager
+  },
   props: {
     visible: {
       type: Boolean,
@@ -597,24 +429,10 @@ export default defineComponent({
       } as GalleryData,
       localPublished: false,
       localVisible: false,
-      
-      // Media browser state
-      showMediaBrowser: false,
-      browserMedia: [] as MediaItem[],
-      mediaLoading: false,
-      mediaLoadingMore: false,
-      mediaCurrentPage: 1,
-      hasMoreMediaPages: false,
-      mediaSearchTerm: '',
-      mediaSelectedCollection: '',
-      selectedImages: [] as MediaItem[],
-      
-      // Image editor state
+      showMediaManager: false,
       showImageEditor: false,
       editingImage: null as GalleryImage | null,
       editingImageIndex: -1,
-      
-      // Options
       columnOptions: [
         { label: '1 Column', value: 1 },
         { label: '2 Columns', value: 2 },
@@ -622,33 +440,19 @@ export default defineComponent({
         { label: '4 Columns', value: 4 },
         { label: '5 Columns', value: 5 }
       ],
-      
       spacingOptions: [
         { label: 'Tight', value: 'tight' },
         { label: 'Normal', value: 'normal' },
         { label: 'Loose', value: 'loose' }
       ],
-      
       aspectRatioOptions: [
         { label: 'Square (1:1)', value: 'square' },
         { label: 'Landscape (4:3)', value: 'landscape' },
         { label: 'Portrait (3:4)', value: 'portrait' },
         { label: 'Wide (16:9)', value: 'wide' },
         { label: 'Auto', value: 'auto' }
-      ],
-      
-      mediaCollectionOptions: [
-        { label: 'All Collections', value: '' },
-        { label: 'Images', value: 'images' },
-        { label: 'General', value: 'general' }
       ]
     };
-  },
-  computed: {
-    // Filter to show only images in the media browser
-    imageMedia() {
-      return this.browserMedia.filter(item => this.isImage(item.mime_type));
-    }
   },
   watch: {
     visible: {
@@ -728,122 +532,34 @@ export default defineComponent({
       this.$emit('update:visible', false);
     },
 
-    // Media browser methods
-    openMediaBrowser() {
-      this.showMediaBrowser = true;
-      this.selectedImages = [];
-      this.fetchMediaForBrowser();
+    openMediaManager() {
+      this.showMediaManager = true;
     },
     
-    async fetchMediaForBrowser(reset = true) {
-      if (reset) {
-        this.mediaCurrentPage = 1;
-        this.browserMedia = [];
-      }
-      
-      this.mediaLoading = reset;
-      this.mediaLoadingMore = !reset;
-      
-      try {
-        const params: any = {
-          page: this.mediaCurrentPage,
-          per_page: 20
-        };
+    handleMediaSelect(selectedItems: any[]) {
+      if (selectedItems && selectedItems.length > 0) {
+        const newImages: GalleryImage[] = selectedItems.map(media => ({
+          id: media.id,
+          url: media.download_url || `/v1/conferences/${this.conferenceId}/media/${media.id}/download`,
+          thumbnail: media.conversions?.thumb || media.download_url,
+          caption: media.alt_text || media.file_name,
+          alt: media.alt_text || media.file_name,
+          filename: media.file_name,
+          size: media.size_human,
+          isMissing: false
+        }));
         
-        if (this.mediaSelectedCollection) {
-          params.collection = this.mediaSelectedCollection;
-        }
-        
-        if (this.mediaSearchTerm) {
-          params.search = this.mediaSearchTerm;
-        }
-        
-        const response = await apiService.get(`/v1/conferences/${this.conferenceId}/media`, { params });
-        
-        let newMedia: MediaItem[] = [];
-        let paginationInfo: any = {};
-        
-        if (response.data.payload && Array.isArray(response.data.payload)) {
-          newMedia = response.data.payload;
-        } else if (response.data.payload && response.data.payload.data) {
-          newMedia = response.data.payload.data;
-        } else if (response.data.payload) {
-          newMedia = response.data.payload;
-        }
-        
-        if (response.data.meta) {
-          paginationInfo = response.data.meta;
-        }
-        
-        if (reset) {
-          this.browserMedia = newMedia || [];
-        } else {
-          this.browserMedia.push(...(newMedia || []));
-        }
-        
-        if (paginationInfo.current_page && paginationInfo.last_page) {
-          this.hasMoreMediaPages = paginationInfo.current_page < paginationInfo.last_page;
-        } else {
-          this.hasMoreMediaPages = false;
-        }
-        
-      } catch (error) {
-        console.error('Error fetching media:', error);
+        this.localGalleryData.images.push(...newImages);
         this.$toast?.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: 'Failed to fetch media files',
+          severity: 'success',
+          summary: 'Success',
+          detail: `${newImages.length} image(s) added to gallery`,
           life: 3000
         });
-      } finally {
-        this.mediaLoading = false;
-        this.mediaLoadingMore = false;
       }
+      this.showMediaManager = false;
     },
     
-    async loadMoreMedia() {
-      this.mediaCurrentPage++;
-      await this.fetchMediaForBrowser(false);
-    },
-    
-    toggleImageSelection(media: MediaItem) {
-      const index = this.selectedImages.findIndex(img => img.id === media.id);
-      if (index > -1) {
-        this.selectedImages.splice(index, 1);
-      } else {
-        this.selectedImages.push(media);
-      }
-    },
-    
-    isImageSelected(media: MediaItem): boolean {
-      return this.selectedImages.some(img => img.id === media.id);
-    },
-    
-    addSelectedImages() {
-      const newImages: GalleryImage[] = this.selectedImages.map(media => ({
-        id: media.id,
-        url: media.download_url || `/v1/conferences/${this.conferenceId}/media/${media.id}/download`,
-        thumbnail: media.conversions?.thumb || media.download_url,
-        caption: media.alt_text || media.file_name,
-        alt: media.alt_text || media.file_name,
-        filename: media.file_name,
-        size: media.size_human,
-        isMissing: false // Initialize as not missing
-      }));
-      
-      this.localGalleryData.images.push(...newImages);
-      this.selectedImages = [];
-      this.showMediaBrowser = false;
-      
-      this.$toast?.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: `${newImages.length} image(s) added to gallery`,
-        life: 3000
-      });
-    },
-    
-    // Image management methods
     editImage(index: number) {
       this.editingImageIndex = index;
       this.editingImage = { ...this.localGalleryData.images[index] };
@@ -912,10 +628,6 @@ export default defineComponent({
     
     getImageSize(image: GalleryImage): string {
       return image.size || 'Unknown size';
-    },
-    
-    isImage(mimeType: string): boolean {
-      return mimeType.startsWith('image/');
     }
   }
 });

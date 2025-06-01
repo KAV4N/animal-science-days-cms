@@ -1,4 +1,3 @@
-<!-- Speaker.vue - Editor Component with Media Gallery -->
 <template>
   <Dialog 
     v-model:visible="localVisible" 
@@ -109,7 +108,7 @@
                             <Button
                               label="Browse Gallery"
                               icon="pi pi-images"
-                              @click="openMediaBrowser"
+                              @click="openMediaManager"
                               outlined
                               size="small"
                             />
@@ -278,159 +277,22 @@
         </div>
       </template>
     </Card>
-
-    <!-- Media Browser Dialog -->
-    <Dialog 
-      v-model:visible="showMediaBrowser" 
-      header="Select Avatar Image" 
-      :style="{ width: '95vw', maxWidth: '1000px', height: '80vh' }" 
-      :modal="true"
-      :maximizable="true"
-      :closable="true"
-      :breakpoints="{ '640px': '95vw' }"
-    >
-      <div class="h-full flex flex-col">
-        <!-- Media Browser Header -->
-        <Card class="mb-4 flex-shrink-0">
-          <template #content>
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-0">
-              <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-1">
-                <!-- Collection Filter -->
-                <div class="flex items-center gap-2">
-                  <label class="text-sm font-medium whitespace-nowrap">Collection:</label>
-                  <Select
-                    v-model="mediaSelectedCollection"
-                    :options="mediaCollectionOptions"
-                    option-label="label"
-                    option-value="value"
-                    placeholder="All Collections"
-                    class="w-40"
-                    @change="fetchMediaForBrowser"
-                  />
-                </div>
-                
-                <!-- Search -->
-                <div class="flex items-center gap-2 flex-1 min-w-0">
-                  <label class="text-sm font-medium whitespace-nowrap">Search:</label>
-                  <InputText
-                    v-model="mediaSearchTerm"
-                    placeholder="Search images..."
-                    class="flex-1"
-                    @keyup.enter="fetchMediaForBrowser"
-                  />
-                  <Button
-                    icon="pi pi-search"
-                    @click="fetchMediaForBrowser"
-                    outlined
-                    size="small"
-                  />
-                </div>
-              </div>
-            </div>
-          </template>
-        </Card>
-
-        <!-- Media Grid -->
-        <div class="flex-1 overflow-y-auto">
-          <!-- Loading State -->
-          <div v-if="mediaLoading" class="flex items-center justify-center h-64">
-            <Card>
-              <template #content>
-                <div class="text-center p-0">
-                  <i class="pi pi-spin pi-spinner text-4xl mb-4"></i>
-                  <p class="text-lg">Loading media files...</p>
-                </div>
-              </template>
-            </Card>
-          </div>
-
-          <!-- Empty State -->
-          <div v-else-if="browserMedia.length === 0" class="flex items-center justify-center h-64">
-            <Card>
-              <template #content>
-                <div class="text-center p-0">
-                  <i class="pi pi-images text-6xl mb-4 text-gray-400"></i>
-                  <h3 class="text-xl font-medium mb-4">No Images Found</h3>
-                  <p class="mb-6">No images found matching your criteria</p>
-                </div>
-              </template>
-            </Card>
-          </div>
-
-          <!-- Media Grid - Only show images -->
-          <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            <Card 
-              v-for="item in imageMedia" 
-              :key="item.id"
-              class="group hover:shadow-lg transition-all duration-200 cursor-pointer"
-              @click="selectAvatarImage(item)"
-            >
-              <template #content>
-                <div class="p-0">
-                  <!-- Image Preview -->
-                  <div class="aspect-square bg-gray-100 rounded-lg mb-4 overflow-hidden relative">
-                    <img 
-                      v-if="item.conversions && item.conversions.thumb"
-                      :src="item.conversions.thumb"
-                      :alt="item.file_name"
-                      class="w-full h-full object-cover"
-                    />
-                    <div 
-                      v-else
-                      class="w-full h-full flex items-center justify-center"
-                    >
-                      <i class="pi pi-image text-6xl text-gray-400"></i>
-                    </div>
-                    
-                    <!-- Selection Indicator -->
-                    <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button
-                        icon="pi pi-check"
-                        class="rounded-full"
-                        size="small"
-                        severity="success"
-                      />
-                    </div>
-                  </div>
-
-                  <!-- Image Info -->
-                  <div class="space-y-2">
-                    <h4 class="font-semibold text-sm truncate" :title="item.file_name">
-                      {{ item.file_name }}
-                    </h4>
-                    <div class="flex items-center justify-between text-xs text-gray-600">
-                      <Badge 
-                        :value="item.collection_name || 'General'" 
-                        class="text-xs"
-                      />
-                      <span>{{ item.size_human }}</span>
-                    </div>
-                  </div>
-                </div>
-              </template>
-            </Card>
-          </div>
-
-          <!-- Load More Button -->
-          <div v-if="hasMoreMediaPages" class="text-center mt-6">
-            <Button
-              label="Load More"
-              icon="pi pi-chevron-down"
-              @click="loadMoreMedia"
-              :loading="mediaLoadingMore"
-              outlined
-            />
-          </div>
-        </div>
-      </div>
-    </Dialog>
+    
+    <!-- MediaManager Integration -->
+    <MediaManager
+      v-model:visible="showMediaManager"
+      selectionMode="single"
+      :allowedMimeTypes="['image/*']"
+      @select="handleMediaSelect"
+      :conferenceId="conferenceId"
+    />
   </Dialog>
 </template>
 
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue';
+import MediaManager from '@/components/dashboard/PageEditor/MediaManager.vue'; // Adjust path as needed
 import apiService from '@/services/apiService';
-import type { MediaItem } from '@/types/media';
 
 interface SpeakerData {
   name: string;
@@ -450,6 +312,9 @@ interface SpeakerData {
 
 export default defineComponent({
   name: 'SpeakerEditor',
+  components: {
+    MediaManager
+  },
   props: {
     visible: {
       type: Boolean,
@@ -507,29 +372,8 @@ export default defineComponent({
       } as SpeakerData,
       localPublished: false,
       localVisible: false,
-      
-      // Media browser state
-      showMediaBrowser: false,
-      browserMedia: [] as MediaItem[],
-      mediaLoading: false,
-      mediaLoadingMore: false,
-      mediaCurrentPage: 1,
-      hasMoreMediaPages: false,
-      mediaSearchTerm: '',
-      mediaSelectedCollection: '',
-      
-      mediaCollectionOptions: [
-        { label: 'All Collections', value: '' },
-        { label: 'Images', value: 'images' },
-        { label: 'General', value: 'general' }
-      ]
+      showMediaManager: false
     };
-  },
-  computed: {
-    // Filter to show only images in the media browser
-    imageMedia() {
-      return this.browserMedia.filter(item => this.isImage(item.mime_type));
-    }
   },
   watch: {
     visible: {
@@ -625,7 +469,6 @@ export default defineComponent({
     },
 
     handleImageError() {
-      // Reset avatar if image fails to load
       this.localSpeakerData.avatar = '';
     },
 
@@ -633,99 +476,22 @@ export default defineComponent({
       this.localSpeakerData.avatar = '';
     },
 
-    // Media browser methods
-    openMediaBrowser() {
-      this.showMediaBrowser = true;
-      this.fetchMediaForBrowser();
+    openMediaManager() {
+      this.showMediaManager = true;
     },
     
-    async fetchMediaForBrowser(reset = true) {
-      if (reset) {
-        this.mediaCurrentPage = 1;
-        this.browserMedia = [];
-      }
-      
-      this.mediaLoading = reset;
-      this.mediaLoadingMore = !reset;
-      
-      try {
-        const params: any = {
-          page: this.mediaCurrentPage,
-          per_page: 20
-        };
-        
-        if (this.mediaSelectedCollection) {
-          params.collection = this.mediaSelectedCollection;
-        }
-        
-        if (this.mediaSearchTerm) {
-          params.search = this.mediaSearchTerm;
-        }
-        
-        const response = await apiService.get(`/v1/conferences/${this.conferenceId}/media`, { params });
-        
-        let newMedia: MediaItem[] = [];
-        let paginationInfo: any = {};
-        
-        if (response.data.payload && Array.isArray(response.data.payload)) {
-          newMedia = response.data.payload;
-        } else if (response.data.payload && response.data.payload.data) {
-          newMedia = response.data.payload.data;
-        } else if (response.data.payload) {
-          newMedia = response.data.payload;
-        }
-        
-        if (response.data.meta) {
-          paginationInfo = response.data.meta;
-        }
-        
-        if (reset) {
-          this.browserMedia = newMedia || [];
-        } else {
-          this.browserMedia.push(...(newMedia || []));
-        }
-        
-        if (paginationInfo.current_page && paginationInfo.last_page) {
-          this.hasMoreMediaPages = paginationInfo.current_page < paginationInfo.last_page;
-        } else {
-          this.hasMoreMediaPages = false;
-        }
-        
-      } catch (error) {
-        console.error('Error fetching media:', error);
+    handleMediaSelect(selectedItem: any) {
+      if (selectedItem) {
+        const avatarUrl = selectedItem.download_url || `/v1/conferences/${this.conferenceId}/media/${selectedItem.id}/download`;
+        this.localSpeakerData.avatar = avatarUrl;
         this.$toast?.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: 'Failed to fetch media files',
+          severity: 'success',
+          summary: 'Success',
+          detail: 'Avatar image selected successfully',
           life: 3000
         });
-      } finally {
-        this.mediaLoading = false;
-        this.mediaLoadingMore = false;
       }
-    },
-    
-    async loadMoreMedia() {
-      this.mediaCurrentPage++;
-      await this.fetchMediaForBrowser(false);
-    },
-    
-    selectAvatarImage(media: MediaItem) {
-      // Use the full download URL for the avatar
-      const avatarUrl = media.download_url || `/v1/conferences/${this.conferenceId}/media/${media.id}/download`;
-      this.localSpeakerData.avatar = avatarUrl;
-      this.showMediaBrowser = false;
-      
-      this.$toast?.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: 'Avatar image selected successfully',
-        life: 3000
-      });
-    },
-    
-    isImage(mimeType: string): boolean {
-      return mimeType.startsWith('image/');
+      this.showMediaManager = false;
     }
   }
 });
