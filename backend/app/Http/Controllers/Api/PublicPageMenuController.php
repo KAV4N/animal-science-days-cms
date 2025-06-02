@@ -1,4 +1,5 @@
-<?php
+<?php 
+
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
@@ -14,7 +15,7 @@ class PublicPageMenuController extends Controller
     use ApiResponse;
 
     /**
-     * Display a listing of published pages for a conference.
+     * Display a listing of published pages for a conference WITHOUT their page data.
      *
      * @param  string  $conferenceSlug
      * @return \Illuminate\Http\JsonResponse
@@ -27,11 +28,7 @@ class PublicPageMenuController extends Controller
         
         $menus = $conference->pageMenus()
             ->where('is_published', true)
-            ->with(['pageData' => function($query) {
-                $query->where('is_published', true)
-                    ->orderBy('order', 'asc');
-            }])
-            ->orderBy('created_at', 'asc')
+            ->orderBy('order', 'asc')
             ->get();
         
         return $this->successResponse(
@@ -64,7 +61,7 @@ class PublicPageMenuController extends Controller
         
         return $this->successResponse(
             new PageMenuResource($menu),
-            'Page menu retrieved successfully'
+            'Page menu with data components retrieved successfully'
         );
     }
 }

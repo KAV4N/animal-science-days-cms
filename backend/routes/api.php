@@ -29,11 +29,11 @@ Route::prefix('v1')->group(function () {
         Route::get('/conferences', [PublicConferenceController::class, 'index']);
         Route::get('/conferences/{conferenceSlug}', [PublicConferenceController::class, 'show']);
 
-        // Public routes for page menus
+        // Public routes for page menus - get all pages without content
         Route::get('/conferences/{conferenceSlug}/pages', [PublicPageMenuController::class, 'index']);
+        
+        // Public route for specific page with its data components
         Route::get('/conferences/{conferenceSlug}/pages/{pageSlug}', [PublicPageMenuController::class, 'show']);
-        
-        
     });
 
     // Public media serve endpoint (no authentication required for serving files)
@@ -41,7 +41,6 @@ Route::prefix('v1')->group(function () {
         ->name('api.media.serve');
     Route::get('/conferences/{conference}/media/{mediaId}/download', [MediaController::class, 'download'])
         ->name('api.media.download');
-
 
     // Authentication routes
     Route::prefix('auth')->group(function () {
@@ -84,7 +83,6 @@ Route::prefix('v1')->group(function () {
                     Route::put('/{media}', [MediaController::class, 'update']);
                     Route::patch('/{media}', [MediaController::class, 'update']);
                     Route::delete('/{media}', [MediaController::class, 'destroy']);
-              
                 });
             });
             
@@ -96,7 +94,6 @@ Route::prefix('v1')->group(function () {
                 Route::middleware('role:super_admin')->group(function () {
                     Route::apiResource('universities', UniversityController::class)->except(['index', 'show']);
                 });
-
 
                 Route::get('/conferences/{conference}/editors/unattached', [ConferenceEditorController::class, 'unattached']);
                 Route::get('/conferences/{conference}/editors', [ConferenceEditorController::class, 'index']);

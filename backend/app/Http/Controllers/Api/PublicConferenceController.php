@@ -1,4 +1,4 @@
-<?php
+<?php 
 
 namespace App\Http\Controllers\Api;
 
@@ -6,11 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Conference\ConferenceResource;
 use App\Http\Resources\Conference\DecadeResource;
 use App\Models\Conference;
-use App\Models\PageMenu; // Add this import
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use App\Http\Resources\PageMenu\PageMenuResource;
 
 class PublicConferenceController extends Controller
 {
@@ -21,7 +19,6 @@ class PublicConferenceController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        
         if ($request->has('latest')) {
             return $this->latest();
         }
@@ -110,7 +107,7 @@ class PublicConferenceController extends Controller
     }
 
     /**
-     * Get a specific published conference by slug with its published pages and page data
+     * Get a specific published conference by slug WITHOUT pages (just basic conference info)
      */
     public function show(string $slug): JsonResponse
     {
@@ -123,22 +120,9 @@ class PublicConferenceController extends Controller
             return $this->errorResponse('Conference not found', 404);
         }
 
-        $pages = PageMenu::where('conference_id', $conference->id)
-            ->where('is_published', true)
-            ->with(['pageData' => function($query) {
-                $query->where('is_published', true)
-                    ->orderBy('order', 'asc');
-            }])
-            ->orderBy('order', 'asc')
-            ->get();
-
-        $conferenceData = new ConferenceResource($conference);
-        $conferenceArray = $conferenceData->toArray(request());
-        $conferenceArray['pages'] = PageMenuResource::collection($pages);
-
         return $this->successResponse(
-            $conferenceArray,
-            'Conference with pages and content retrieved successfully'
+            new ConferenceResource($conference),
+            'Conference retrieved successfully'
         );
     }
 
