@@ -53,6 +53,32 @@ export const componentRegistry: Record<string, ComponentDefinition> = {
     },
     name: 'Image Gallery',
     icon: 'pi pi-images'
+  },
+  'banner': {
+    edit: () => import('@/components/dashboard/PageEditor/EditorComponents/Banner.vue'),
+    public: () => import('@/components/site/SiteComponents/Banner.vue'),
+    defaultData: {
+      shapeType: 'wave',
+      position: 'bottom',
+      flipX: false,
+      flipY: false,
+      height: 120,
+      density: 100, // Updated from 'width' to 'density'
+      color: '#6366f1',
+      backgroundType: 'solid',
+      gradientColor1: '#6366f1',
+      gradientColor2: '#8b5cf6',
+      gradientDirection: 'to right',
+      opacity: 100,
+      blur: false,
+      blurAmount: 5,
+      shapeImage: '',
+      backgroundImage: '',
+      shapeImageOpacity: 100, // Updated from 'imageOpacity'
+      backgroundImageOpacity: 100 // New property
+    },
+    name: 'Shape Divider Banner',
+    icon: 'pi pi-bookmark'
   }
 };
 
