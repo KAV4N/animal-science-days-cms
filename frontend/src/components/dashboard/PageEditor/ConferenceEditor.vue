@@ -45,6 +45,22 @@
               outlined
               size="small"
             />
+
+            <Button 
+              label="Live Preview" 
+              icon="pi pi-eye" 
+              @click="openLivePreview"
+              class="hidden sm:inline-flex"
+              outlined
+              size="small"
+            />
+            <Button 
+              icon="pi pi-eye" 
+              @click="openLivePreview"
+              class="sm:hidden"
+              outlined
+              size="small"
+            />
           </div>
         </div>
       </template>
@@ -976,6 +992,28 @@ export default defineComponent({
     },
     async acquireLock() {
       await this.pageMenuStore.acquireLock();
+    },
+    async openLivePreview() {
+      try {
+        const response = await apiService.get(`/v1/conferences/${this.conferenceId}`);
+        const conference = response.data.payload;
+        
+        if (!conference || !conference.slug) {
+          console.error('Conference not found or missing slug');
+          return;
+        }
+        
+        const previewUrl = `/preview/conferences/${conference.slug}`;
+        
+        if (this.pageMenuStore.selectedMenu) {
+          const pagePreviewUrl = `/preview/conferences/${conference.slug}/pages/${this.pageMenuStore.selectedMenu.slug}`;
+          window.open(pagePreviewUrl, '_blank', 'noopener,noreferrer');
+        } else {
+          window.open(previewUrl, '_blank', 'noopener,noreferrer');
+        }
+      } catch (error) {
+        console.error('Error opening live preview:', error);
+      }
     },
     async handleExit() {
       if (this.pageMenuStore.isLocked) {

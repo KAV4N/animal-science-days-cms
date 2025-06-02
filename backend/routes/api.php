@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\ConferenceController;
 use App\Http\Controllers\Api\PublicConferenceController;
+use App\Http\Controllers\Api\PreviewConferenceController;
 use App\Http\Controllers\Api\ConferenceEditorController;
 use App\Http\Controllers\Api\UniversityController;
 use App\Http\Controllers\Api\RoleController;
@@ -34,6 +35,13 @@ Route::prefix('v1')->group(function () {
         
         // Public route for specific page with its data components
         Route::get('/conferences/{conferenceSlug}/pages/{pageSlug}', [PublicPageMenuController::class, 'show']);
+    });
+
+    // Preview routes (requires authentication)
+    Route::middleware('auth:sanctum')->prefix('preview')->group(function() {
+        Route::get('/conferences/{conferenceSlug}', [PreviewConferenceController::class, 'show']);
+        Route::get('/conferences/{conferenceSlug}/pages', [PreviewConferenceController::class, 'pages']);
+        Route::get('/conferences/{conferenceSlug}/pages/{pageSlug}', [PreviewConferenceController::class, 'page']);
     });
 
     // Public media serve endpoint (no authentication required for serving files)

@@ -7,6 +7,7 @@ import ConferenceManagement from '@/views/dashboard/ConferenceManagement.vue';
 import UserManagement from '@/views/dashboard/UserManagement.vue';
 import Site from '@/views/Site.vue';
 import ConferenceView from '@/views/site/ConferenceView.vue';
+import PreviewConferenceView from '@/views/site/PreviewConferenceView.vue';
 
 import middleware from './middleware';
 import ChangePassword from '@/views/auth/ChangePassword.vue';
@@ -48,6 +49,52 @@ const routes: Array<RouteRecordRaw> = [
         name: 'archive',
         component: ConferencesByDecade
       },
+    ]
+  },
+  // Preview routes (requires authentication)
+  {
+    path: '/preview',
+    name: 'Preview',
+    meta: {
+      middleware: [middleware.requiresAuth]
+    },
+    children: [
+      {
+        path: 'conferences/:slug',
+        name: 'previewConference',
+        component: PreviewConferenceView,
+        props: (route) => ({ 
+          slug: route.params.slug as string, 
+          pageSlug: '' 
+        }),
+        beforeEnter: (to, from, next) => {
+          // Open in new tab
+          if (from.name && from.name.toString().startsWith('Dashboard')) {
+            window.open(to.fullPath, '_blank');
+            next(false);
+          } else {
+            next();
+          }
+        }
+      },
+      {
+        path: 'conferences/:slug/pages/:pageSlug',
+        name: 'previewConferencePage',
+        component: PreviewConferenceView,
+        props: (route) => ({ 
+          slug: route.params.slug as string, 
+          pageSlug: route.params.pageSlug as string 
+        }),
+        beforeEnter: (to, from, next) => {
+          // Open in new tab
+          if (from.name && from.name.toString().startsWith('Dashboard')) {
+            window.open(to.fullPath, '_blank');
+            next(false);
+          } else {
+            next();
+          }
+        }
+      }
     ]
   },
   {

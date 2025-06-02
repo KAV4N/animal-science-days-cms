@@ -304,7 +304,12 @@ export default defineComponent({
             max-width: 100%;
             height: auto;
           }
-        `
+        `,
+        // Add convert_urls configuration to handle URL conversion properly
+        convert_urls: false,
+        relative_urls: false,
+        remove_script_host: false,
+        document_base_url: this.getBaseUrl()
       };
     }
   },
@@ -365,18 +370,47 @@ export default defineComponent({
       this.$emit('update:visible', false);
     },
     
+    getBaseUrl(): string {
+      // Get the current base URL for the application
+      const protocol = window.location.protocol;
+      const host = window.location.host;
+      return `${protocol}//${host}`;
+    },
+    
+    buildFullUrl(selectedItem: any): string {
+      // If the item already has a full URL, use it
+      if (selectedItem.download_url && selectedItem.download_url.startsWith('http')) {
+        return selectedItem.download_url;
+      }
+      
+      // If it has a relative download_url, make it absolute
+      if (selectedItem.download_url) {
+        const baseUrl = this.getBaseUrl();
+        // Remove leading slash if present to avoid double slashes
+        const cleanUrl = selectedItem.download_url.startsWith('/') 
+          ? selectedItem.download_url.substring(1) 
+          : selectedItem.download_url;
+        return `${baseUrl}/${cleanUrl}`;
+      }
+      
+      // Fallback: construct the URL manually
+      const baseUrl = this.getBaseUrl();
+      return `${baseUrl}/api/v1/conferences/${this.conferenceId}/media/${selectedItem.id}/download`;
+    },
+    
     handleMediaSelect(selectedItem: any) {
       if (selectedItem) {
-        const url = selectedItem.download_url || `/v1/conferences/${this.conferenceId}/media/${selectedItem.id}/download`;
+        const fullUrl = this.buildFullUrl(selectedItem);
+        
         if (this.filePickerCallback) {
-          this.filePickerCallback(url, { alt: selectedItem.file_name });
+          this.filePickerCallback(fullUrl, { alt: selectedItem.file_name });
           this.filePickerCallback = null;
         } else if (this.editorInstance) {
           let content = '';
           if (this.isImage(selectedItem.mime_type)) {
-            content = `<img src="${url}" alt="${selectedItem.file_name}" style="max-width: 100%; height: auto;" />`;
+            content = `<img src="${fullUrl}" alt="${selectedItem.file_name}" style="max-width: 100%; height: auto;" />`;
           } else {
-            content = `<p><a href="${url}" target="_blank" download="${selectedItem.file_name}" title="Download ${selectedItem.file_name}">
+            content = `<p><a href="${fullUrl}" target="_blank" download="${selectedItem.file_name}" title="Download ${selectedItem.file_name}">
               📁 ${selectedItem.file_name}
             </a></p>`;
           }
