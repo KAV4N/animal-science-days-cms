@@ -28,7 +28,7 @@ class UniversityController extends Controller
             });
         }
 
-        $universities = $query->paginate($request->per_page ?? 15);
+        $universities = $query->get();
 
         return $this->successResponse(
             UniversityResource::collection($universities),
