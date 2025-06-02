@@ -107,8 +107,16 @@
           <!-- Main Content Area -->
           <div class="lg:col-span-3 space-y-1">
 
+            <!-- Page Loading State -->
+            <div v-if="pageDataLoading" class="bg-white rounded-lg shadow-sm">
+              <div class="flex flex-col items-center justify-center space-y-1 p-1">
+                <ProgressSpinner class="w-8 h-8" strokeWidth="3" />
+                <p class="text-lg font-medium">Loading page content...</p>
+              </div>
+            </div>
+
             <!-- Active Page Header -->
-            <div v-if="activePage" class="p-4 bg-white rounded-lg shadow-sm">
+            <div v-else-if="activePage" class="p-4 bg-white rounded-lg shadow-sm">
               <div class="px-1 py-1">
                 <div class="flex items-start justify-between">
                   <div class="flex-1">
@@ -194,7 +202,7 @@
             </template>
 
             <!-- Empty Page State -->
-            <div v-else-if="activePage && !activePage.page_data?.length" class="bg-white rounded-lg shadow-sm">
+            <div v-else-if="activePage && !activePage.page_data?.length && !pageDataLoading" class="bg-white rounded-lg shadow-sm">
               <div class="text-center space-y-1 p-1">
                 <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
                   <i class="pi pi-file-o text-2xl text-gray-400"></i>
@@ -219,16 +227,14 @@ import { getComponentDefinition } from '@/utils/componentRegistry';
 import type { Conference } from '@/types/conference';
 import type { PageMenu } from '@/types/pageMenu';
 
-interface ConferenceWithPages extends Conference {
-  pages?: PageMenu[];
-}
-
 interface ComponentData {
-  conference: ConferenceWithPages | null;
+  conference: Conference | null;
+  pages: PageMenu[];
   activePage: PageMenu | null;
   activePageId: number | null;
   loading: boolean;
   pagesLoading: boolean;
+  pageDataLoading: boolean;
   error: string | null;
   loadedComponents: Map<string, any>;
 }
@@ -240,25 +246,29 @@ export default defineComponent({
       type: String,
       required: false,
       default: ''
+    },
+    pageSlug: {
+      type: String,
+      required: false,
+      default: ''
     }
   },
   data(): ComponentData {
     return {
       conference: null,
+      pages: [],
       activePage: null,
       activePageId: null,
       loading: false,
       pagesLoading: false,
+      pageDataLoading: false,
       error: null,
       loadedComponents: new Map()
     };
   },
   computed: {
     sortedPages(): PageMenu[] {
-      if (!this.conference?.pages) {
-        return [];
-      }
-      return [...this.conference.pages]
+      return [...this.pages]
         .filter(page => page.is_published)
         .sort((a, b) => (a.order || 0) - (b.order || 0));
     },
@@ -277,6 +287,10 @@ export default defineComponent({
     slug: {
       handler: 'loadConference',
       immediate: false
+    },
+    pageSlug: {
+      handler: 'handlePageSlugChange',
+      immediate: false
     }
   },
   methods: {
@@ -284,6 +298,7 @@ export default defineComponent({
       this.loading = true;
       this.error = null;
       this.conference = null;
+      this.pages = [];
       this.activePage = null;
       this.activePageId = null;
 
@@ -291,23 +306,27 @@ export default defineComponent({
         let conferenceSlug: string;
 
         if (this.slug) {
-          // Load specific conference by slug
-          const response = await apiService.get<{ payload: ConferenceWithPages }>(`/v1/public/conferences/${this.slug}`);
+          // Load specific conference by slug (without pages)
+          const response = await apiService.get<{ payload: Conference }>(`/v1/public/conferences/${this.slug}`);
           this.conference = response.data.payload;
           conferenceSlug = this.slug;
         } else {
-          // Load latest conference
+          // Load latest conference (without pages)
           const latestResponse = await apiService.get<{ payload: Conference }>('/v1/public/conferences?latest=1');
           const latestConference = latestResponse.data.payload;
           if (!latestConference.slug) {
             throw new Error('Latest conference does not have a slug');
           }
-          this.conference = latestConference as ConferenceWithPages;
-          this.conference.pages = [];
+          this.conference = latestConference;
           conferenceSlug = latestConference.slug;
+          
+          // Update URL to show the latest conference slug
+          if (this.$route.name === 'HomePage') {
+            this.$router.replace({ name: 'conference', params: { slug: conferenceSlug } });
+          }
         }
 
-        // Load pages separately to ensure fresh data
+        // Load pages separately (without their data components)
         if (conferenceSlug) {
           await this.loadPages(conferenceSlug);
         }
@@ -324,16 +343,38 @@ export default defineComponent({
       this.pagesLoading = true;
       try {
         const response = await apiService.get<{ payload: PageMenu[] }>(`/v1/public/conferences/${slug}/pages`);
+        this.pages = response.data.payload;
         
-        if (this.conference) {
-          this.conference.pages = response.data.payload;
-          
-          // Auto-select first published page
-          const firstPublishedPage = this.sortedPages[0];
-          if (firstPublishedPage) {
-            this.selectPage(firstPublishedPage);
+        // Handle page selection based on route
+        if (this.pageSlug) {
+          // Find and select specific page from URL
+          const requestedPage = this.sortedPages.find(page => page.slug === this.pageSlug);
+          if (requestedPage) {
+            await this.selectPage(requestedPage);
+          } else {
+            // Page not found, redirect to first page or conference home
+            const firstPage = this.sortedPages[0];
+            if (firstPage) {
+              this.$router.replace({ 
+                name: 'conferencePage', 
+                params: { slug, pageSlug: firstPage.slug } 
+              });
+            } else {
+              this.$router.replace({ 
+                name: 'conference', 
+                params: { slug } 
+              });
+            }
           }
+        } else if (this.sortedPages.length > 0) {
+          // Auto-select first page and update URL
+          const firstPage = this.sortedPages[0];
+          this.$router.replace({ 
+            name: 'conferencePage', 
+            params: { slug, pageSlug: firstPage.slug } 
+          });
         }
+        
       } catch (err: any) {
         console.error('Error loading pages:', err);
         if (!this.conference) {
@@ -344,9 +385,44 @@ export default defineComponent({
       }
     },
 
-    selectPage(page: PageMenu): void {
-      this.activePage = page;
+    async handlePageSlugChange(): Promise<void> {
+      if (this.pageSlug && this.pages.length > 0) {
+        const requestedPage = this.sortedPages.find(page => page.slug === this.pageSlug);
+        if (requestedPage && requestedPage.id !== this.activePageId) {
+          await this.selectPage(requestedPage, false); // Don't update URL since we're responding to URL change
+        }
+      }
+    },
+
+    async selectPage(page: PageMenu, updateUrl: boolean = true): Promise<void> {
       this.activePageId = page.id;
+      this.pageDataLoading = true;
+
+      try {
+        // Load page data components
+        const response = await apiService.get<{ payload: PageMenu }>(
+          `/v1/public/conferences/${this.conference?.slug}/pages/${page.slug}`
+        );
+        this.activePage = response.data.payload;
+
+        // Update URL if needed
+        if (updateUrl && this.conference?.slug) {
+          this.$router.push({ 
+            name: 'conferencePage', 
+            params: { 
+              slug: this.conference.slug, 
+              pageSlug: page.slug 
+            } 
+          });
+        }
+
+      } catch (err: any) {
+        console.error('Error loading page data:', err);
+        // Still set the page even if data loading fails
+        this.activePage = page;
+      } finally {
+        this.pageDataLoading = false;
+      }
     },
 
     getPublicComponent(componentType: string) {

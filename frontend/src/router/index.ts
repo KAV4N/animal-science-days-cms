@@ -23,13 +23,25 @@ const routes: Array<RouteRecordRaw> = [
         path: '',
         name: 'HomePage',
         component: ConferenceView,
-        props: { slug: '' } 
+        props: { slug: '', pageSlug: '' } 
       },
       {
         path: 'conferences/:slug',
         name: 'conference',
         component: ConferenceView,
-        props: (route) => ({ slug: route.params.slug })
+        props: (route) => ({ 
+          slug: route.params.slug as string, 
+          pageSlug: '' 
+        })
+      },
+      {
+        path: 'conferences/:slug/pages/:pageSlug',
+        name: 'conferencePage',
+        component: ConferenceView,
+        props: (route) => ({ 
+          slug: route.params.slug as string, 
+          pageSlug: route.params.pageSlug as string 
+        })
       },
       {
         path: 'archive',
