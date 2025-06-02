@@ -19,6 +19,7 @@ export interface MediaItem {
   uploaded_by: number;
   created_at: string;
   updated_at: string;
+  linkType?: 'serve' | 'download'; // New property for link type selection
 }
 
 export interface MediaUploadData {
@@ -50,6 +51,7 @@ export interface MediaFilterParams {
   search?: string;
   per_page?: number;
   page?: number;
+  mime_types?: string[]; // Added support for MIME type filtering
 }
 
 export interface MediaCollectionOption {
@@ -64,6 +66,29 @@ export interface FileUploadEvent {
 export interface FileRemoveEvent {
   file: File;
 }
+
+// Link type selection interfaces
+export interface MediaLinkTypeSelection {
+  type: 'serve' | 'download';
+  description: string;
+  icon: string;
+  example: string;
+}
+
+export const MEDIA_LINK_TYPES: Record<string, MediaLinkTypeSelection> = {
+  serve: {
+    type: 'serve',
+    description: 'Creates embedded content or a link that displays the file directly in the browser. Images and videos will be embedded inline, while documents open in browser viewer.',
+    icon: 'pi pi-eye',
+    example: 'Embeds images/videos inline, opens PDFs in browser viewer'
+  },
+  download: {
+    type: 'download',
+    description: 'Creates a link that downloads the file to the user\'s device. Best for documents, files, and resources that users need to save locally.',
+    icon: 'pi pi-download',
+    example: 'Downloads file with original filename'
+  }
+} as const;
 
 // Media validation constants
 export const MEDIA_COLLECTIONS = {
@@ -133,4 +158,59 @@ export interface MediaManagerState {
   updating: boolean;
   deleting: boolean;
   error: MediaError | null;
+  // New properties for link type selection
+  showLinkTypeDialog: boolean;
+  pendingMediaSelection: MediaItem | null;
 }
+
+// Extended media item for editor integration
+export interface MediaItemWithLinkType extends MediaItem {
+  linkType?: 'serve' | 'download';
+}
+
+// Helper functions for media handling
+export const MediaHelpers = {
+  isImage: (mimeType: string): boolean => mimeType.startsWith('image/'),
+  
+  isDocument: (mimeType: string): boolean => [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  ].includes(mimeType),
+  
+  isVideo: (mimeType: string): boolean => mimeType.startsWith('video/'),
+  
+  getFileIcon: (mimeType: string): string => {
+    if (MediaHelpers.isImage(mimeType)) return 'pi pi-image';
+    if (mimeType === 'application/pdf') return 'pi pi-file-pdf';
+    if (MediaHelpers.isDocument(mimeType)) return 'pi pi-file';
+    if (MediaHelpers.isVideo(mimeType)) return 'pi pi-video';
+    return 'pi pi-file';
+  },
+  
+  getFileIconEmoji: (mimeType: string): string => {
+    if (MediaHelpers.isImage(mimeType)) return '🖼️';
+    if (mimeType === 'application/pdf') return '📄';
+    if (MediaHelpers.isDocument(mimeType)) return '📄';
+    if (MediaHelpers.isVideo(mimeType)) return '🎥';
+    return '📁';
+  },
+  
+  buildServeUrl: (conferenceId: number, mediaId: number, baseUrl: string): string => {
+    return `${baseUrl}/api/v1/conferences/${conferenceId}/media/${mediaId}/serve`;
+  },
+  
+  buildDownloadUrl: (conferenceId: number, mediaId: number, baseUrl: string): string => {
+    return `${baseUrl}/api/v1/conferences/${conferenceId}/media/${mediaId}/download`;
+  },
+  
+  formatFileSize: (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+};

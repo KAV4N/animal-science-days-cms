@@ -46,8 +46,7 @@ export default defineComponent({
       if (!this.data?.content) {
         return '';
       }
-      
-      // Configure DOMPurify to allow common HTML elements and attributes
+
       const config = {
         ALLOWED_TAGS: [
           'p', 'br', 'strong', 'em', 'u', 's', 'sub', 'sup',
@@ -56,21 +55,23 @@ export default defineComponent({
           'a', 'img',
           'table', 'thead', 'tbody', 'tr', 'th', 'td',
           'blockquote', 'pre', 'code',
-          'div', 'span',
-          'hr'
+          'div', 'span', 'hr',
+          'iframe', 'video', 'source'  // <-- Added here
         ],
         ALLOWED_ATTR: [
           'href', 'target', 'rel',
           'src', 'alt', 'title', 'width', 'height',
           'class', 'style',
           'colspan', 'rowspan',
-          'data-*'
+          'data-*',
+          'allow', 'allowfullscreen', 'frameborder', 'scrolling',
+          'controls', 'autoplay', 'loop', 'muted', 'poster', 'preload', 'type'  // <-- Added video/source attrs
         ],
-        ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp|data):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
-        ADD_TAGS: ['iframe'],
-        ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling']
+        ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp|data):|[^a-z]|[a-z+.-]+(?:[^a-z+.-:]|$))/i,
+        ADD_TAGS: ['iframe', 'video', 'source'],
+        ADD_ATTR: ['controls', 'autoplay', 'loop', 'muted', 'poster', 'preload', 'type']
       };
-      
+
       return DOMPurify.sanitize(this.data.content, config);
     }
   }

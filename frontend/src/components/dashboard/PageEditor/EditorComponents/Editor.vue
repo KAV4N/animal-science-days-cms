@@ -101,6 +101,23 @@ interface ComponentData {
   content: string;
 }
 
+interface MediaItemWithLinkType {
+  id: number;
+  uuid: string;
+  collection_name: string;
+  file_name: string;
+  mime_type: string;
+  size: number;
+  size_human: string;
+  url: string;
+  download_url?: string;
+  conversions: any;
+  uploaded_by: number;
+  created_at: string;
+  updated_at: string;
+  linkType?: 'serve' | 'download';
+}
+
 export default defineComponent({
   name: 'EditorComponent',
   components: {
@@ -304,6 +321,10 @@ export default defineComponent({
             max-width: 100%;
             height: auto;
           }
+          video {
+            max-width: 100%;
+            height: auto;
+          }
         `,
         // Add convert_urls configuration to handle URL conversion properly
         convert_urls: false,
@@ -377,47 +398,90 @@ export default defineComponent({
       return `${protocol}//${host}`;
     },
     
-    buildFullUrl(selectedItem: any): string {
-      // If the item already has a full URL, use it
-      if (selectedItem.download_url && selectedItem.download_url.startsWith('http')) {
-        return selectedItem.download_url;
-      }
-      
-      // If it has a relative download_url, make it absolute
-      if (selectedItem.download_url) {
-        const baseUrl = this.getBaseUrl();
-        // Remove leading slash if present to avoid double slashes
-        const cleanUrl = selectedItem.download_url.startsWith('/') 
-          ? selectedItem.download_url.substring(1) 
-          : selectedItem.download_url;
-        return `${baseUrl}/${cleanUrl}`;
-      }
-      
-      // Fallback: construct the URL manually
+    buildFullUrl(selectedItem: MediaItemWithLinkType, linkType?: 'serve' | 'download'): string {
       const baseUrl = this.getBaseUrl();
-      return `${baseUrl}/api/v1/conferences/${this.conferenceId}/media/${selectedItem.id}/download`;
+      const type = linkType || selectedItem.linkType || 'serve';
+      
+      if (type === 'download') {
+        // Use download URL
+        if (selectedItem.download_url && selectedItem.download_url.startsWith('http')) {
+          return selectedItem.download_url;
+        }
+        
+        if (selectedItem.download_url) {
+          const cleanUrl = selectedItem.download_url.startsWith('/') 
+            ? selectedItem.download_url.substring(1) 
+            : selectedItem.download_url;
+          return `${baseUrl}/${cleanUrl}`;
+        }
+        
+        // Fallback: construct download URL manually
+        return `${baseUrl}/api/v1/conferences/${this.conferenceId}/media/${selectedItem.id}/download`;
+      } else {
+        // Use serve URL (default)
+        if (selectedItem.url && selectedItem.url.startsWith('http')) {
+          return selectedItem.url;
+        }
+        
+        if (selectedItem.url) {
+          const cleanUrl = selectedItem.url.startsWith('/') 
+            ? selectedItem.url.substring(1) 
+            : selectedItem.url;
+          return `${baseUrl}/${cleanUrl}`;
+        }
+        
+        // Fallback: construct serve URL manually
+        return `${baseUrl}/api/v1/conferences/${this.conferenceId}/media/${selectedItem.id}/serve`;
+      }
     },
     
-    handleMediaSelect(selectedItem: any) {
+    handleMediaSelect(selectedItem: MediaItemWithLinkType) {
       if (selectedItem) {
-        const fullUrl = this.buildFullUrl(selectedItem);
+        const linkType = selectedItem.linkType || 'serve';
+        const fullUrl = this.buildFullUrl(selectedItem, linkType);
         
         if (this.filePickerCallback) {
           this.filePickerCallback(fullUrl, { alt: selectedItem.file_name });
           this.filePickerCallback = null;
         } else if (this.editorInstance) {
           let content = '';
-          if (this.isImage(selectedItem.mime_type)) {
-            content = `<img src="${fullUrl}" alt="${selectedItem.file_name}" style="max-width: 100%; height: auto;" />`;
-          } else {
+          
+          if (linkType === 'download') {
+            // Create download link regardless of file type
+            const fileIcon = this.getFileIconForDisplay(selectedItem.mime_type);
             content = `<p><a href="${fullUrl}" target="_blank" download="${selectedItem.file_name}" title="Download ${selectedItem.file_name}">
-              📁 ${selectedItem.file_name}
+              ${fileIcon} ${selectedItem.file_name}
             </a></p>`;
+          } else {
+            // Create serve link - different behavior for different file types
+            if (this.isImage(selectedItem.mime_type)) {
+              content = `<img src="${fullUrl}" alt="${selectedItem.file_name}" style="max-width: 100%; height: auto;" />`;
+            } else if (this.isVideo(selectedItem.mime_type)) {
+              // Embed video with controls
+              content = `<video width="100%" height="auto" controls style="max-width: 100%;">
+                <source src="${fullUrl}" type="${selectedItem.mime_type}">
+                Your browser does not support the video tag.
+              </video>`;
+            } else {
+              const fileIcon = this.getFileIconForDisplay(selectedItem.mime_type);
+              content = `<p><a href="${fullUrl}" target="_blank" title="View ${selectedItem.file_name}">
+                ${fileIcon} ${selectedItem.file_name}
+              </a></p>`;
+            }
           }
+          
           this.editorInstance.insertContent(content);
         }
       }
       this.showMediaManager = false;
+    },
+    
+    getFileIconForDisplay(mimeType: string): string {
+      if (this.isImage(mimeType)) return '🖼️';
+      if (mimeType === 'application/pdf') return '📄';
+      if (this.isDocument(mimeType)) return '📄';
+      if (this.isVideo(mimeType)) return '🎥';
+      return '📁';
     },
     
     isImage(mimeType: string): boolean {

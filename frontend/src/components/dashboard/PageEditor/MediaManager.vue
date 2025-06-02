@@ -429,6 +429,90 @@
       </div>
     </Dialog>
 
+    <!-- Link Type Selection Dialog -->
+    <Dialog 
+      v-model:visible="showLinkTypeDialog" 
+      header="Choose Link Type" 
+      :style="{ width: '95vw', maxWidth: '500px' }" 
+      :modal="true"
+      :closable="true"
+      @hide="cancelLinkTypeSelection"
+    >
+      <Card>
+        <template #content>
+          <div class="space-y-6 p-0">
+            <div class="text-center">
+              <div class="rounded-full p-4 w-16 h-16 mx-auto mb-4 bg-blue-50 flex items-center justify-center">
+                <i class="pi pi-link text-2xl text-blue-600"></i>
+              </div>
+              <h3 class="text-2xl font-bold mb-4">Insert File Link</h3>
+              <p class="text-gray-600">Choose how you want to insert this file</p>
+            </div>
+            
+            <div v-if="pendingMediaSelection" class="bg-gray-50 rounded-lg p-4 mb-4">
+              <div class="flex items-center gap-3">
+                <i :class="getFileIcon(pendingMediaSelection.mime_type)" class="text-2xl text-gray-600"></i>
+                <div>
+                  <p class="font-medium">{{ pendingMediaSelection.file_name }}</p>
+                  <p class="text-sm text-gray-600">{{ pendingMediaSelection.size_human }} • {{ pendingMediaSelection.collection_name }}</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              <Card class="cursor-pointer hover:shadow-md transition-shadow border-2 border-transparent hover:border-blue-200" @click="selectLinkType('serve')">
+                <template #content>
+                  <div class="flex items-start gap-4 p-0">
+                    <div class="rounded-full p-3 bg-green-50 flex-shrink-0">
+                      <i class="pi pi-eye text-green-600 text-xl"></i>
+                    </div>
+                    <div>
+                      <h4 class="font-semibold text-lg mb-2">Serve Link (View/Display)</h4>
+                      <p class="text-gray-600 text-sm mb-2">
+                        Creates embedded content or a link that displays the file directly in the browser. Images and videos will be embedded inline, while documents open in browser viewer.
+                      </p>
+                      <div class="text-xs text-gray-500 bg-gray-100 rounded px-2 py-1 inline-block">
+                        Example: Embeds images/videos inline, opens PDFs in browser viewer
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </Card>
+
+              <Card class="cursor-pointer hover:shadow-md transition-shadow border-2 border-transparent hover:border-blue-200" @click="selectLinkType('download')">
+                <template #content>
+                  <div class="flex items-start gap-4 p-0">
+                    <div class="rounded-full p-3 bg-blue-50 flex-shrink-0">
+                      <i class="pi pi-download text-blue-600 text-xl"></i>
+                    </div>
+                    <div>
+                      <h4 class="font-semibold text-lg mb-2">Download Link</h4>
+                      <p class="text-gray-600 text-sm mb-2">
+                        Creates a link that downloads the file to the user's device. Best for documents, files, and resources that users need to save locally.
+                      </p>
+                      <div class="text-xs text-gray-500 bg-gray-100 rounded px-2 py-1 inline-block">
+                        Example: Downloads file with original filename
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </Card>
+            </div>
+            
+            <div class="flex justify-center pt-4">
+              <Button
+                label="Cancel"
+                icon="pi pi-times"
+                @click="cancelLinkTypeSelection"
+                outlined
+                class="w-full sm:w-auto"
+              />
+            </div>
+          </div>
+        </template>
+      </Card>
+    </Dialog>
+
     <!-- Confirm Delete Dialog -->
     <Dialog 
       v-model:visible="showDeleteDialog" 
@@ -547,6 +631,9 @@ export default defineComponent({
       showDeleteDialog: false,
       deleting: false,
       deletingMedia: null as MediaItem | null,
+      // New properties for link type selection
+      showLinkTypeDialog: false,
+      pendingMediaSelection: null as MediaItem | null,
     };
   },
   watch: {
@@ -649,8 +736,14 @@ export default defineComponent({
     },
 
     selectSingle(item: MediaItem) {
-      this.$emit('select', item);
-      this.dialogVisible = false;
+      // Show link type selection dialog for single selection
+      if (this.selectionMode === 'single') {
+        this.pendingMediaSelection = item;
+        this.showLinkTypeDialog = true;
+      } else {
+        this.$emit('select', item);
+        this.dialogVisible = false;
+      }
     },
 
     selectMultiple() {
@@ -674,6 +767,26 @@ export default defineComponent({
         this.viewingMedia = item;
         this.showViewDialog = true;
       }
+    },
+
+    // New methods for link type selection
+    selectLinkType(linkType: 'serve' | 'download') {
+      if (!this.pendingMediaSelection) return;
+      
+      const mediaItem = {
+        ...this.pendingMediaSelection,
+        linkType: linkType
+      };
+      
+      this.$emit('select', mediaItem);
+      this.showLinkTypeDialog = false;
+      this.pendingMediaSelection = null;
+      this.dialogVisible = false;
+    },
+
+    cancelLinkTypeSelection() {
+      this.showLinkTypeDialog = false;
+      this.pendingMediaSelection = null;
     },
 
     async confirmBatchDelete() {
@@ -811,11 +924,13 @@ export default defineComponent({
         });
       }
     },
+
     editMedia(media: MediaItem) {
       this.editingMedia = media;
       this.editData = { file_name: media.file_name || '' };
       this.showEditDialog = true;
     },
+
     async saveEdit() {
       if (!this.editingMedia) return;
       this.updating = true;
@@ -832,15 +947,18 @@ export default defineComponent({
         this.updating = false;
       }
     },
+
     cancelEdit() {
       this.showEditDialog = false;
       this.editingMedia = null;
       this.editData = { file_name: '' };
     },
+
     confirmDeleteMedia(media: MediaItem) {
       this.deletingMedia = media;
       this.showDeleteDialog = true;
     },
+
     async deleteMedia() {
       if (!this.deletingMedia) return;
       this.deleting = true;
@@ -856,19 +974,24 @@ export default defineComponent({
         this.deleting = false;
       }
     },
+
     cancelDelete() {
       this.showDeleteDialog = false;
       this.deletingMedia = null;
     },
+
     isImage(mimeType: string): boolean {
       return mimeType.startsWith('image/');
     },
+
     isDocument(mimeType: string): boolean {
       return ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'].includes(mimeType);
     },
+
     isVideo(mimeType: string): boolean {
       return mimeType.startsWith('video/');
     },
+
     getFileIcon(mimeType: string): string {
       if (this.isImage(mimeType)) return 'pi pi-image';
       if (mimeType === 'application/pdf') return 'pi pi-file-pdf';
@@ -876,6 +999,7 @@ export default defineComponent({
       if (this.isVideo(mimeType)) return 'pi pi-video';
       return 'pi pi-file';
     },
+
     formatDate(dateString: string): string {
       return new Date(dateString).toLocaleDateString();
     }
