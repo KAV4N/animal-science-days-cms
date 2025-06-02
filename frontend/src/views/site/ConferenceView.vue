@@ -3,7 +3,7 @@
     <div class="max-w-7xl mx-auto px-1 py-1">
 
       <!-- Loading State -->
-      <div v-if="loading" class="flex flex-col items-center justify-center min-h-[60vh] space-y-1">
+      <div v-if="publicConferenceLoading" class="flex flex-col items-center justify-center min-h-[60vh] space-y-1">
         <Card class="w-full max-w-md mx-auto">
           <template #content>
             <div class="flex flex-col items-center space-y-1 p-1">
@@ -15,7 +15,7 @@
       </div>
 
       <!-- Error State -->
-      <div v-else-if="error" class="flex flex-col items-center justify-center min-h-[60vh] space-y-1">
+      <div v-else-if="publicConferenceError" class="flex flex-col items-center justify-center min-h-[60vh] space-y-1">
         <Card class="w-full max-w-md text-center">
           <template #content>
             <div class="flex flex-col items-center space-y-1 p-1">
@@ -23,10 +23,10 @@
                 <i class="pi pi-exclamation-triangle text-2xl text-red-600"></i>
               </div>
               <h2 class="text-2xl font-bold text-gray-900">Something went wrong</h2>
-              <p class="text-gray-600">{{ error }}</p>
-              <Button 
-                label="Try Again" 
-                @click="loadConference" 
+              <p class="text-gray-600">{{ publicConferenceError }}</p>
+              <Button
+                label="Try Again"
+                @click="loadConferenceData"
                 class="mt-1"
                 icon="pi pi-refresh"
               />
@@ -36,33 +36,33 @@
       </div>
 
       <!-- Main Content -->
-      <div v-else-if="conference" class="space-y-1">
-        
+      <div v-else-if="currentPublicConference" class="space-y-1">
+
         <!-- Conference Header -->
         <div class="bg-white rounded-lg shadow-sm p-2">
           <div class="px-1 py-1 text-center">
-            <h1 class="text-4xl font-bold text-gray-900 mb-1">{{ conference.title }}</h1>
+            <h1 class="text-4xl font-bold text-gray-900 mb-1">{{ currentPublicConference.title }}</h1>
             <div class="flex flex-col sm:flex-row items-center justify-center space-y-1 sm:space-y-0 sm:space-x-8 text-gray-600">
               <div class="flex items-center space-x-1">
                 <i class="pi pi-map-marker text-primary"></i>
-                <span>{{ conference.location }}</span>
+                <span>{{ currentPublicConference.location }}</span>
               </div>
               <div class="flex items-center space-x-1">
                 <i class="pi pi-calendar text-primary"></i>
                 <span>
-                  {{ formatDate(conference.start_date) }} - {{ formatDate(conference.end_date) }}
+                  {{ formatDate(currentPublicConference.start_date) }} - {{ formatDate(currentPublicConference.end_date) }}
                 </span>
               </div>
             </div>
-            <div v-if="conference.description" class="mt-1 text-gray-700 max-w-3xl mx-auto">
-              <p>{{ conference.description }}</p>
+            <div v-if="currentPublicConference.description" class="mt-1 text-gray-700 max-w-3xl mx-auto">
+              <p>{{ currentPublicConference.description }}</p>
             </div>
           </div>
         </div>
 
         <!-- Navigation & Content Layout -->
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-1">
-          
+
           <!-- Sidebar Navigation -->
           <div class="lg:col-span-1">
             <div class="bg-white rounded-lg shadow-sm p-1 sticky top-1">
@@ -70,15 +70,15 @@
                 <i class="pi pi-list mr-1 text-primary p-4"></i>
                 Pages
               </h2>
-              
+
               <div v-if="pagesLoading" class="flex flex-col items-center space-y-1 py-1">
                 <ProgressSpinner class="w-6 h-6" strokeWidth="4" />
                 <p class="text-sm text-gray-600">Loading pages...</p>
               </div>
-              
+
               <nav v-else-if="sortedPages?.length > 0" class="space-y-1">
                 <button
-                  v-for="page in sortedPages" 
+                  v-for="page in sortedPages"
                   :key="page.id"
                   @click="selectPage(page)"
                   :class="[
@@ -94,7 +94,7 @@
                   </div>
                 </button>
               </nav>
-              
+
               <div v-else class="text-center py-1">
                 <div class="flex flex-col items-center space-y-1">
                   <i class="pi pi-inbox text-3xl text-gray-400"></i>
@@ -129,8 +129,8 @@
                     </div>
                   </div>
                   <div class="flex items-center space-x-1">
-                    <Chip 
-                      :label="`Page ${activePage.order || 1}`" 
+                    <Chip
+                      :label="`Page ${activePage.order || 1}`"
                       class="bg-primary-100 text-primary-800"
                     />
                   </div>
@@ -146,7 +146,7 @@
                 </div>
                 <div>
                   <h2 class="text-3xl font-bold text-gray-900 mb-1">
-                    Welcome to {{ conference.title }}
+                    Welcome to {{ currentPublicConference.title }}
                   </h2>
                   <p v-if="pagesLoading" class="text-gray-600">Loading pages...</p>
                   <p v-else-if="sortedPages?.length" class="text-gray-600">
@@ -155,8 +155,8 @@
                   <p v-else class="text-gray-600">No pages are available for this conference yet.</p>
                 </div>
                 <div v-if="sortedPages?.length" class="flex flex-wrap gap-1 justify-center">
-                  <Button 
-                    v-for="page in sortedPages.slice(0, 3)" 
+                  <Button
+                    v-for="page in sortedPages.slice(0, 3)"
                     :key="page.id"
                     :label="page.title"
                     @click="selectPage(page)"
@@ -170,8 +170,8 @@
 
             <!-- Page Components -->
             <template v-if="activePage?.page_data?.length">
-              <div 
-                v-for="(pageData, index) in publishedPageData" 
+              <div
+                v-for="(pageData, index) in publishedPageData"
                 :key="pageData.id"
                 class="bg-white rounded-lg shadow-sm overflow-hidden"
               >
@@ -180,11 +180,11 @@
                   <component
                     :is="getPublicComponent(pageData.component_type)"
                     :data="pageData.data"
-                    :component-name="pageData.name"
-                    :conference-id="conference.id"
+                    :component-name="pageData.tag"
+                    :conference-id="currentPublicConference.id"
                     v-if="getPublicComponent(pageData.component_type)"
                   />
-                  
+
                   <!-- Fallback for unknown component types -->
                   <div v-else class="bg-gray-50 rounded-lg p-1 border-2 border-dashed border-gray-300">
                     <div class="text-center">
@@ -221,21 +221,20 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, defineAsyncComponent } from 'vue';
+import { defineComponent, defineAsyncComponent, computed } from 'vue';
+import { useConferenceStore } from '@/stores/conferenceStore';
+import { storeToRefs } from 'pinia';
 import apiService from '@/services/apiService';
 import { getComponentDefinition } from '@/utils/componentRegistry';
-import type { Conference } from '@/types/conference';
+import type { Conference } from '@/types/conference'; // Import Conference type for direct API call
 import type { PageMenu } from '@/types/pageMenu';
 
 interface ComponentData {
-  conference: Conference | null;
   pages: PageMenu[];
   activePage: PageMenu | null;
   activePageId: number | null;
-  loading: boolean;
   pagesLoading: boolean;
   pageDataLoading: boolean;
-  error: string | null;
   loadedComponents: Map<string, any>;
 }
 
@@ -253,16 +252,28 @@ export default defineComponent({
       default: ''
     }
   },
+  setup() {
+    const conferenceStore = useConferenceStore();
+    const {
+      currentPublicConference,
+      publicConferenceLoading,
+      publicConferenceError
+    } = storeToRefs(conferenceStore);
+
+    return {
+      conferenceStore,
+      currentPublicConference,
+      publicConferenceLoading,
+      publicConferenceError
+    };
+  },
   data(): ComponentData {
     return {
-      conference: null,
       pages: [],
       activePage: null,
       activePageId: null,
-      loading: false,
       pagesLoading: false,
       pageDataLoading: false,
-      error: null,
       loadedComponents: new Map()
     };
   },
@@ -272,7 +283,7 @@ export default defineComponent({
         .filter(page => page.is_published)
         .sort((a, b) => (a.order || 0) - (b.order || 0));
     },
-    
+
     publishedPageData() {
       if (!this.activePage?.page_data) {
         return [];
@@ -281,144 +292,187 @@ export default defineComponent({
     }
   },
   async mounted() {
-    await this.loadConference();
+    await this.loadConferenceData();
+  },
+  beforeUnmount() {
+    this.conferenceStore.clearCurrentPublicConference();
   },
   watch: {
     slug: {
-      handler: 'loadConference',
+      async handler(newSlug?: string) {
+        await this.loadConferenceData();
+      },
       immediate: false
     },
     pageSlug: {
       handler: 'handlePageSlugChange',
-      immediate: false
+      immediate: true // Ensure it runs on initial load and when pageSlug becomes empty
+    },
+    currentPublicConference: {
+      async handler(newConference, oldConference) {
+        if (newConference && newConference.slug && (!oldConference || newConference.slug !== oldConference.slug)) {
+          await this.loadPages(newConference.slug);
+        } else if (!newConference) {
+          this.pages = [];
+          this.activePage = null;
+          this.activePageId = null;
+        }
+      },
     }
   },
   methods: {
-    async loadConference(): Promise<void> {
-      this.loading = true;
-      this.error = null;
-      this.conference = null;
+    async loadConferenceData(): Promise<void> {
       this.pages = [];
       this.activePage = null;
       this.activePageId = null;
+      this.conferenceStore.clearCurrentPublicConference();
 
-      try {
-        let conferenceSlug: string;
+      let slugToLoad = this.slug;
 
-        if (this.slug) {
-          // Load specific conference by slug (without pages)
-          const response = await apiService.get<{ payload: Conference }>(`/v1/public/conferences/${this.slug}`);
-          this.conference = response.data.payload;
-          conferenceSlug = this.slug;
-        } else {
-          // Load latest conference (without pages)
+
+      if (!slugToLoad) {
+        this.conferenceStore.publicConferenceLoading = true;
+        try {
           const latestResponse = await apiService.get<{ payload: Conference }>('/v1/public/conferences?latest=1');
           const latestConference = latestResponse.data.payload;
-          if (!latestConference.slug) {
-            throw new Error('Latest conference does not have a slug');
+
+          if (latestConference?.slug) {
+            slugToLoad = latestConference.slug;
+            this.conferenceStore.currentPublicConference = latestConference;
+            this.conferenceStore.publicConferenceError = null;
+            this.conferenceStore.publicConferenceLoading = false;
+
+            if (this.$route.name === 'HomePage' || (this.$route.name === 'conference' && this.$route.params.slug !== slugToLoad)) {
+               this.$router.replace({ name: 'conference', params: { slug: slugToLoad } });
+            }
+          } else {
+            throw new Error('Latest conference slug not found.');
           }
-          this.conference = latestConference;
-          conferenceSlug = latestConference.slug;
-          
-          // Update URL to show the latest conference slug
-          if (this.$route.name === 'HomePage') {
-            this.$router.replace({ name: 'conference', params: { slug: conferenceSlug } });
+        } catch (error: any) {
+          console.error('ConferenceView: Error fetching latest conference:', error);
+          this.conferenceStore.publicConferenceError = error.response?.data?.message || error.message || 'Failed to fetch latest conference details.';
+          this.conferenceStore.publicConferenceLoading = false;
+          return;
+        }
+      }
+
+      if (slugToLoad) {
+        if (this.conferenceStore.currentPublicConference?.slug !== slugToLoad) {
+          try {
+            await this.conferenceStore.fetchPublicConferenceBySlug(slugToLoad);
+          } catch (error) {
+            // Error is handled in store
+          }
+        } else {
+          if (this.conferenceStore.currentPublicConference && this.pages.length === 0) {
+            await this.loadPages(this.conferenceStore.currentPublicConference.slug);
           }
         }
-
-        // Load pages separately (without their data components)
-        if (conferenceSlug) {
-          await this.loadPages(conferenceSlug);
-        }
-
-      } catch (err: any) {
-        console.error('Error loading conference:', err);
-        this.error = err.response?.data?.message || err.message || 'Failed to load conference';
-      } finally {
-        this.loading = false;
+      } else if (!this.conferenceStore.publicConferenceError) {
+          this.conferenceStore.publicConferenceError = "Could not determine which conference to load.";
       }
     },
 
-    async loadPages(slug: string): Promise<void> {
+    async loadPages(conferenceSlug: string): Promise<void> {
+      if (!conferenceSlug) {
+        this.pages = [];
+        this.activePage = null;
+        this.activePageId = null;
+        return;
+      }
       this.pagesLoading = true;
+      this.activePage = null;
+      this.activePageId = null;
       try {
-        const response = await apiService.get<{ payload: PageMenu[] }>(`/v1/public/conferences/${slug}/pages`);
+        const response = await apiService.get<{ payload: PageMenu[] }>(`/v1/public/conferences/${conferenceSlug}/pages`);
         this.pages = response.data.payload;
-        
-        // Handle page selection based on route
+
         if (this.pageSlug) {
-          // Find and select specific page from URL
-          const requestedPage = this.sortedPages.find(page => page.slug === this.pageSlug);
+          const requestedPage = this.sortedPages.find(p => p.slug === this.pageSlug);
           if (requestedPage) {
-            await this.selectPage(requestedPage);
+            await this.selectPage(requestedPage, false);
           } else {
-            // Page not found, redirect to first page or conference home
-            const firstPage = this.sortedPages[0];
-            if (firstPage) {
-              this.$router.replace({ 
-                name: 'conferencePage', 
-                params: { slug, pageSlug: firstPage.slug } 
-              });
-            } else {
-              this.$router.replace({ 
-                name: 'conference', 
-                params: { slug } 
-              });
-            }
+            this.redirectToDefaultPage(conferenceSlug);
           }
         } else if (this.sortedPages.length > 0) {
-          // Auto-select first page and update URL
-          const firstPage = this.sortedPages[0];
-          this.$router.replace({ 
-            name: 'conferencePage', 
-            params: { slug, pageSlug: firstPage.slug } 
-          });
+          this.redirectToDefaultPage(conferenceSlug);
         }
-        
       } catch (err: any) {
-        console.error('Error loading pages:', err);
-        if (!this.conference) {
-          this.error = err.response?.data?.message || 'Failed to load pages';
-        }
+        console.error(`Error loading pages for conference ${conferenceSlug}:`, err);
       } finally {
         this.pagesLoading = false;
       }
     },
 
     async handlePageSlugChange(): Promise<void> {
-      if (this.pageSlug && this.pages.length > 0) {
-        const requestedPage = this.sortedPages.find(page => page.slug === this.pageSlug);
-        if (requestedPage && requestedPage.id !== this.activePageId) {
-          await this.selectPage(requestedPage, false); // Don't update URL since we're responding to URL change
+      if (this.pageSlug) {
+        if (this.pages.length > 0) {
+          const requestedPage = this.sortedPages.find(page => page.slug === this.pageSlug);
+          if (requestedPage) {
+            if (requestedPage.id !== this.activePageId) {
+              await this.selectPage(requestedPage, false);
+            }
+          } else {
+            if (this.currentPublicConference?.slug) {
+              this.redirectToDefaultPage(this.currentPublicConference.slug);
+            }
+          }
+        }
+      } else {
+        if (this.currentPublicConference?.slug) {
+          if (this.sortedPages.length > 0) {
+            this.redirectToDefaultPage(this.currentPublicConference.slug);
+          } else if (!this.pagesLoading) {
+            await this.loadPages(this.currentPublicConference.slug);
+          }
+        }
+      }
+    },
+
+    redirectToDefaultPage(conferenceSlug: string) {
+      const firstPage = this.sortedPages[0];
+      if (firstPage) {
+        this.$router.replace({
+          name: 'conferencePage',
+          params: { slug: conferenceSlug, pageSlug: firstPage.slug }
+        });
+      } else {
+        if (this.$route.name !== 'conference' || this.$route.params.slug !== conferenceSlug) {
+          this.$router.replace({
+            name: 'conference',
+            params: { slug: conferenceSlug }
+          });
         }
       }
     },
 
     async selectPage(page: PageMenu, updateUrl: boolean = true): Promise<void> {
+      if (!this.currentPublicConference?.slug) {
+        console.error("Cannot select page, current conference or its slug is missing.");
+        return;
+      }
+
       this.activePageId = page.id;
       this.pageDataLoading = true;
+      this.activePage = null;
 
       try {
-        // Load page data components
         const response = await apiService.get<{ payload: PageMenu }>(
-          `/v1/public/conferences/${this.conference?.slug}/pages/${page.slug}`
+          `/v1/public/conferences/${this.currentPublicConference.slug}/pages/${page.slug}`
         );
         this.activePage = response.data.payload;
 
-        // Update URL if needed
-        if (updateUrl && this.conference?.slug) {
-          this.$router.push({ 
-            name: 'conferencePage', 
-            params: { 
-              slug: this.conference.slug, 
-              pageSlug: page.slug 
-            } 
+        if (updateUrl) {
+          this.$router.push({
+            name: 'conferencePage',
+            params: {
+              slug: this.currentPublicConference.slug,
+              pageSlug: page.slug
+            }
           });
         }
-
       } catch (err: any) {
-        console.error('Error loading page data:', err);
-        // Still set the page even if data loading fails
+        console.error(`Error loading page data for ${page.slug}:`, err);
         this.activePage = page;
       } finally {
         this.pageDataLoading = false;

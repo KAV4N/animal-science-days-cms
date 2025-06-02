@@ -1,12 +1,12 @@
 import { defineStore } from 'pinia';
 import { useAuthStore } from './authStore';
 import apiService from '@/services/apiService';
-import type { 
-  Conference, 
-  ConferenceFilters, 
-  ConferenceStoreRequest, 
-  ConferenceUpdateRequest, 
-  ConferenceResponse, 
+import type {
+  Conference,
+  ConferenceFilters,
+  ConferenceStoreRequest,
+  ConferenceUpdateRequest,
+  ConferenceResponse,
   ConferencePaginatedResponse
 } from '@/types/conference';
 import type { PaginationMeta } from '@/types/common';
@@ -16,8 +16,11 @@ import type { ApiErrorResponse } from '@/types/common';
 interface ConferenceState {
   conferences: Conference[];
   latestConference: Conference | null;
+  currentPublicConference: Conference | null;
   loading: boolean;
+  publicConferenceLoading: boolean;
   error: string | null;
+  publicConferenceError: string | null;
   meta: PaginationMeta | null;
 }
 
@@ -25,20 +28,26 @@ export const useConferenceStore = defineStore('conference', {
   state: (): ConferenceState => ({
     conferences: [],
     latestConference: null,
+    currentPublicConference: null,
     loading: false,
+    publicConferenceLoading: false,
     error: null,
+    publicConferenceError: null,
     meta: null
   }),
 
   getters: {
     getConferences: (state) => state.conferences,
     isLoading: (state) => state.loading,
+    isPublicConferenceLoading: (state) => state.publicConferenceLoading,
     getError: (state) => state.error,
+    getPublicConferenceError: (state) => state.publicConferenceError,
     getPaginationMeta: (state) => state.meta,
 
     getPublishedConferences: (state) => state.conferences.filter(c => c.is_published),
 
     getLatestConference: (state) => state.latestConference,
+    getCurrentPublicConference: (state) => state.currentPublicConference,
 
     getConferencesByUniversity: (state) => (universityId: number) => {
       return state.conferences.filter(c => c.university?.id === universityId);
@@ -53,7 +62,7 @@ export const useConferenceStore = defineStore('conference', {
   actions: {
     async fetchConferences(filters: ConferenceFilters = {}) {
       const authStore = useAuthStore();
-      return authStore.hasAdminAccess 
+      return authStore.hasAdminAccess
         ? this.fetchConferencesAll(filters)
         : this.fetchMyConferences(filters);
     },
@@ -255,9 +264,36 @@ export const useConferenceStore = defineStore('conference', {
     resetState() {
       this.conferences = [];
       this.latestConference = null;
+      this.currentPublicConference = null;
       this.loading = false;
+      this.publicConferenceLoading = false;
       this.error = null;
+      this.publicConferenceError = null;
       this.meta = null;
+    },
+
+    async fetchPublicConferenceBySlug(slug: string) {
+      this.publicConferenceLoading = true;
+      this.publicConferenceError = null;
+      this.currentPublicConference = null;
+
+      try {
+        const response = await apiService.get<{ payload: Conference }>(`/v1/public/conferences/${slug}`);
+        this.currentPublicConference = response.data.payload;
+        return this.currentPublicConference;
+      } catch (error) {
+        const axiosError = error as AxiosError<ApiErrorResponse>;
+        this.publicConferenceError = axiosError.response?.data.message || `Failed to fetch public conference with slug: ${slug}`;
+        this.currentPublicConference = null;
+        throw error;
+      } finally {
+        this.publicConferenceLoading = false;
+      }
+    },
+
+    clearCurrentPublicConference() {
+      this.currentPublicConference = null;
+      this.publicConferenceError = null;
     }
   }
 });
