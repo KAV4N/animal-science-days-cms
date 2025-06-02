@@ -88,14 +88,7 @@ class PublicConferenceController extends Controller
             ->with(['university'])
             ->first();
 
-        if (!$conference) {
-            // Fallback to most recent published conference if no latest is marked
-            $conference = Conference::where('is_published', true)
-                ->with(['university'])
-                ->orderBy('start_date', 'desc')
-                ->first();
-        }
-
+       
         if (!$conference) {
             return $this->errorResponse('No published conferences found', 404);
         }

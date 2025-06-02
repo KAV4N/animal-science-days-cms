@@ -44,11 +44,13 @@ Route::prefix('v1')->group(function () {
         Route::get('/conferences/{conferenceSlug}/pages/{pageSlug}', [PreviewConferenceController::class, 'page']);
     });
 
-    // Public media serve endpoint (no authentication required for serving files)
-    Route::get('/conferences/{conference}/media/{mediaId}/serve', [MediaController::class, 'serve'])
-        ->name('api.media.serve');
-    Route::get('/conferences/{conference}/media/{mediaId}/download', [MediaController::class, 'download'])
-        ->name('api.media.download');
+    // Public media serve and download endpoints (policy-controlled access)
+    Route::middleware('media.access')->group(function() {
+        Route::get('/conferences/{conference}/media/{mediaId}/serve', [MediaController::class, 'serve'])
+            ->name('api.media.serve');
+        Route::get('/conferences/{conference}/media/{mediaId}/download', [MediaController::class, 'download'])
+            ->name('api.media.download');
+    });
 
     // Authentication routes
     Route::prefix('auth')->group(function () {
@@ -82,16 +84,18 @@ Route::prefix('v1')->group(function () {
                 Route::post('/refresh', [ConferenceLockController::class, 'refreshLock']);
             });
             
-            // Media management routes (protected)
-            Route::middleware('check.conference.lock')->group(function () {
-                Route::prefix('conferences/{conference}/media')->group(function () {
-                    Route::get('/', [MediaController::class, 'index']);
-                    Route::post('/', [MediaController::class, 'store']);
-                    Route::get('/{media}', [MediaController::class, 'show']);
-                    Route::put('/{media}', [MediaController::class, 'update']);
-                    Route::patch('/{media}', [MediaController::class, 'update']);
-                    Route::delete('/{media}', [MediaController::class, 'destroy']);
-                });
+            // Media management routes (policy-protected)
+            Route::prefix('conferences/{conference}/media')->group(function () {
+                Route::get('/', [MediaController::class, 'index']);
+                Route::post('/', [MediaController::class, 'store'])
+                    ->middleware('check.conference.lock'); // Only creating requires lock
+                Route::get('/{media}', [MediaController::class, 'show']);
+                Route::put('/{media}', [MediaController::class, 'update'])
+                    ->middleware('check.conference.lock');
+                Route::patch('/{media}', [MediaController::class, 'update'])
+                    ->middleware('check.conference.lock');
+                Route::delete('/{media}', [MediaController::class, 'destroy'])
+                    ->middleware('check.conference.lock');
             });
             
             // Admin-only routes

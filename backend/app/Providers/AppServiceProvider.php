@@ -6,11 +6,14 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 
 use App\Models\Conference;
+use App\Models\Media;
 
 use App\Policies\ConferencePolicy;
+use App\Policies\MediaPolicy;
 
 use App\Services\AuthService;
 use App\Services\ConferenceLockService;
+
 
 
 
@@ -36,5 +39,6 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::policy(Conference::class, ConferencePolicy::class);
+        Gate::policy(Media::Class, MediaPolicy::Class);
     }
 }
