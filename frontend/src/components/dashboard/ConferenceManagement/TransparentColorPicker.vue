@@ -4,11 +4,15 @@
   </div>
 </template>
 
-<script>
+<script lang="ts">
+import { defineComponent, ref, onMounted, nextTick, watch, onBeforeUnmount } from 'vue';
+
+// You'll need to install Alwan: npm install alwan
+// @ts-ignore
 import Alwan from 'alwan';
 import 'alwan/dist/css/alwan.min.css';
 
-export default {
+export default defineComponent({
   name: 'TransparentColorPicker',
   
   props: {
@@ -21,13 +25,13 @@ export default {
     theme: {
       type: String,
       default: 'light',
-      validator: (value) => ['light', 'dark'].includes(value)
+      validator: (value: string) => ['light', 'dark'].includes(value)
     },
     // Color format (hex, rgb, hsl)
     format: {
       type: String,
       default: 'hex',
-      validator: (value) => ['hex', 'rgb', 'hsl'].includes(value)
+      validator: (value: string) => ['hex', 'rgb', 'hsl'].includes(value)
     },
     // Additional CSS classes
     customClass: {
@@ -36,126 +40,134 @@ export default {
     }
   },
   
-  data() {
-    return {
-      colorPicker: null
-    };
-  },
+  emits: ['update:modelValue', 'color-change'],
   
-  mounted() {
-    this.initColorPicker();
+  setup(props, { emit }) {
+    const colorPickerRef = ref<HTMLElement | null>(null);
+    const colorPicker = ref<any>(null);
     
-    // Apply transparent background after initialization
-    this.$nextTick(() => {
-      this.applyTransparentBackground();
-    });
-  },
-  
-  methods: {
-    initColorPicker() {
+    const initColorPicker = () => {
+      if (!colorPickerRef.value) return;
+      
       // Create a reference element
       const refElement = document.createElement('div');
-      this.$refs.colorPickerRef.appendChild(refElement);
+      colorPickerRef.value.appendChild(refElement);
       
       // Ensure initial color has # prefix if it's a hex value
-      const initialColor = this.ensureHashPrefix(this.modelValue);
+      const initialColor = ensureHashPrefix(props.modelValue);
       
-      this.colorPicker = new Alwan(refElement, {
-        theme: this.theme,
-        format: this.format,
+      colorPicker.value = new Alwan(refElement, {
+        theme: props.theme,
+        format: props.format,
         color: initialColor,
         inputs: { hex: true, rgb: false, hsl: false },
         // Key settings for embedded transparent picker
         opacity: false,                   // Remove alpha/transparency option
         toggle: false,                   // Always visible
         popover: false,                  // Not a popover
-        target: this.$refs.colorPickerRef, // Target container
+        target: colorPickerRef.value,    // Target container
         preset: false,                   // Don't replace with preset button
-        classname: 'transparent-picker ' + this.customClass // Custom classes
+        classname: 'transparent-picker ' + props.customClass // Custom classes
       });
       
       // Listen for color changes
-      this.colorPicker.on('change', (event) => {
-        let colorValue = event[this.format];
+      colorPicker.value.on('change', (event: any) => {
+        let colorValue = event[props.format];
         
         // Ensure hex colors always include # prefix
-        if (this.format === 'hex' && colorValue && !colorValue.startsWith('#')) {
+        if (props.format === 'hex' && colorValue && !colorValue.startsWith('#')) {
           colorValue = '#' + colorValue;
         }
         
-        this.$emit('update:modelValue', colorValue);
-        this.$emit('color-change', event);
+        emit('update:modelValue', colorValue);
+        emit('color-change', event);
       });
-    },
+    };
     
     // Helper method to ensure hex colors start with #
-    ensureHashPrefix(color) {
-      if (this.format === 'hex' && color && !color.startsWith('#')) {
+    const ensureHashPrefix = (color: string): string => {
+      if (props.format === 'hex' && color && !color.startsWith('#')) {
         return '#' + color;
       }
       return color;
-    },
+    };
     
-    applyTransparentBackground() {
+    const applyTransparentBackground = () => {
+      if (!colorPickerRef.value) return;
+      
       // Make background transparent for all relevant elements
-      const elements = this.$el.querySelectorAll('.alwan, .alwan__panel');
-      elements.forEach(el => {
-        el.style.backgroundColor = 'transparent';
+      const elements = colorPickerRef.value.querySelectorAll('.alwan, .alwan__panel');
+      elements.forEach((el: Element) => {
+        (el as HTMLElement).style.backgroundColor = 'transparent';
       });
-    },
+    };
     
     // Public method to set color programmatically
-    setColor(color) {
-      if (this.colorPicker) {
-        const formattedColor = this.ensureHashPrefix(color);
-        this.colorPicker.setColor(formattedColor).trigger('change');
+    const setColor = (color: string) => {
+      if (colorPicker.value) {
+        const formattedColor = ensureHashPrefix(color);
+        colorPicker.value.setColor(formattedColor).trigger('change');
       }
-    },
+    };
     
     // Public method to reset to default color
-    reset() {
-      if (this.colorPicker) {
-        this.colorPicker.reset();
+    const reset = () => {
+      if (colorPicker.value) {
+        colorPicker.value.reset();
       }
-    },
+    };
     
     // Clean up
-    destroyColorPicker() {
-      if (this.colorPicker) {
-        this.colorPicker.destroy();
-        this.colorPicker = null;
+    const destroyColorPicker = () => {
+      if (colorPicker.value) {
+        colorPicker.value.destroy();
+        colorPicker.value = null;
       }
-    }
-  },
-  
-  watch: {
-    // React to prop changes
-    modelValue(newVal) {
-      if (this.colorPicker) {
-        const formattedVal = this.ensureHashPrefix(newVal);
-        const currentColor = this.colorPicker.getColor()[this.format];
-        const formattedCurrentColor = this.ensureHashPrefix(currentColor);
+    };
+    
+    onMounted(() => {
+      initColorPicker();
+      
+      // Apply transparent background after initialization
+      nextTick(() => {
+        applyTransparentBackground();
+      });
+    });
+    
+    // Watch for prop changes
+    watch(() => props.modelValue, (newVal) => {
+      if (colorPicker.value) {
+        const formattedVal = ensureHashPrefix(newVal);
+        const currentColor = colorPicker.value.getColor()[props.format];
+        const formattedCurrentColor = ensureHashPrefix(currentColor);
         
         if (formattedVal !== formattedCurrentColor) {
-          this.colorPicker.setColor(formattedVal);
+          colorPicker.value.setColor(formattedVal);
         }
       }
-    },
+    });
     
-    theme() {
+    watch(() => props.theme, () => {
       // Reinitialize if theme changes
-      this.destroyColorPicker();
-      this.$nextTick(() => {
-        this.initColorPicker();
-        this.applyTransparentBackground();
+      destroyColorPicker();
+      nextTick(() => {
+        initColorPicker();
+        applyTransparentBackground();
       });
-    }
-  },
-  
-  beforeUnmount() {
-    this.destroyColorPicker();
+    });
+    
+    onBeforeUnmount(() => {
+      destroyColorPicker();
+    });
+    
+    // Expose methods for parent component access
+    return {
+      colorPickerRef,
+      setColor,
+      reset
+    };
   }
-};
+});
 </script>
 
 <style scoped>
