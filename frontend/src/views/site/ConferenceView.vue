@@ -60,12 +60,45 @@
           </div>
         </div>
 
+        <!-- Mobile Menu Toggle -->
+        <div class="lg:hidden bg-white rounded-lg shadow-sm p-4 mb-4">
+          <Button
+            :icon="isMobileMenuOpen ? 'pi pi-times' : 'pi pi-bars'"
+            :label="isMobileMenuOpen ? 'Close Menu' : 'Open Menu'"
+            @click="toggleMobileMenu"
+            class="w-full"
+            outlined
+          />
+        </div>
+
         <!-- Navigation & Content Layout -->
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-1">
 
+
           <!-- Sidebar Navigation -->
           <div class="lg:col-span-1">
-            <div class="bg-white rounded-lg shadow-sm p-1 sticky top-1">
+            <div 
+              :class="[
+                'bg-white rounded-lg shadow-sm p-1 transition-transform duration-300 ease-in-out',
+                'lg:sticky lg:top-1',
+                'lg:transform-none lg:translate-x-0',
+                isMobileMenuOpen 
+                  ? 'fixed top-0 left-0 h-full w-80 max-w-[90vw] z-50 transform translate-x-0 overflow-y-auto' 
+                  : 'fixed top-0 left-0 h-full w-80 max-w-[90vw] z-50 transform -translate-x-full overflow-y-auto lg:relative lg:w-auto lg:h-auto'
+              ]"
+            >
+              <!-- Mobile Menu Header -->
+              <div class="lg:hidden flex items-center justify-between p-4 border-b border-gray-200 mb-4">
+                <h2 class="text-lg font-semibold text-gray-900">Navigation</h2>
+                <Button
+                  icon="pi pi-times"
+                  @click="closeMobileMenu"
+                  text
+                  class="p-2"
+                  aria-label="Close Menu"
+                />
+              </div>
+
               <h2 class="text-lg font-semibold text-gray-900 mb-1 flex items-center">
                 <i class="pi pi-list mr-1 text-primary p-4"></i>
                 Pages
@@ -82,7 +115,7 @@
                   :key="page.id"
                   @click="selectPage(page)"
                   :class="[
-                    'w-full text-left px-3 py-3  transition-colors duration-200 cursor-pointer block',
+                    'w-full text-left px-3 py-3 transition-colors duration-200 cursor-pointer block',
                     activePageId === page.id
                       ? 'bg-primary-50 text-primary-700 border-l-4 border-primary-600'
                       : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
@@ -236,6 +269,7 @@ interface ComponentData {
   pagesLoading: boolean;
   pageDataLoading: boolean;
   loadedComponents: Map<string, any>;
+  isMobileMenuOpen: boolean;
 }
 
 export default defineComponent({
@@ -274,7 +308,8 @@ export default defineComponent({
       activePageId: null,
       pagesLoading: false,
       pageDataLoading: false,
-      loadedComponents: new Map()
+      loadedComponents: new Map(),
+      isMobileMenuOpen: false
     };
   },
   computed: {
@@ -293,9 +328,13 @@ export default defineComponent({
   },
   async mounted() {
     await this.loadConferenceData();
+    // Add event listener for window resize to close mobile menu
+    window.addEventListener('resize', this.handleResize);
   },
   beforeUnmount() {
     this.conferenceStore.clearCurrentPublicConference();
+    // Remove event listener
+    window.removeEventListener('resize', this.handleResize);
   },
   watch: {
     slug: {
@@ -321,6 +360,21 @@ export default defineComponent({
     }
   },
   methods: {
+    toggleMobileMenu() {
+      this.isMobileMenuOpen = !this.isMobileMenuOpen;
+    },
+
+    closeMobileMenu() {
+      this.isMobileMenuOpen = false;
+    },
+
+    handleResize() {
+      // Close mobile menu on desktop breakpoint
+      if (window.innerWidth >= 1024) {
+        this.isMobileMenuOpen = false;
+      }
+    },
+
     async loadConferenceData(): Promise<void> {
       this.pages = [];
       this.activePage = null;
@@ -328,7 +382,6 @@ export default defineComponent({
       this.conferenceStore.clearCurrentPublicConference();
 
       let slugToLoad = this.slug;
-
 
       if (!slugToLoad) {
         this.conferenceStore.publicConferenceLoading = true;
@@ -455,6 +508,9 @@ export default defineComponent({
       this.activePageId = page.id;
       this.pageDataLoading = true;
       this.activePage = null;
+
+      // Close mobile menu when page is selected
+      this.closeMobileMenu();
 
       try {
         const response = await apiService.get<{ payload: PageMenu }>(

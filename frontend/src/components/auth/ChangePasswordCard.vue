@@ -59,17 +59,13 @@ export default defineComponent({
 
         if (changeSuccessful) {
           this.successMessage = 'Password changed successfully!';
-
           this.$emit('password-changed');
 
           if (this.authStore.user) {
             this.authStore.user.must_change_password = false;
           }
 
-          setTimeout(() => {
-            this.router.push({ name: 'ConferenceManagement' });
-          }, 2000);
-
+          this.router.push({ name: 'ConferenceManagement' });
         } else {
           this.errorMessage = this.authStore.error || 'Password change failed';
         }
@@ -78,6 +74,9 @@ export default defineComponent({
       } finally {
         this.isLoading = false;
       }
+    },
+    goBackHome() {
+      this.router.push({ name: 'HomePage' });
     }
   }
 });
@@ -94,17 +93,15 @@ export default defineComponent({
     <template #container>
       <div class="flex flex-col items-center px-8 py-8 gap-6 rounded-2xl" style="background-image: radial-gradient(circle at left top, var(--p-surface-400), var(--p-surface-700))">
         <img src="/school-logo.png" alt="School Logo" class="block mx-auto h-20 w-auto" />
-        <!-- Mandatory Change Password Message -->
+
         <div v-if="mustChange" class="text-center text-primary-50 w-80">
           <p>Since this is your first login, you need to change your password.</p>
         </div>
 
-        <!-- Error Message Display -->
         <div v-if="errorMessage" class="bg-red-500/20 border border-red-500 text-red-400 p-3 rounded-lg text-center w-80">
           {{ errorMessage }}
         </div>
 
-        <!-- Success Message Display -->
         <div v-if="successMessage" class="bg-green-500/20 border border-green-500 text-green-400 p-3 rounded-lg text-center w-80">
           {{ successMessage }}
         </div>
@@ -117,7 +114,7 @@ export default defineComponent({
             class="!bg-white/20 !border-0 !p-4 !text-primary-50 w-80"
             type="password"
             placeholder="Enter new password"
-          ></InputText>
+          />
         </div>
 
         <div class="inline-flex flex-col gap-2">
@@ -128,10 +125,10 @@ export default defineComponent({
             class="!bg-white/20 !border-0 !p-4 !text-primary-50 w-80"
             type="password"
             placeholder="Confirm new password"
-          ></InputText>
+          />
         </div>
 
-        <div class="flex items-center gap-4">
+        <div class="flex flex-col gap-3 w-80">
           <Button
             label="Change Password"
             @click="handlePasswordChange"
@@ -141,6 +138,14 @@ export default defineComponent({
           >
             {{ isLoading ? 'Changing...' : 'Change Password' }}
           </Button>
+
+          <!-- 👇 Subtle "Go Back Home" Button -->
+          <Button
+            label="Go Back Home"
+            @click="goBackHome"
+            text
+            class="!p-3 w-full !text-primary-300 !border !border-white/10 hover:!bg-white/5"
+          />
         </div>
       </div>
     </template>

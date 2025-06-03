@@ -50,10 +50,18 @@
           <!-- Fixed left column -->
           <Column v-if="authStore.hasAdminAccess" selectionMode="multiple" style="width: 3rem" frozen alignFrozen="left" class="checkbox-column border-e shadow" :exportable="false"></Column>
           
-          <Column field="name" header="Name" sortable style="min-width: 16rem"></Column>
+          <Column field="name" header="Name" sortable style="min-width: 16rem">
+            <template #body="slotProps">
+              <span v-tooltip.top="slotProps.data.name" class="truncate block">
+                {{ truncateText(slotProps.data.name, 30) }}
+              </span>
+            </template>
+          </Column>
           <Column field="university" header="University" sortable style="min-width: 12rem">
             <template #body="slotProps">
-              {{ slotProps.data.university?.full_name }}
+              <span v-tooltip.top="slotProps.data.university?.full_name" class="truncate block">
+                {{ truncateText(slotProps.data.university?.full_name, 25) }}
+              </span>
             </template>
           </Column>
           <Column field="start_date" header="Start Date" sortable style="min-width: 10rem">
@@ -66,19 +74,16 @@
               {{ formatDate(slotProps.data.end_date) }}
             </template>
           </Column>
-          
           <Column field="is_published" header="Status" sortable style="min-width: 10rem">
             <template #body="slotProps">
               <Tag :value="slotProps.data.is_published ? 'Published' : 'Draft'" :severity="getStatusSeverity(slotProps.data.is_published)" />
             </template>
           </Column>
-          
           <Column field="created_at" header="Created" sortable style="min-width: 10rem">
             <template #body="slotProps">
               {{ formatDateTime(slotProps.data.created_at) }}
             </template>
           </Column>
-          
           <Column field="updated_at" header="Last Updated" sortable style="min-width: 10rem">
             <template #body="slotProps">
               {{ formatDateTime(slotProps.data.updated_at) }}
@@ -100,7 +105,6 @@
                   @click="onEditPagesClick(slotProps.data)" 
                   v-tooltip.top="'Edit conference pages'"
                 />
-                
                 <div v-if="authStore.hasAdminAccess" class="flex justify-center gap-2">
                   <Divider layout="vertical" />
                   <Button 
@@ -277,8 +281,13 @@ export default defineComponent({
       return isPublished ? 'success' : 'warning';
     },
     
+    truncateText(text: string | undefined, maxLength: number): string {
+      if (!text) return '';
+      if (text.length <= maxLength) return text;
+      return text.substring(0, maxLength - 3) + '...';
+    },
+    
     onEditPagesClick(conference: Conference): void {
-      // Navigate to the conference edit route directly without lock checks
       this.$router.push({ name: 'ConferenceEdit', params: { id: conference.id.toString() } });
     },
     
@@ -339,7 +348,6 @@ export default defineComponent({
         let successCount = 0;
         const errors = [];
         
-        // Delete each conference
         for (const conference of this.selectedConferences) {
           try {
             const response = await this.conferenceStore.deleteConference(conference.id);
@@ -354,11 +362,9 @@ export default defineComponent({
           }
         }
         
-        // Refresh the conference list
         this.selectedConferences = [];
         this.loadConferences();
         
-        // Show appropriate success/failure messages
         if (successCount > 0) {
           this.toast.add({
             severity: 'success',
@@ -402,6 +408,10 @@ export default defineComponent({
 .action-buttons-column {
   z-index: 1; 
   box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+:deep(.p-datatable .p-datatable-tbody > tr > td) {
+  @apply truncate;
 }
 
 @media screen and (max-width: 960px) {

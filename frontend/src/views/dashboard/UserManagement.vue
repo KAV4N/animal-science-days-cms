@@ -54,8 +54,20 @@
           <!-- Fixed left column -->
           <Column selectionMode="multiple" style="width: 3rem" frozen alignFrozen="left" class="checkbox-column border-e shadow" :exportable="false"></Column>
           
-          <Column field="name" header="Name" sortable style="min-width: 16rem"></Column>
-          <Column field="email" header="Email" sortable style="min-width: 16rem"></Column>
+          <Column field="name" header="Name" sortable style="min-width: 16rem">
+            <template #body="slotProps">
+              <span v-tooltip.top="slotProps.data.name" class="truncate block">
+                {{ truncateText(slotProps.data.name, 30) }}
+              </span>
+            </template>
+          </Column>
+          <Column field="email" header="Email" sortable style="min-width: 16rem">
+            <template #body="slotProps">
+              <span v-tooltip.top="slotProps.data.email" class="truncate block">
+                {{ truncateText(slotProps.data.email, 25) }}
+              </span>
+            </template>
+          </Column>
           <Column header="Role" sortable :sortField="'roles'" style="min-width: 10rem">
             <template #body="slotProps">
               <Tag v-for="role in slotProps.data.roles" :key="role.id" 
@@ -68,7 +80,9 @@
           </Column>
           <Column header="University" style="min-width: 16rem">
             <template #body="slotProps">
-              {{ slotProps.data.university ? slotProps.data.university.full_name : 'Not Assigned' }}
+              <span v-tooltip.top="slotProps.data.university ? slotProps.data.university.full_name : 'Not Assigned'" class="truncate block">
+                {{ truncateText(slotProps.data.university ? slotProps.data.university.full_name : 'Not Assigned', 25) }}
+              </span>
             </template>
             <template #csv="slotProps">
               {{ slotProps.data.university ? slotProps.data.university.full_name : 'Not Assigned' }}
@@ -169,6 +183,18 @@ import { useAuthStore } from '@/stores/authStore';
 import apiService from '@/services/apiService';
 import debounce from 'lodash/debounce';
 import type { User, Role } from '@/types/user';
+import Card from 'primevue/card';
+import DataTable from 'primevue/datatable';
+import Column from 'primevue/column';
+import Button from 'primevue/button';
+import InputGroup from 'primevue/inputgroup';
+import InputGroupAddon from 'primevue/inputgroupaddon';
+import InputText from 'primevue/inputtext';
+import Tag from 'primevue/tag';
+import Select from 'primevue/select';
+import Dialog from 'primevue/dialog';
+import Toast from 'primevue/toast';
+import Tooltip from 'primevue/tooltip';
 
 interface UserFilters {
   search: string;
@@ -197,7 +223,22 @@ export default defineComponent({
   components: {
     UserDialog,
     DeleteConfirmDialog,
-    UserToolbar
+    UserToolbar,
+    Card,
+    DataTable,
+    Column,
+    Button,
+    InputGroup,
+    InputGroupAddon,
+    InputText,
+    Tag,
+    Select,
+    Dialog,
+    Toast
+  },
+  
+  directives: {
+    tooltip: Tooltip
   },
   
   data() {
@@ -382,6 +423,12 @@ export default defineComponent({
       }
       
       return options;
+    },
+    
+    truncateText(text: string | undefined, maxLength: number): string {
+      if (!text) return '';
+      if (text.length <= maxLength) return text;
+      return text.substring(0, maxLength - 3) + '...';
     },
     
     openNewUser(): void {
@@ -681,6 +728,10 @@ export default defineComponent({
 .action-buttons-column {
   z-index: 1;
   box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+:deep(.p-datatable .p-datatable-tbody > tr > td) {
+  @apply truncate;
 }
 
 @media screen and (max-width: 960px) {

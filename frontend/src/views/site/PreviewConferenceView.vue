@@ -81,12 +81,44 @@
           </div>
         </div>
 
+        <!-- Mobile Menu Toggle -->
+        <div class="lg:hidden bg-white rounded-lg shadow-sm p-4 mb-4">
+          <Button
+            :icon="isMobileMenuOpen ? 'pi pi-times' : 'pi pi-bars'"
+            :label="isMobileMenuOpen ? 'Close Menu' : 'Open Menu'"
+            @click="toggleMobileMenu"
+            class="w-full"
+            outlined
+          />
+        </div>
+
         <!-- Navigation & Content Layout -->
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-1">
           
           <!-- Sidebar Navigation -->
           <div class="lg:col-span-1">
-            <div class="bg-white rounded-lg shadow-sm p-1 sticky top-20">
+            <div 
+              :class="[
+                'bg-white rounded-lg shadow-sm p-1 transition-transform duration-300 ease-in-out',
+                'lg:sticky lg:top-20',
+                'lg:transform-none lg:translate-x-0',
+                isMobileMenuOpen 
+                  ? 'fixed top-0 left-0 h-full w-80 max-w-[90vw] z-50 transform translate-x-0 overflow-y-auto' 
+                  : 'fixed top-0 left-0 h-full w-80 max-w-[90vw] z-50 transform -translate-x-full overflow-y-auto lg:relative lg:w-auto lg:h-auto'
+              ]"
+            >
+              <!-- Mobile Menu Header -->
+              <div class="lg:hidden flex items-center justify-between p-4 border-b border-gray-200 mb-4">
+                <h2 class="text-lg font-semibold text-gray-900">Navigation</h2>
+                <Button
+                  icon="pi pi-times"
+                  @click="closeMobileMenu"
+                  text
+                  class="p-2"
+                  aria-label="Close Menu"
+                />
+              </div>
+
               <h2 class="text-lg font-semibold text-gray-900 mb-1 flex items-center">
                 <i class="pi pi-list mr-1 text-primary p-4"></i>
                 Pages
@@ -275,6 +307,7 @@ interface ComponentData {
   pageDataLoading: boolean;
   error: string | null;
   loadedComponents: Map<string, any>;
+  isMobileMenuOpen: boolean;
 }
 
 export default defineComponent({
@@ -300,7 +333,8 @@ export default defineComponent({
       pagesLoading: false,
       pageDataLoading: false,
       error: null,
-      loadedComponents: new Map()
+      loadedComponents: new Map(),
+      isMobileMenuOpen: false
     };
   },
   computed: {
@@ -318,6 +352,12 @@ export default defineComponent({
   },
   async mounted() {
     await this.loadConference();
+    // Add event listener for window resize to close mobile menu
+    window.addEventListener('resize', this.handleResize);
+  },
+  beforeUnmount() {
+    // Remove event listener
+    window.removeEventListener('resize', this.handleResize);
   },
   watch: {
     slug: {
@@ -330,6 +370,21 @@ export default defineComponent({
     }
   },
   methods: {
+    toggleMobileMenu() {
+      this.isMobileMenuOpen = !this.isMobileMenuOpen;
+    },
+
+    closeMobileMenu() {
+      this.isMobileMenuOpen = false;
+    },
+
+    handleResize() {
+      // Close mobile menu on desktop breakpoint
+      if (window.innerWidth >= 1024) {
+        this.isMobileMenuOpen = false;
+      }
+    },
+
     async loadConference(): Promise<void> {
       this.loading = true;
       this.error = null;
@@ -412,6 +467,9 @@ export default defineComponent({
     async selectPage(page: PageMenu, updateUrl: boolean = true): Promise<void> {
       this.activePageId = page.id;
       this.pageDataLoading = true;
+
+      // Close mobile menu when page is selected
+      this.closeMobileMenu();
 
       try {
         // Load page data components using preview API
