@@ -141,21 +141,17 @@ export default defineComponent({
         userAgent: navigator.userAgent,
         referrer: document.referrer || 'Direct access'
       });
-      
-      // You can add analytics tracking here
-      // Example: gtag('event', '404_error', { page_location: this.currentUrl });
     }
   }
 });
 </script>
 
 <style scoped>
-/* Custom styles for 404 page */
 .break-all {
   word-break: break-all;
 }
 
-/* Animation for the 404 number */
+/* Animation for 404 */
 @keyframes fadeInUp {
   from {
     opacity: 0;
