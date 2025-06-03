@@ -57,21 +57,8 @@
                 />
               </div>
 
-              <!-- Density (replaces Width) -->
-              <div>
-                <label for="density" class="block text-sm font-medium mb-2">Shape Density: {{ localBannerData.density }}%</label>
-                <Slider
-                  id="density"
-                  v-model="localBannerData.density"
-                  :min="50"
-                  :max="200"
-                  :step="10"
-                  class="w-full"
-                />
-              </div>
-
               <!-- Flip Options -->
-              <div class="flex items-center space-x-4">
+              <div class="flex items-center space-x-4 md:col-span-2">
                 <div class="flex items-center">
                   <Checkbox v-model="localBannerData.flipX" inputId="flipX" binary />
                   <label for="flipX" class="ml-2 text-sm">Flip Horizontal</label>
@@ -298,37 +285,6 @@
           </template>
         </Card>
 
-        <!-- Effects -->
-        <Card>
-          <template #title>
-            <h4 class="text-lg font-semibold">Effects</h4>
-          </template>
-          <template #content>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-0">
-              <!-- Blur Effect -->
-              <div class="flex items-center">
-                <Checkbox v-model="localBannerData.blur" inputId="blur" binary />
-                <label for="blur" class="ml-2 text-sm font-medium">Enable Blur Effect</label>
-              </div>
-
-              <!-- Blur Amount -->
-              <div v-if="localBannerData.blur">
-                <label for="blurAmount" class="block text-sm font-medium mb-2">
-                  Blur Amount: {{ localBannerData.blurAmount }}px
-                </label>
-                <Slider
-                  id="blurAmount"
-                  v-model="localBannerData.blurAmount"
-                  :min="1"
-                  :max="20"
-                  :step="1"
-                  class="w-full"
-                />
-              </div>
-            </div>
-          </template>
-        </Card>
-
         <!-- Published Checkbox -->
         <Card>
           <template #content>
@@ -382,7 +338,6 @@
               </div>
               <div class="mt-3 text-sm text-gray-600 space-y-1">
                 <p><strong>Height:</strong> {{ localBannerData.height }}px</p>
-                <p><strong>Density:</strong> {{ localBannerData.density }}%</p>
                 <p><strong>Shape:</strong> {{ getShapeLabel(localBannerData.shapeType) }}</p>
               </div>
             </div>
@@ -415,7 +370,6 @@ interface BannerData {
   flipX: boolean;
   flipY: boolean;
   height: number;
-  density: number;
   width?: number; // For backward compatibility
   color: string;
   backgroundType: 'solid' | 'gradient';
@@ -423,8 +377,6 @@ interface BannerData {
   gradientColor2: string;
   gradientDirection: string;
   opacity: number;
-  blur: boolean;
-  blurAmount: number;
   shapeImage: string;
   backgroundImage: string;
   shapeImageOpacity: number;
@@ -457,15 +409,12 @@ export default defineComponent({
         flipX: false,
         flipY: false,
         height: 120,
-        density: 100,
         color: '#6366f1',
         backgroundType: 'solid',
         gradientColor1: '#6366f1',
         gradientColor2: '#8b5cf6',
         gradientDirection: 'to right',
         opacity: 100,
-        blur: false,
-        blurAmount: 5,
         shapeImage: '',
         backgroundImage: '',
         shapeImageOpacity: 100,
@@ -491,15 +440,12 @@ export default defineComponent({
         flipX: false,
         flipY: false,
         height: 120,
-        density: 100,
         color: '#6366f1',
         backgroundType: 'solid',
         gradientColor1: '#6366f1',
         gradientColor2: '#8b5cf6',
         gradientDirection: 'to right',
         opacity: 100,
-        blur: false,
-        blurAmount: 5,
         shapeImage: '',
         backgroundImage: '',
         shapeImageOpacity: 100,
@@ -535,10 +481,9 @@ export default defineComponent({
   },
   computed: {
     previewData() {
-      // Convert density to width for the BannerPublic component
       return {
         ...this.localBannerData,
-        width: this.localBannerData.density,
+        width: 100, // Set to default width since density is removed
         imageOpacity: this.localBannerData.shapeImageOpacity // For backward compatibility
       };
     }
@@ -590,15 +535,12 @@ export default defineComponent({
         flipX: bannerData.flipX || false,
         flipY: bannerData.flipY || false,
         height: bannerData.height || 120,
-        density: bannerData.density || bannerData.width || 100, // Migration support
         color: bannerData.color || '#6366f1',
         backgroundType: bannerData.backgroundType || 'solid',
         gradientColor1: bannerData.gradientColor1 || '#6366f1',
         gradientColor2: bannerData.gradientColor2 || '#8b5cf6',
         gradientDirection: bannerData.gradientDirection || 'to right',
         opacity: bannerData.opacity || 100,
-        blur: bannerData.blur || false,
-        blurAmount: bannerData.blurAmount || 5,
         shapeImage: bannerData.shapeImage || '',
         backgroundImage: bannerData.backgroundImage || '',
         shapeImageOpacity: bannerData.shapeImageOpacity || bannerData.imageOpacity || 100,

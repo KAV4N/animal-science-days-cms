@@ -18,7 +18,7 @@
     >
       <svg 
         viewBox="0 0 1200 320"
-        :width="(data.width || data.density || 100) + '%'"
+        width="100%"
         :height="data.height + 'px'"
         preserveAspectRatio="none"
         class="shape-svg"
@@ -26,7 +26,10 @@
         <defs>
           <linearGradient 
             id="shapeGradient" 
-            :gradientTransform="gradientTransform"
+            :x1="gradientCoords.x1"
+            :y1="gradientCoords.y1"
+            :x2="gradientCoords.x2"
+            :y2="gradientCoords.y2"
             v-if="data.backgroundType === 'gradient'"
           >
             <stop offset="0%" :stop-color="data.gradientColor1" />
@@ -67,15 +70,12 @@ interface BannerData {
   flipY: boolean;
   height: number;
   width: number;
-  density?: number;
   color: string;
   backgroundType: 'solid' | 'gradient';
   gradientColor1: string;
   gradientColor2: string;
   gradientDirection: string;
   opacity: number;
-  blur: boolean;
-  blurAmount: number;
   shapeImage: string;
   backgroundImage: string;
   imageOpacity: number;
@@ -94,15 +94,12 @@ export default defineComponent({
         flipX: false,
         flipY: false,
         height: 120,
-        density: 100,
         color: '#6366f1',
         backgroundType: 'solid',
         gradientColor1: '#6366f1',
         gradientColor2: '#8b5cf6',
         gradientDirection: 'to right',
         opacity: 100,
-        blur: false,
-        blurAmount: 5,
         shapeImage: '',
         backgroundImage: '',
         imageOpacity: 100,
@@ -134,15 +131,26 @@ export default defineComponent({
       return props.data.color;
     });
 
-    const gradientTransform = computed(() => {
+    const gradientCoords = computed(() => {
       const direction = props.data.gradientDirection;
-      if (direction === 'to right') return 'rotate(0)';
-      if (direction === 'to left') return 'rotate(180)';
-      if (direction === 'to bottom') return 'rotate(90)';
-      if (direction === 'to top') return 'rotate(270)';
-      if (direction === '45deg') return 'rotate(45)';
-      if (direction === '-45deg') return 'rotate(-45)';
-      return 'rotate(0)';
+      
+      // Return coordinates for linearGradient
+      switch (direction) {
+        case 'to right':
+          return { x1: '0%', y1: '0%', x2: '100%', y2: '0%' };
+        case 'to left':
+          return { x1: '100%', y1: '0%', x2: '0%', y2: '0%' };
+        case 'to bottom':
+          return { x1: '0%', y1: '0%', x2: '0%', y2: '100%' };
+        case 'to top':
+          return { x1: '0%', y1: '100%', x2: '0%', y2: '0%' };
+        case '45deg': // Diagonal ↗ (bottom-left to top-right)
+          return { x1: '0%', y1: '100%', x2: '100%', y2: '0%' };
+        case '-45deg': // Diagonal ↖ (bottom-right to top-left)
+          return { x1: '100%', y1: '100%', x2: '0%', y2: '0%' };
+        default:
+          return { x1: '0%', y1: '0%', x2: '100%', y2: '0%' }; // default to left-to-right
+      }
     });
 
     const dividerStyle = computed(() => {
@@ -159,7 +167,6 @@ export default defineComponent({
       return {
         '--divider-height': props.data.height + 'px',
         transform: transformValue,
-        filter: props.data.blur ? `blur(${props.data.blurAmount}px)` : 'none',
         opacity: props.data.shapeImage ? 1 : props.data.opacity / 100,
         height: props.data.height + 'px'
       };
@@ -169,7 +176,7 @@ export default defineComponent({
       backgroundImage: props.data.backgroundImage ? `url(${props.data.backgroundImage})` : 'none',
       opacity: (props.data.backgroundImageOpacity || 100) / 100,
       height: props.data.height + 'px',
-      width: (props.data.width || props.data.density || 100) + '%',
+      width: '100%',
       position: 'absolute' as const,
       top: props.data.position === 'top' ? '0' : 'auto',
       bottom: props.data.position === 'bottom' ? '0' : 'auto',
@@ -182,7 +189,7 @@ export default defineComponent({
     return {
       currentPath,
       fillColor,
-      gradientTransform,
+      gradientCoords,
       dividerStyle,
       backgroundImageStyle
     };
