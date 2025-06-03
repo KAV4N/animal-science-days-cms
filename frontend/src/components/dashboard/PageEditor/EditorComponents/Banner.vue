@@ -57,8 +57,19 @@
                 />
               </div>
 
+              <!-- Invert Shape -->
+              <div>
+                <div class="flex items-center">
+                  <Checkbox v-model="localBannerData.invert" inputId="invert" binary />
+                  <label for="invert" class="ml-2 text-sm">Invert Shape</label>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">
+                  Automatically adjusts based on position, but can be overridden manually
+                </p>
+              </div>
+
               <!-- Flip Options -->
-              <div class="flex items-center space-x-4 md:col-span-2">
+              <div class="flex items-center space-x-4">
                 <div class="flex items-center">
                   <Checkbox v-model="localBannerData.flipX" inputId="flipX" binary />
                   <label for="flipX" class="ml-2 text-sm">Flip Horizontal</label>
@@ -339,6 +350,7 @@
               <div class="mt-3 text-sm text-gray-600 space-y-1">
                 <p><strong>Height:</strong> {{ localBannerData.height }}px</p>
                 <p><strong>Shape:</strong> {{ getShapeLabel(localBannerData.shapeType) }}</p>
+                <p><strong>Inverted:</strong> {{ shouldShowInvertStatus ? 'Yes' : 'No' }}</p>
               </div>
             </div>
           </template>
@@ -382,6 +394,7 @@ interface BannerData {
   shapeImageOpacity: number;
   backgroundImageOpacity: number;
   imageOpacity?: number; // For backward compatibility
+  invert?: boolean; // New property for manual shape inversion control
 }
 
 export default defineComponent({
@@ -418,7 +431,8 @@ export default defineComponent({
         shapeImage: '',
         backgroundImage: '',
         shapeImageOpacity: 100,
-        backgroundImageOpacity: 100
+        backgroundImageOpacity: 100,
+        invert: false
       })
     },
     isPublished: {
@@ -449,7 +463,8 @@ export default defineComponent({
         shapeImage: '',
         backgroundImage: '',
         shapeImageOpacity: 100,
-        backgroundImageOpacity: 100
+        backgroundImageOpacity: 100,
+        invert: false
       } as BannerData,
       localPublished: false,
       localVisible: false,
@@ -457,13 +472,19 @@ export default defineComponent({
       currentImageType: '' as 'background' | 'shape',
       shapeOptions: [
         { label: 'Wave', value: 'wave' },
+        { label: 'Waves with Opacity', value: 'waves-opacity' },
         { label: 'Curve', value: 'curve' },
+        { label: 'Curve Asymmetrical', value: 'curve-asymmetrical' },
         { label: 'Triangle', value: 'triangle' },
+        { label: 'Triangle Asymmetrical', value: 'triangle-asymmetrical' },
+        { label: 'Arrow', value: 'arrow' },
+        { label: 'Book', value: 'book' },
+        { label: 'Tilt', value: 'tilt' },
+        { label: 'Split', value: 'split' },
+        // Legacy shapes for backward compatibility
         { label: 'Zigzag', value: 'zigzag' },
         { label: 'Mountains', value: 'mountains' },
-        { label: 'Clouds', value: 'clouds' },
-        { label: 'Book', value: 'book' },
-        { label: 'Arrow', value: 'arrow' }
+        { label: 'Clouds', value: 'clouds' }
       ],
       backgroundTypeOptions: [
         { label: 'Solid Color', value: 'solid' },
@@ -486,6 +507,13 @@ export default defineComponent({
         width: 100, // Set to default width since density is removed
         imageOpacity: this.localBannerData.shapeImageOpacity // For backward compatibility
       };
+    },
+    shouldShowInvertStatus() {
+      // Show invert status based on explicit setting or auto-invert logic
+      if (this.localBannerData.invert !== undefined) {
+        return this.localBannerData.invert;
+      }
+      return this.localBannerData.position === 'bottom';
     }
   },
   watch: {
@@ -544,7 +572,8 @@ export default defineComponent({
         shapeImage: bannerData.shapeImage || '',
         backgroundImage: bannerData.backgroundImage || '',
         shapeImageOpacity: bannerData.shapeImageOpacity || bannerData.imageOpacity || 100,
-        backgroundImageOpacity: bannerData.backgroundImageOpacity || 100
+        backgroundImageOpacity: bannerData.backgroundImageOpacity || 100,
+        invert: bannerData.invert !== undefined ? bannerData.invert : false
       };
       
       this.localPublished = this.isPublished;
