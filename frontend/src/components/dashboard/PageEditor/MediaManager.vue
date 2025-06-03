@@ -1,8 +1,8 @@
 <template>
-  <Dialog 
-    v-model:visible="dialogVisible" 
-    header="Media Manager" 
-    :style="{ width: '95vw', maxWidth: '1200px', height: '90vh' }" 
+  <Dialog
+    v-model:visible="dialogVisible"
+    header="Media Manager"
+    :style="{ width: '95vw', maxWidth: '1200px', height: '90vh' }"
     :modal="true"
     :maximizable="true"
     :closable="true"
@@ -24,10 +24,10 @@
                   option-value="value"
                   placeholder="All Collections"
                   class="w-40"
-                  @change="fetchMedia"
+                  @change="() => fetchMedia(true)"
                 />
               </div>
-              
+
               <!-- Search -->
               <div class="flex items-center gap-2 flex-1 min-w-0">
                 <label class="text-sm font-medium whitespace-nowrap">Search:</label>
@@ -39,13 +39,13 @@
                 />
                 <Button
                   icon="pi pi-search"
-                  @click="fetchMedia"
+                  @click="() => fetchMedia(true)"
                   outlined
                   size="small"
                 />
               </div>
             </div>
-            
+
             <div class="flex gap-2">
               <Button
                 v-if="selectionMode === 'none'"
@@ -100,30 +100,30 @@
 
         <!-- Media Grid -->
         <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          <Card 
-            v-for="item in media" 
+          <Card
+            v-for="item in media"
             :key="item.id"
             class="group hover:shadow-lg transition-all duration-200"
-            :class="{ 
+            :class="{
               'ring-2 ring-blue-500': isItemSelected(item),
-              'cursor-pointer': selectionMode === 'single' || selectionMode === 'multiple' || isBatchDeleteMode 
+              'cursor-pointer': selectionMode === 'single' || selectionMode === 'multiple' || isBatchDeleteMode
             }"
           >
             <template #content>
-              <div 
-                class="p-0 relative" 
+              <div
+                class="p-0 relative"
                 @click="handleCardClick(item, $event)"
               >
                 <!-- Checkbox for multiple selection or batch delete -->
                 <div v-if="selectionMode === 'multiple' || (selectionMode === 'none' && isBatchDeleteMode)" class="absolute top-2 left-2 z-10">
-                  <Checkbox 
+                  <Checkbox
                     :model-value="isItemSelected(item)"
                     @update:model-value="toggleItemSelection(item)"
                     @click.stop
                     binary
                   />
                 </div>
-                
+
                 <!-- Action Buttons -->
                 <div v-if="!isBatchDeleteMode && selectionMode === 'none'" class="absolute top-2 right-2 flex gap-1 z-10">
                   <Button
@@ -151,45 +151,45 @@
                     class="text-white bg-black bg-opacity-75 hover:bg-opacity-75"
                   />
                 </div>
-                
+
                 <!-- Media Preview -->
                 <div class="aspect-square bg-gray-100 rounded-lg mb-4 overflow-hidden">
-                  <img 
+                  <img
                     v-if="isImage(item.mime_type)"
                     :src="item.conversions?.thumb || item.url"
                     :alt="item.file_name"
                     class="w-full h-full object-cover"
                     loading="lazy"
                   />
-                  <div 
+                  <div
                     v-else-if="isDocument(item.mime_type)"
                     class="w-full h-full flex items-center justify-center"
                   >
                     <i class="pi pi-file-pdf text-6xl text-red-500" v-if="item.mime_type === 'application/pdf'"></i>
                     <i class="pi pi-file text-6xl text-blue-500" v-else></i>
                   </div>
-                  <div 
+                  <div
                     v-else-if="isVideo(item.mime_type)"
                     class="w-full h-full flex items-center justify-center"
                   >
                     <i class="pi pi-video text-6xl text-purple-500"></i>
                   </div>
-                  <div 
+                  <div
                     v-else
                     class="w-full h-full flex items-center justify-center"
                   >
                     <i class="pi pi-file text-6xl text-gray-500"></i>
                   </div>
                 </div>
-                
+
                 <!-- Media Info -->
                 <div class="space-y-2">
                   <h4 class="font-semibold text-sm truncate" :title="item.file_name">
                     {{ item.file_name }}
                   </h4>
                   <div class="flex items-center justify-between text-xs text-gray-600">
-                    <Badge 
-                      :value="item.collection_name" 
+                    <Badge
+                      :value="item.collection_name"
                       class="text-xs"
                     />
                     <span>{{ item.size_human }}</span>
@@ -241,10 +241,10 @@
     </div>
 
     <!-- Upload Dialog -->
-    <Dialog 
-      v-model:visible="showUploadDialog" 
-      header="Upload Files" 
-      :style="{ width: '95vw', maxWidth: '600px' }" 
+    <Dialog
+      v-model:visible="showUploadDialog"
+      header="Upload Files"
+      :style="{ width: '95vw', maxWidth: '600px' }"
       :modal="true"
       :closable="true"
       @hide="cancelUpload"
@@ -320,10 +320,10 @@
     </Dialog>
 
     <!-- Edit Media Dialog -->
-    <Dialog 
-      v-model:visible="showEditDialog" 
-      header="Edit Media" 
-      :style="{ width: '95vw', maxWidth: '500px' }" 
+    <Dialog
+      v-model:visible="showEditDialog"
+      header="Edit Media"
+      :style="{ width: '95vw', maxWidth: '500px' }"
       :modal="true"
       :closable="true"
       @hide="cancelEdit"
@@ -370,10 +370,10 @@
     </Dialog>
 
     <!-- View Media Dialog -->
-    <Dialog 
-      v-model:visible="showViewDialog" 
-      :header="viewingMedia?.file_name || 'View Media'" 
-      :style="{ width: '95vw', maxWidth: '800px' }" 
+    <Dialog
+      v-model:visible="showViewDialog"
+      :header="viewingMedia?.file_name || 'View Media'"
+      :style="{ width: '95vw', maxWidth: '800px' }"
       :modal="true"
       :maximizable="true"
       :closable="true"
@@ -381,17 +381,17 @@
     >
       <div v-if="viewingMedia" class="space-y-4">
         <div class="text-center">
-          <img 
+          <img
             v-if="isImage(viewingMedia.mime_type)"
             :src="viewingMedia.conversions?.preview || viewingMedia.url"
             :alt="viewingMedia.file_name"
             class="max-w-full max-h-96 mx-auto rounded-lg shadow-md"
           />
-          <div 
+          <div
             v-else
             class="bg-gray-100 rounded-lg p-8 text-center"
           >
-            <i 
+            <i
               :class="getFileIcon(viewingMedia.mime_type)"
               class="text-6xl text-gray-400 mb-4"
             ></i>
@@ -430,10 +430,10 @@
     </Dialog>
 
     <!-- Link Type Selection Dialog -->
-    <Dialog 
-      v-model:visible="showLinkTypeDialog" 
-      header="Choose Link Type" 
-      :style="{ width: '95vw', maxWidth: '500px' }" 
+    <Dialog
+      v-model:visible="showLinkTypeDialog"
+      header="Choose Link Type"
+      :style="{ width: '95vw', maxWidth: '500px' }"
       :modal="true"
       :closable="true"
       @hide="cancelLinkTypeSelection"
@@ -448,7 +448,7 @@
               <h3 class="text-2xl font-bold mb-4">Insert File Link</h3>
               <p class="text-gray-600">Choose how you want to insert this file</p>
             </div>
-            
+
             <div v-if="pendingMediaSelection" class="bg-gray-50 rounded-lg p-4 mb-4">
               <div class="flex items-center gap-3">
                 <i :class="getFileIcon(pendingMediaSelection.mime_type)" class="text-2xl text-gray-600"></i>
@@ -498,7 +498,7 @@
                 </template>
               </Card>
             </div>
-            
+
             <div class="flex justify-center pt-4">
               <Button
                 label="Cancel"
@@ -514,10 +514,10 @@
     </Dialog>
 
     <!-- Confirm Delete Dialog -->
-    <Dialog 
-      v-model:visible="showDeleteDialog" 
-      header="Confirm Delete" 
-      :style="{ width: '95vw', maxWidth: '400px' }" 
+    <Dialog
+      v-model:visible="showDeleteDialog"
+      header="Confirm Delete"
+      :style="{ width: '95vw', maxWidth: '400px' }"
       :modal="true"
       :closable="true"
       @hide="cancelDelete"
@@ -570,10 +570,10 @@ import apiService from '@/services/apiService';
 import mediaService from '@/services/mediaService';
 
 import type { ApiResponse, ApiPaginatedResponse } from '@/types/common';
-import type { 
-  MediaItem, 
-  MediaPaginatedData, 
-  MediaUploadData, 
+import type {
+  MediaItem,
+  MediaPaginatedData,
+  MediaUploadData,
   MediaUpdateData,
   MediaFilterParams,
   MediaCollectionOption,
@@ -639,8 +639,8 @@ export default defineComponent({
   watch: {
     visible: {
       immediate: true,
-      handler(newVal) { 
-        this.dialogVisible = newVal; 
+      handler(newVal) {
+        this.dialogVisible = newVal;
       }
     },
     dialogVisible(newVal) {
@@ -661,22 +661,22 @@ export default defineComponent({
       }
       this.loading = reset;
       this.loadingMore = !reset;
-      
+
       try {
-        const params: MediaFilterParams = { 
-          page: this.currentPage, 
-          per_page: 20 
+        const params: MediaFilterParams = {
+          page: this.currentPage,
+          per_page: 20
         };
-        
+
         if (this.selectedCollection) params.collection = this.selectedCollection;
         if (this.searchTerm) params.search = this.searchTerm;
         if (this.allowedMimeTypes.length > 0) params.mime_types = this.allowedMimeTypes;
-        
-        const response = await apiService.get(`/v1/conferences/${this.conferenceId}/media`, { params });
-        
+
+        const response = await apiService.get(`/v1/conference-management/conferences/${this.conferenceId}/media`, { params });
+
         let newMedia: MediaItem[] = [];
         let paginationInfo: any = {};
-        
+
         if (response.data.payload && Array.isArray(response.data.payload)) {
           newMedia = response.data.payload;
         } else if (response.data.payload && response.data.payload.data) {
@@ -684,9 +684,9 @@ export default defineComponent({
         } else if (response.data.payload) {
           newMedia = response.data.payload;
         }
-        
+
         if (response.data.meta) paginationInfo = response.data.meta;
-        
+
         if (reset) {
           this.media = newMedia || [];
           // Clear selection when refreshing
@@ -694,15 +694,15 @@ export default defineComponent({
         } else {
           this.media.push(...(newMedia || []));
         }
-        
+
         this.hasMorePages = paginationInfo.current_page < paginationInfo.last_page;
       } catch (error) {
         console.error('Error fetching media:', error);
-        this.$toast.add({ 
-          severity: 'error', 
-          summary: 'Error', 
-          detail: 'Failed to fetch media files', 
-          life: 3000 
+        this.$toast.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to fetch media files',
+          life: 3000
         });
       } finally {
         this.loading = false;
@@ -772,12 +772,12 @@ export default defineComponent({
     // New methods for link type selection
     selectLinkType(linkType: 'serve' | 'download') {
       if (!this.pendingMediaSelection) return;
-      
+
       const mediaItem = {
         ...this.pendingMediaSelection,
         linkType: linkType
       };
-      
+
       this.$emit('select', mediaItem);
       this.showLinkTypeDialog = false;
       this.pendingMediaSelection = null;
@@ -791,7 +791,7 @@ export default defineComponent({
 
     async confirmBatchDelete() {
       if (this.selectedMedia.length === 0) return;
-      
+
       this.$confirm.require({
         message: `Are you sure you want to delete ${this.selectedMedia.length} media item${this.selectedMedia.length > 1 ? 's' : ''}?`,
         header: 'Confirm Delete',
@@ -799,28 +799,28 @@ export default defineComponent({
         accept: async () => {
           this.deleting = true;
           try {
-            const deletePromises = this.selectedMedia.map(item => 
-              apiService.delete(`/v1/conferences/${this.conferenceId}/media/${item.id}`)
+            const deletePromises = this.selectedMedia.map(item =>
+              apiService.delete(`/v1/conference-management/conferences/${this.conferenceId}/media/${item.id}`)
             );
             await Promise.all(deletePromises);
-            
-            this.$toast.add({ 
-              severity: 'success', 
-              summary: 'Success', 
-              detail: `${this.selectedMedia.length} media item${this.selectedMedia.length > 1 ? 's' : ''} deleted`, 
-              life: 3000 
+
+            this.$toast.add({
+              severity: 'success',
+              summary: 'Success',
+              detail: `${this.selectedMedia.length} media item${this.selectedMedia.length > 1 ? 's' : ''} deleted`,
+              life: 3000
             });
-            
+
             this.selectedMedia = [];
             this.isBatchDeleteMode = false;
             await this.fetchMedia();
           } catch (error) {
             console.error('Error deleting media:', error);
-            this.$toast.add({ 
-              severity: 'error', 
-              summary: 'Error', 
-              detail: 'Failed to delete some media items', 
-              life: 5000 
+            this.$toast.add({
+              severity: 'error',
+              summary: 'Error',
+              detail: 'Failed to delete some media items',
+              life: 5000
             });
           } finally {
             this.deleting = false;
@@ -839,19 +839,19 @@ export default defineComponent({
 
     async handleUpload() {
       if (this.selectedFiles.length === 0 || !this.uploadData.collection || this.uploading) return;
-      
+
       this.uploading = true;
       let successCount = 0;
       let errorCount = 0;
-      
+
       try {
         for (const file of this.selectedFiles) {
           try {
             const formData = new FormData();
             formData.append('file', file);
             formData.append('collection', this.uploadData.collection);
-            
-            await apiService.post(`/v1/conferences/${this.conferenceId}/media`, formData, {
+
+            await apiService.post(`/v1/conference-management/conferences/${this.conferenceId}/media`, formData, {
               headers: { 'Content-Type': 'multipart/form-data' }
             });
             successCount++;
@@ -860,36 +860,36 @@ export default defineComponent({
             errorCount++;
           }
         }
-        
+
         if (successCount > 0) {
-          this.$toast.add({ 
-            severity: 'success', 
-            summary: 'Upload Complete', 
-            detail: `${successCount} file(s) uploaded successfully${errorCount > 0 ? `, ${errorCount} failed` : ''}`, 
-            life: 5000 
+          this.$toast.add({
+            severity: 'success',
+            summary: 'Upload Complete',
+            detail: `${successCount} file(s) uploaded successfully${errorCount > 0 ? `, ${errorCount} failed` : ''}`,
+            life: 5000
           });
         }
-        
+
         if (errorCount > 0 && successCount === 0) {
-          this.$toast.add({ 
-            severity: 'error', 
-            summary: 'Upload Failed', 
-            detail: `Failed to upload ${errorCount} file(s)`, 
-            life: 5000 
+          this.$toast.add({
+            severity: 'error',
+            summary: 'Upload Failed',
+            detail: `Failed to upload ${errorCount} file(s)`,
+            life: 5000
           });
         }
-        
+
         if (successCount > 0) {
           this.cancelUpload();
           await this.fetchMedia();
         }
       } catch (error) {
         console.error('Error during upload process:', error);
-        this.$toast.add({ 
-          severity: 'error', 
-          summary: 'Upload Error', 
-          detail: 'An unexpected error occurred during upload', 
-          life: 5000 
+        this.$toast.add({
+          severity: 'error',
+          summary: 'Upload Error',
+          detail: 'An unexpected error occurred during upload',
+          life: 5000
         });
       } finally {
         this.uploading = false;
@@ -908,19 +908,19 @@ export default defineComponent({
     async downloadMedia(media: MediaItem) {
       try {
         await mediaService.downloadMediaFile(this.conferenceId, media);
-        this.$toast.add({ 
-          severity: 'success', 
-          summary: 'Download Started', 
-          detail: `Downloading ${media.file_name}`, 
-          life: 3000 
+        this.$toast.add({
+          severity: 'success',
+          summary: 'Download Started',
+          detail: `Downloading ${media.file_name}`,
+          life: 3000
         });
       } catch (error: any) {
         console.error('Download error:', error);
-        this.$toast.add({ 
-          severity: 'error', 
-          summary: 'Download Failed', 
-          detail: error.response?.data?.message || `Failed to download file: ${media.file_name}`, 
-          life: 8000 
+        this.$toast.add({
+          severity: 'error',
+          summary: 'Download Failed',
+          detail: error.response?.data?.message || `Failed to download file: ${media.file_name}`,
+          life: 8000
         });
       }
     },
@@ -936,7 +936,7 @@ export default defineComponent({
       this.updating = true;
       try {
         const updateData: MediaUpdateData = { file_name: this.editData.file_name };
-        await apiService.put(`/v1/conferences/${this.conferenceId}/media/${this.editingMedia.id}`, updateData);
+        await apiService.put(`/v1/conference-management/conferences/${this.conferenceId}/media/${this.editingMedia.id}`, updateData);
         this.$toast.add({ severity: 'success', summary: 'Success', detail: 'Media updated successfully', life: 3000 });
         this.cancelEdit();
         this.fetchMedia();
@@ -963,7 +963,7 @@ export default defineComponent({
       if (!this.deletingMedia) return;
       this.deleting = true;
       try {
-        await apiService.delete(`/v1/conferences/${this.conferenceId}/media/${this.deletingMedia.id}`);
+        await apiService.delete(`/v1/conference-management/conferences/${this.conferenceId}/media/${this.deletingMedia.id}`);
         this.$toast.add({ severity: 'success', summary: 'Success', detail: 'Media deleted successfully', life: 3000 });
         this.cancelDelete();
         this.fetchMedia();

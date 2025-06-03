@@ -1,12 +1,13 @@
 import { defineStore } from 'pinia';
 import apiService from '@/services/apiService';
 import type { User, Role, Permission } from '@/types/user';
+import type { UserResponse } from '@/types/user';
 import router from '@/router';
 
 // Import the auth types
-import type { 
-  LoginRequest, 
-  RegisterRequest, 
+import type {
+  LoginRequest,
+  RegisterRequest,
   ChangePasswordRequest,
   LoginResponse,
   RegisterResponse,
@@ -81,7 +82,7 @@ export const useAuthStore = defineStore('auth', {
       try {
         console.log('Checking if user is already authenticated...');
         const refreshSuccess = await this.tryRefreshToken();
-        
+
         if (refreshSuccess) {
           return true;
         }
@@ -175,7 +176,10 @@ export const useAuthStore = defineStore('auth', {
       this.isLoading = true;
 
       try {
-        const response = await apiService.auth.getCurrentUser();
+        // Updated to use the new getCurrentUser endpoint.
+        // The endpoint /v1/user-management/users/me is expected to return UserResponse (ApiResponse<User>)
+        // UserResponse should have a 'payload' property containing the User object.
+        const response = await apiService.get<UserResponse>('/v1/user-management/users/me');
         this.user = response.data.payload;
         this.isAuthenticated = true;
         return true;
