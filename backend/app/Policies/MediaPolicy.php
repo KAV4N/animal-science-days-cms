@@ -12,59 +12,6 @@ class MediaPolicy
     use HandlesAuthorization;
 
     /**
-     * Determine whether the user can view any media.
-     */
-    public function viewAny(User $user, Conference $conference): bool
-    {
-        // Super admins and admins can view all media
-        if ($user->hasRole(['super_admin', 'admin'])) {
-            return true;
-        }
-
-        // If conference is published, everyone can view
-        if ($conference->is_published) {
-            return true;
-        }
-
-        // For unpublished conferences, editors need to be assigned to the conference
-        if ($user->hasRole('editor')) {
-            return $user->conferences()->where('conference_id', $conference->id)->exists();
-        }
-
-        return false;
-    }
-
-    /**
-     * Determine whether the user can view the media.
-     */
-    public function view(User $user, Media $media): bool
-    {
-        // Get the conference from the media model
-        $conference = $this->getConferenceFromMedia($media);
-        
-        if (!$conference) {
-            return false;
-        }
-
-        // Super admins and admins can view all media
-        if ($user->hasRole(['super_admin', 'admin'])) {
-            return true;
-        }
-
-        // If conference is published, everyone can view
-        if ($conference->is_published) {
-            return true;
-        }
-
-        // For unpublished conferences, editors need to be assigned to the conference
-        if ($user->hasRole('editor')) {
-            return $user->conferences()->where('conference_id', $conference->id)->exists();
-        }
-
-        return false;
-    }
-
-    /**
      * Determine whether the user can create media.
      */
     public function create(User $user, Conference $conference): bool
@@ -143,37 +90,6 @@ class MediaPolicy
     }
 
     /**
-     * Determine whether the user can download the media.
-     */
-    public function download(User $user, Media $media): bool
-    {
-        // Download follows the same rules as view
-        return $this->view($user, $media);
-    }
-
-    /**
-     * Determine whether the user can serve/display the media.
-     */
-    public function serve(?User $user, Media $media): bool
-    {
-        // Get the conference from the media model
-        $conference = $this->getConferenceFromMedia($media);
-        
-        if (!$conference) {
-            return false;
-        }
-
-        // If user is not authenticated
-        if (!$user) {
-            // Only allow if conference is published
-            return $conference->is_published;
-        }
-
-        // If user is authenticated, use the view policy
-        return $this->view($user, $media);
-    }
-
-    /**
      * Determine if the user can manage all media (bulk operations, etc.).
      */
     public function manage(User $user, Conference $conference): bool
@@ -198,17 +114,9 @@ class MediaPolicy
     private function getConferenceFromMedia(Media $media): ?Conference
     {
         if ($media->model_type === Conference::class) {
-            return Conference::find($media->model_id);
+            return $media->model; 
         }
 
         return null;
-    }
-
-    /**
-     * Determine if user can access media endpoints for a conference
-     */
-    public function access(User $user, Conference $conference): bool
-    {
-        return $this->viewAny($user, $conference);
     }
 }

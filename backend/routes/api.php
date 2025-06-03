@@ -18,7 +18,7 @@ use App\Http\Controllers\Api\PublicPageMenuController;
 use App\Http\Controllers\Api\MediaController;
 
 Route::prefix('v1')->group(function () {
-    // Public routes for universities
+    // Public routes for universities - READ ONLY
     Route::apiResource('universities', UniversityController::class)->only(['index', 'show']);
     
     // Public routes for conferences and pages
@@ -44,13 +44,11 @@ Route::prefix('v1')->group(function () {
         Route::get('/conferences/{conferenceSlug}/pages/{pageSlug}', [PreviewConferenceController::class, 'page']);
     });
 
-    // Public media serve and download endpoints (policy-controlled access)
-    Route::middleware('media.access')->group(function() {
-        Route::get('/conferences/{conference}/media/{mediaId}/serve', [MediaController::class, 'serve'])
-            ->name('api.media.serve');
-        Route::get('/conferences/{conference}/media/{mediaId}/download', [MediaController::class, 'download'])
-            ->name('api.media.download');
-    });
+    Route::get('/conferences/{conference}/media/{mediaId}/serve', [MediaController::class, 'serve'])
+        ->name('api.media.serve');
+    Route::get('/conferences/{conference}/media/{mediaId}/download', [MediaController::class, 'download'])
+        ->name('api.media.download');
+
 
     // Authentication routes
     Route::prefix('auth')->group(function () {
@@ -102,11 +100,6 @@ Route::prefix('v1')->group(function () {
             Route::middleware('permission:access.admin')->group(function () {
                 Route::get('/users', [UserController::class, 'index']);
                 
-                // University management for super admins
-                Route::middleware('role:super_admin')->group(function () {
-                    Route::apiResource('universities', UniversityController::class)->except(['index', 'show']);
-                });
-
                 Route::get('/conferences/{conference}/editors/unattached', [ConferenceEditorController::class, 'unattached']);
                 Route::get('/conferences/{conference}/editors', [ConferenceEditorController::class, 'index']);
                 Route::post('/conferences/{conference}/editors', [ConferenceEditorController::class, 'store']);

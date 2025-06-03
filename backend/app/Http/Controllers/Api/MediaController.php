@@ -22,11 +22,6 @@ class MediaController extends Controller
      */
     public function index(Request $request, Conference $conference): JsonResponse
     {
-        // Check if user can view media for this conference
-        if (!Gate::allows('viewAny', [Media::class, $conference])) {
-            return $this->errorResponse('You are not authorized to view media for this conference', 403);
-        }
-
         $validator = Validator::make($request->all(), [
             'collection' => 'nullable|string|in:images,documents,general',
             'per_page' => 'nullable|integer|min:1|max:100',
@@ -155,11 +150,6 @@ class MediaController extends Controller
             return $this->errorResponse('Media not found for this conference', 404);
         }
 
-        // Check if user can view this media
-        if (!Gate::allows('view', $media)) {
-            return $this->errorResponse('You are not authorized to view this media', 403);
-        }
-
         $transformedMedia = [
             'id' => $media->id,
             'uuid' => $media->uuid,
@@ -272,11 +262,6 @@ class MediaController extends Controller
             return $this->errorResponse('Media not found for this conference', 404);
         }
 
-        // Check if user can download this media
-        if (!Gate::allows('download', $media)) {
-            return $this->errorResponse('You are not authorized to download this media', 403);
-        }
-
         try {
             $path = $media->getPath();
             
@@ -318,11 +303,6 @@ class MediaController extends Controller
         
         if (!$media) {
             return $this->errorResponse('Media not found for this conference', 404);
-        }
-
-        // Check if user can serve this media (allows unauthenticated access for published conferences)
-        if (!Gate::allows('serve', $media)) {
-            return $this->errorResponse('Access denied', 403);
         }
 
         try {
