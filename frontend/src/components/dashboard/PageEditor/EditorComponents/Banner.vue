@@ -83,6 +83,119 @@
           </template>
         </Card>
 
+        <!-- Text Configuration -->
+        <Card>
+          <template #title>
+            <h4 class="text-lg font-semibold">Text Configuration</h4>
+          </template>
+          <template #content>
+            <div class="p-0 space-y-4">
+              <!-- Enable Text -->
+              <div class="flex items-center">
+                <Checkbox v-model="localBannerData.enableText" inputId="enableText" binary />
+                <label for="enableText" class="ml-2 text-sm font-medium">Enable Text Overlay</label>
+              </div>
+
+              <!-- Text Settings (shown when text is enabled) -->
+              <div v-if="localBannerData.enableText" class="space-y-4">
+                <!-- Text Content -->
+                <div>
+                  <label for="textContent" class="block text-sm font-medium mb-2">Text Content</label>
+                  <InputText
+                    id="textContent"
+                    v-model="localBannerData.textContent"
+                    class="w-full"
+                    placeholder="Enter your text..."
+                  />
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <!-- Text Size -->
+                  <div>
+                    <label for="textSize" class="block text-sm font-medium mb-2">
+                      Text Size: {{ localBannerData.textSize }}px
+                    </label>
+                    <Slider
+                      id="textSize"
+                      v-model="localBannerData.textSize"
+                      :min="12"
+                      :max="120"
+                      :step="2"
+                      class="w-full"
+                    />
+                  </div>
+
+                  <!-- Text Weight -->
+                  <div>
+                    <label for="textWeight" class="block text-sm font-medium mb-2">Text Weight</label>
+                    <Select
+                      id="textWeight"
+                      v-model="localBannerData.textWeight"
+                      :options="textWeightOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      placeholder="Select weight"
+                      class="w-full"
+                    />
+                  </div>
+                </div>
+
+                <!-- Text Color -->
+                <div>
+                  <label class="block text-sm font-medium mb-2">Text Color</label>
+                  <div class="color-picker-container">
+                    <div class="color-preview" :style="{ backgroundColor: localBannerData.textColor }"></div>
+                    <TransparentColorPicker 
+                      v-model="localBannerData.textColor"
+                      theme="light"
+                      format="hex"
+                      custom-class="text-color-picker"
+                      @update:modelValue="updateTextColor"
+                    />
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <!-- Text Alignment -->
+                  <div>
+                    <label for="textAlign" class="block text-sm font-medium mb-2">Text Alignment</label>
+                    <Select
+                      id="textAlign"
+                      v-model="localBannerData.textAlign"
+                      :options="textAlignOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      placeholder="Select alignment"
+                      class="w-full"
+                    />
+                  </div>
+
+                  <!-- Text Opacity -->
+                  <div>
+                    <label for="textOpacity" class="block text-sm font-medium mb-2">
+                      Text Opacity: {{ localBannerData.textOpacity }}%
+                    </label>
+                    <Slider
+                      id="textOpacity"
+                      v-model="localBannerData.textOpacity"
+                      :min="10"
+                      :max="100"
+                      :step="5"
+                      class="w-full"
+                    />
+                  </div>
+                </div>
+
+                <!-- Text Shadow -->
+                <div class="flex items-center">
+                  <Checkbox v-model="localBannerData.textShadow" inputId="textShadow" binary />
+                  <label for="textShadow" class="ml-2 text-sm">Add Text Shadow</label>
+                </div>
+              </div>
+            </div>
+          </template>
+        </Card>
+
         <!-- Images -->
         <Card>
           <template #title>
@@ -351,6 +464,7 @@
                 <p><strong>Height:</strong> {{ localBannerData.height }}px</p>
                 <p><strong>Shape:</strong> {{ getShapeLabel(localBannerData.shapeType) }}</p>
                 <p><strong>Inverted:</strong> {{ shouldShowInvertStatus ? 'Yes' : 'No' }}</p>
+                <p v-if="localBannerData.enableText"><strong>Text:</strong> {{ localBannerData.textContent || 'No text' }}</p>
               </div>
             </div>
           </template>
@@ -395,6 +509,14 @@ interface BannerData {
   backgroundImageOpacity: number;
   imageOpacity?: number; // For backward compatibility
   invert?: boolean; // New property for manual shape inversion control
+  enableText: boolean;
+  textContent: string;
+  textSize: number;
+  textColor: string;
+  textWeight: string;
+  textAlign: string;
+  textOpacity: number;
+  textShadow: boolean;
 }
 
 export default defineComponent({
@@ -432,7 +554,15 @@ export default defineComponent({
         backgroundImage: '',
         shapeImageOpacity: 100,
         backgroundImageOpacity: 100,
-        invert: false
+        invert: false,
+        enableText: false,
+        textContent: '',
+        textSize: 32,
+        textColor: '#ffffff',
+        textWeight: '600',
+        textAlign: 'center',
+        textOpacity: 100,
+        textShadow: true
       })
     },
     isPublished: {
@@ -464,7 +594,15 @@ export default defineComponent({
         backgroundImage: '',
         shapeImageOpacity: 100,
         backgroundImageOpacity: 100,
-        invert: false
+        invert: false,
+        enableText: false,
+        textContent: '',
+        textSize: 32,
+        textColor: '#ffffff',
+        textWeight: '600',
+        textAlign: 'center',
+        textOpacity: 100,
+        textShadow: true
       } as BannerData,
       localPublished: false,
       localVisible: false,
@@ -497,6 +635,19 @@ export default defineComponent({
         { label: 'Bottom to Top', value: 'to top' },
         { label: 'Diagonal ↗', value: '45deg' },
         { label: 'Diagonal ↖', value: '-45deg' }
+      ],
+      textWeightOptions: [
+        { label: 'Light', value: '300' },
+        { label: 'Normal', value: '400' },
+        { label: 'Medium', value: '500' },
+        { label: 'Semi Bold', value: '600' },
+        { label: 'Bold', value: '700' },
+        { label: 'Extra Bold', value: '800' }
+      ],
+      textAlignOptions: [
+        { label: 'Left', value: 'left' },
+        { label: 'Center', value: 'center' },
+        { label: 'Right', value: 'right' }
       ]
     };
   },
@@ -573,7 +724,15 @@ export default defineComponent({
         backgroundImage: bannerData.backgroundImage || '',
         shapeImageOpacity: bannerData.shapeImageOpacity || bannerData.imageOpacity || 100,
         backgroundImageOpacity: bannerData.backgroundImageOpacity || 100,
-        invert: bannerData.invert !== undefined ? bannerData.invert : false
+        invert: bannerData.invert !== undefined ? bannerData.invert : false,
+        enableText: bannerData.enableText || false,
+        textContent: bannerData.textContent || '',
+        textSize: bannerData.textSize || 32,
+        textColor: bannerData.textColor || '#ffffff',
+        textWeight: bannerData.textWeight || '600',
+        textAlign: bannerData.textAlign || 'center',
+        textOpacity: bannerData.textOpacity || 100,
+        textShadow: bannerData.textShadow !== undefined ? bannerData.textShadow : true
       };
       
       this.localPublished = this.isPublished;
@@ -642,6 +801,10 @@ export default defineComponent({
 
     updateGradientColor2(color: string) {
       this.localBannerData.gradientColor2 = color;
+    },
+
+    updateTextColor(color: string) {
+      this.localBannerData.textColor = color;
     }
   }
 });

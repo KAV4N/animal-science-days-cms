@@ -84,6 +84,15 @@
         </g>
       </svg>
     </div>
+
+    <!-- Text Overlay -->
+    <div 
+      v-if="data.enableText && data.textContent" 
+      class="text-overlay"
+      :style="textStyle"
+    >
+      {{ data.textContent }}
+    </div>
   </div>
 </template>
 
@@ -109,6 +118,14 @@ interface BannerData {
   shapeImageOpacity?: number;
   backgroundImageOpacity?: number;
   invert?: boolean;
+  enableText?: boolean;
+  textContent?: string;
+  textSize?: number;
+  textColor?: string;
+  textWeight?: string;
+  textAlign?: string;
+  textOpacity?: number;
+  textShadow?: boolean;
 }
 
 export default defineComponent({
@@ -133,7 +150,15 @@ export default defineComponent({
         imageOpacity: 100,
         shapeImageOpacity: 100,
         backgroundImageOpacity: 100,
-        invert: false
+        invert: false,
+        enableText: false,
+        textContent: '',
+        textSize: 32,
+        textColor: '#ffffff',
+        textWeight: '600',
+        textAlign: 'center',
+        textOpacity: 100,
+        textShadow: true
       })
     }
   },
@@ -327,13 +352,38 @@ export default defineComponent({
       zIndex: -1
     }));
 
+    const textStyle = computed(() => {
+      const textShadowValue = props.data.textShadow 
+        ? '2px 2px 4px rgba(0, 0, 0, 0.5)' 
+        : 'none';
+
+      return {
+        fontSize: (props.data.textSize || 32) + 'px',
+        color: props.data.textColor || '#ffffff',
+        fontWeight: props.data.textWeight || '600',
+        textAlign: props.data.textAlign || 'center',
+        opacity: (props.data.textOpacity || 100) / 100,
+        textShadow: textShadowValue,
+        position: 'absolute' as const,
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: '90%',
+        zIndex: 10,
+        pointerEvents: 'none' as const,
+        whiteSpace: 'pre-wrap' as const,
+        wordBreak: 'break-word' as const
+      };
+    });
+
     return {
       currentPath,
       currentShapePaths,
       fillColor,
       gradientCoords,
       dividerStyle,
-      backgroundImageStyle
+      backgroundImageStyle,
+      textStyle
     };
   }
 });
@@ -385,6 +435,18 @@ export default defineComponent({
   height: 100%;
 }
 
+.text-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  z-index: 10;
+  pointer-events: none;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .banner-container {
   z-index: 1;
 }
@@ -395,5 +457,9 @@ export default defineComponent({
 
 .shape-divider {
   z-index: 1;
+}
+
+.text-overlay {
+  z-index: 10;
 }
 </style>
