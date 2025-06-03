@@ -8,6 +8,7 @@ import UserManagement from '@/views/dashboard/UserManagement.vue';
 import Site from '@/views/Site.vue';
 import ConferenceView from '@/views/site/ConferenceView.vue';
 import PreviewConferenceView from '@/views/site/PreviewConferenceView.vue';
+import NotFoundPage from '@/views/NotFoundPage.vue'; // Add this import
 
 import middleware from './middleware';
 import ChangePassword from '@/views/auth/ChangePassword.vue';
@@ -146,6 +147,15 @@ const routes: Array<RouteRecordRaw> = [
         }
       }
     ]
+  },
+  // 404 Catch-all route - MUST be last!
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: NotFoundPage,
+    meta: {
+      title: 'Page Not Found'
+    }
   }
 ];
 
@@ -163,6 +173,12 @@ const router = createRouter({
 
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
+  
+  // Set page title for 404 pages
+  if (to.meta.title) {
+    document.title = `${to.meta.title} | Your App Name`;
+  }
+  
   if (!to.meta.middleware) {
     return next();
   }
