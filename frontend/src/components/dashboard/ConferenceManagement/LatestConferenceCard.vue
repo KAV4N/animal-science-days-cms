@@ -8,11 +8,11 @@
         </h3>
         <div class="flex items-center gap-1 sm:gap-2">
           <Badge value="Featured" severity="info" v-if="conferenceStore.getLatestConference" class="hidden sm:inline-flex" />
-          <Button 
+          <Button
             :icon="isExpanded ? 'pi pi-chevron-up' : 'pi pi-chevron-down'"
             @click="isExpanded = !isExpanded"
-            text 
-            rounded 
+            text
+            rounded
             class="p-1"
           />
         </div>
@@ -28,7 +28,7 @@
                 {{ conferenceStore.getLatestConference.name }}
               </h4>
               <p class="text-xs sm:text-sm text-gray-600 truncate">
-                {{ formatDate(conferenceStore.getLatestConference.start_date) }} - 
+                {{ formatDate(conferenceStore.getLatestConference.start_date) }} -
                 {{ formatDate(conferenceStore.getLatestConference.end_date) }}
               </p>
               <p class="text-xs sm:text-sm text-gray-600 truncate">
@@ -122,11 +122,11 @@
               <div>
                 <div class="text-sm font-semibold mb-2">Theme Colors:</div>
                 <div class="flex gap-2">
-                  <div 
+                  <div
                     class="w-8 h-8 sm:w-9 sm:h-9 rounded shadow-sm"
                     :style="{ backgroundColor: conferenceStore.getLatestConference.primary_color }"
                   />
-                  <div 
+                  <div
                     class="w-8 h-8 sm:w-9 sm:h-9 rounded shadow-sm"
                     :style="{ backgroundColor: conferenceStore.getLatestConference.secondary_color }"
                   />
@@ -149,29 +149,29 @@
             </div>
 
             <div class="flex flex-col gap-2">
-              <Button 
-                label="Edit Pages" 
-                icon="pi pi-pencil" 
-                class="p-button-sm w-full sm:w-auto" 
-                @click="onEditPagesClick" 
+              <Button
+                label="Edit Pages"
+                icon="pi pi-pencil"
+                class="p-button-sm w-full sm:w-auto"
+                @click="onEditPagesClick"
                 v-tooltip.top="'Edit conference pages'"
               />
-              
+
               <div v-if="authStore.hasAdminAccess" class="flex flex-col gap-2">
                 <Divider class="m-0" />
-                <Button 
-                  label="Manage" 
-                  icon="pi pi-cog" 
-                  class="p-button-sm w-full sm:w-auto" 
-                  @click="editConference" 
+                <Button
+                  label="Manage"
+                  icon="pi pi-cog"
+                  class="p-button-sm w-full sm:w-auto"
+                  @click="editConference"
                   v-tooltip.top="'Edit conference settings'"
                 />
-                <Button 
-                  label="Remove" 
-                  icon="pi pi-trash" 
-                  severity="danger" 
-                  class="p-button-sm w-full sm:w-auto" 
-                  @click="confirmDeleteConference" 
+                <Button
+                  label="Remove"
+                  icon="pi pi-trash"
+                  severity="danger"
+                  class="p-button-sm w-full sm:w-auto"
+                  @click="confirmDeleteConference"
                   v-tooltip.top="'Delete conference'"
                 />
               </div>
@@ -220,7 +220,7 @@ export default defineComponent({
     tooltip: Tooltip
   },
   emits: ['edit-conference'],
-  
+
   data() {
     return {
       isExpanded: false,
@@ -242,7 +242,7 @@ export default defineComponent({
       }
     }
   },
-  
+
   methods: {
     formatDate(value: string): string {
       if (value) {
@@ -254,22 +254,22 @@ export default defineComponent({
       }
       return '';
     },
-    
+
     getStatusSeverity(isPublished: boolean): string {
       return isPublished ? 'success' : 'warning';
     },
-    
+
     async loadConferenceEditors(conferenceId: number): Promise<void> {
       if (!conferenceId) return;
-      
+
       this.loadingEditors = true;
       try {
         const queryParams = new URLSearchParams();
         queryParams.append('per_page', '50'); // Load a reasonable number of editors
-        
-        const url = `/v1/conferences/${conferenceId}/editors?${queryParams.toString()}`;
+
+        const url = `/v1/conference-management/conferences/${conferenceId}/editors?${queryParams.toString()}`;
         const response = await apiService.get(url);
-        
+
         if (response.data.success) {
           this.conferenceEditors = response.data.payload;
         }
@@ -280,24 +280,24 @@ export default defineComponent({
         this.loadingEditors = false;
       }
     },
-    
+
     async editConference() {
       const latestConference = this.conferenceStore.getLatestConference;
       if (!latestConference) return;
-      
+
       // Emit event to open edit dialog
       this.$emit('edit-conference', latestConference);
     },
-    
+
     async confirmDeleteConference() {
       const latestConference = this.conferenceStore.getLatestConference;
       if (!latestConference) return;
-      
+
       if (confirm(`Are you sure you want to delete "${latestConference.name}"?`)) {
         await this.deleteConference(latestConference.id);
       }
     },
-    
+
     async deleteConference(id: number): Promise<void> {
       try {
         await this.conferenceStore.deleteConference(id);
@@ -317,11 +317,11 @@ export default defineComponent({
         });
       }
     },
-    
+
     onEditPagesClick() {
       const latestConference = this.conferenceStore.getLatestConference;
       if (!latestConference) return;
-      
+
       // Navigate to the conference edit page
       this.$router.push({
         name: 'ConferenceEdit',

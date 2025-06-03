@@ -77,13 +77,13 @@
 
           <!-- Sidebar Navigation -->
           <div class="lg:col-span-1">
-            <div 
+            <div
               :class="[
                 'bg-white rounded-lg shadow-sm p-1 transition-transform duration-300 ease-in-out',
                 'lg:sticky lg:top-1',
                 'lg:transform-none lg:translate-x-0',
-                isMobileMenuOpen 
-                  ? 'fixed top-0 left-0 h-full w-80 max-w-[90vw] z-50 transform translate-x-0 overflow-y-auto' 
+                isMobileMenuOpen
+                  ? 'fixed top-0 left-0 h-full w-80 max-w-[90vw] z-50 transform translate-x-0 overflow-y-auto'
                   : 'fixed top-0 left-0 h-full w-80 max-w-[90vw] z-50 transform -translate-x-full overflow-y-auto lg:relative lg:w-auto lg:h-auto'
               ]"
             >
@@ -386,7 +386,7 @@ export default defineComponent({
       if (!slugToLoad) {
         this.conferenceStore.publicConferenceLoading = true;
         try {
-          const latestResponse = await apiService.get<{ payload: Conference }>('/v1/public/conferences?latest=1');
+          const latestResponse = await apiService.get<{ payload: Conference }>('/v1/conferences?latest=1');
           const latestConference = latestResponse.data.payload;
 
           if (latestConference?.slug) {
@@ -437,7 +437,7 @@ export default defineComponent({
       this.activePage = null;
       this.activePageId = null;
       try {
-        const response = await apiService.get<{ payload: PageMenu[] }>(`/v1/public/conferences/${conferenceSlug}/pages`);
+        const response = await apiService.get<{ payload: PageMenu[] }>(`/v1/conferences/${conferenceSlug}/pages`);
         this.pages = response.data.payload;
 
         if (this.pageSlug) {
@@ -514,7 +514,7 @@ export default defineComponent({
 
       try {
         const response = await apiService.get<{ payload: PageMenu }>(
-          `/v1/public/conferences/${this.currentPublicConference.slug}/pages/${page.slug}`
+          `/v1/conferences/${this.currentPublicConference.slug}/pages/${page.slug}`
         );
         this.activePage = response.data.payload;
 

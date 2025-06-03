@@ -4,9 +4,9 @@
     <div class="mb-6">
       <div class="flex justify-between items-center mb-4">
         <h2 class="text-xl font-semibold">Conference Editors</h2>
-        <Button 
-          label="Add Editor" 
-          icon="pi pi-plus" 
+        <Button
+          label="Add Editor"
+          icon="pi pi-plus"
           @click="openAddEditorsDialog"
           v-if="conferenceId"
         />
@@ -35,7 +35,7 @@
           @change="loadEditors"
         />
       </div>
-      
+
       <DataTable
         :value="editors"
         :loading="loading"
@@ -81,9 +81,9 @@
         </Column>
         <Column headerStyle="width: 100px">
           <template #body="slotProps">
-            <Button 
-              icon="pi pi-trash" 
-              class="p-button-text p-button-rounded p-button-danger" 
+            <Button
+              icon="pi pi-trash"
+              class="p-button-text p-button-rounded p-button-danger"
               @click="confirmDetachEditor(slotProps.data)"
               v-tooltip.top="'Remove editor'"
             />
@@ -93,9 +93,9 @@
     </div>
 
     <!-- Add Editors Dialog -->
-    <Dialog 
-      v-model:visible="addEditorsDialogVisible" 
-      header="Add Conference Editors" 
+    <Dialog
+      v-model:visible="addEditorsDialogVisible"
+      header="Add Conference Editors"
       :style="{ width: '70vw' }"
       modal
     >
@@ -159,9 +159,9 @@
         </Column>
         <Column headerStyle="width: 100px">
           <template #body="slotProps">
-            <Button 
-              icon="pi pi-plus" 
-              class="p-button-text p-button-rounded p-button-success" 
+            <Button
+              icon="pi pi-plus"
+              class="p-button-text p-button-rounded p-button-success"
               @click="confirmAttachEditor(slotProps.data)"
               v-tooltip.top="'Add editor'"
             />
@@ -170,10 +170,10 @@
       </DataTable>
 
       <template #footer>
-        <Button 
-          label="Close" 
-          icon="pi pi-times" 
-          @click="addEditorsDialogVisible = false" 
+        <Button
+          label="Close"
+          icon="pi pi-times"
+          @click="addEditorsDialogVisible = false"
           class="p-button-text"
         />
       </template>
@@ -271,25 +271,25 @@ export default defineComponent({
         return dateString;
       }
     },
-    
+
     async loadEditors() {
       if (!this.conferenceId) return;
-      
+
       this.loading = true;
       try {
         const { search, university_id, sort_field, sort_order, page, per_page } = this.filters;
         const queryParams = new URLSearchParams();
-        
+
         if (search) queryParams.append('search', search);
         if (university_id) queryParams.append('university_id', String(university_id));
         if (page) queryParams.append('page', String(page));
         if (per_page) queryParams.append('per_page', String(per_page));
         if (sort_field) queryParams.append('sort_field', sort_field);
         if (sort_order) queryParams.append('sort_order', sort_order);
-        
-        const url = `/v1/conferences/${this.conferenceId}/editors?${queryParams.toString()}`;
+
+        const url = `/v1/conference-management/conferences/${this.conferenceId}/editors?${queryParams.toString()}`;
         const response = await apiService.get(url);
-        
+
         if (response.data.success) {
           this.editors = response.data.payload;
           if (response.data.meta) {
@@ -308,25 +308,25 @@ export default defineComponent({
         this.loading = false;
       }
     },
-    
+
     async loadUnattachedEditors() {
       if (!this.conferenceId) return;
-      
+
       this.loadingUnattached = true;
       try {
         const { search, university_id, sort_field, sort_order, page, per_page } = this.unattachedFilters;
         const queryParams = new URLSearchParams();
-        
+
         if (search) queryParams.append('search', search);
         if (university_id) queryParams.append('university_id', String(university_id));
         if (page) queryParams.append('page', String(page));
         if (per_page) queryParams.append('per_page', String(per_page));
         if (sort_field) queryParams.append('sort_field', sort_field);
         if (sort_order) queryParams.append('sort_order', sort_order);
-        
-        const url = `/v1/conferences/${this.conferenceId}/editors/unattached?${queryParams.toString()}`;
+
+        const url = `/v1/conference-management/conferences/${this.conferenceId}/editors/unattached?${queryParams.toString()}`;
         const response = await apiService.get(url);
-        
+
         if (response.data.success) {
           this.unattachedEditors = response.data.payload;
           if (response.data.meta) {
@@ -345,7 +345,7 @@ export default defineComponent({
         this.loadingUnattached = false;
       }
     },
-    
+
     async loadUniversities() {
       try {
         await this.universityStore.fetchUniversities();
@@ -360,7 +360,7 @@ export default defineComponent({
         console.error('Failed to load universities:', error);
       }
     },
-    
+
     openAddEditorsDialog() {
       this.addEditorsDialogVisible = true;
       this.unattachedFilters = {
@@ -373,7 +373,7 @@ export default defineComponent({
       };
       this.loadUnattachedEditors();
     },
-    
+
     confirmAttachEditor(editor: User) {
       this.confirm.require({
         message: `Are you sure you want to add ${editor.name} as an editor to this conference?`,
@@ -385,17 +385,17 @@ export default defineComponent({
         }
       });
     },
-    
+
     async attachEditor(editor: User) {
       if (!this.conferenceId) return;
-      
+
       try {
         const payload = {
           user_id: editor.id
         };
-        
-        const response = await apiService.post(`/v1/conferences/${this.conferenceId}/editors`, payload);
-        
+
+        const response = await apiService.post(`/v1/conference-management/conferences/${this.conferenceId}/editors`, payload);
+
         if (response.data.success) {
           this.toast.add({
             severity: 'success',
@@ -403,7 +403,7 @@ export default defineComponent({
             detail: 'Editor added successfully',
             life: 3000
           });
-          
+
           await this.loadEditors();
           await this.loadUnattachedEditors();
           await this.refreshConferenceInStore();
@@ -425,7 +425,7 @@ export default defineComponent({
         console.error('Failed to attach editor:', error);
       }
     },
-    
+
     confirmDetachEditor(editor: User) {
       this.confirm.require({
         message: `Are you sure you want to remove ${editor.name} as an editor from this conference?`,
@@ -437,13 +437,13 @@ export default defineComponent({
         }
       });
     },
-    
+
     async detachEditor(editor: User) {
       if (!this.conferenceId) return;
-      
+
       try {
-        const response = await apiService.delete(`/v1/conferences/${this.conferenceId}/editors/${editor.id}`);
-        
+        const response = await apiService.delete(`/v1/conference-management/conferences/${this.conferenceId}/editors/${editor.id}`);
+
         if (response.data.success) {
           this.toast.add({
             severity: 'success',
@@ -451,7 +451,7 @@ export default defineComponent({
             detail: 'Editor removed successfully',
             life: 3000
           });
-          
+
           await this.loadEditors();
           await this.loadUnattachedEditors();
           await this.refreshConferenceInStore();
@@ -466,43 +466,43 @@ export default defineComponent({
         console.error('Failed to detach editor:', error);
       }
     },
-    
+
     async refreshConferenceInStore() {
       if (!this.conferenceId) return;
-      
+
       try {
         const conference = await this.conferenceStore.fetchConference(this.conferenceId);
         if (conference.is_latest) {
           await this.conferenceStore.fetchLatestConference();
         }
-        const filters = this.conferenceStore.getPaginationMeta 
-          ? { page: this.conferenceStore.getPaginationMeta.current_page } 
+        const filters = this.conferenceStore.getPaginationMeta
+          ? { page: this.conferenceStore.getPaginationMeta.current_page }
           : {};
-        
+
         await this.conferenceStore.fetchConferences(filters);
       } catch (error) {
         console.error('Failed to refresh conference data in store:', error);
       }
     },
-    
+
     onSort(event: any) {
       this.filters.sort_field = event.sortField;
       this.filters.sort_order = event.sortOrder === 1 ? 'asc' : 'desc';
       this.loadEditors();
     },
-    
+
     onPage(event: any) {
       this.filters.page = event.page + 1; // PrimeVue uses 0-based indexing, API uses 1-based
       this.filters.per_page = event.rows;
       this.loadEditors();
     },
-    
+
     onSortUnattached(event: any) {
       this.unattachedFilters.sort_field = event.sortField;
       this.unattachedFilters.sort_order = event.sortOrder === 1 ? 'asc' : 'desc';
       this.loadUnattachedEditors();
     },
-    
+
     onPageUnattached(event: any) {
       this.unattachedFilters.page = event.page + 1; // PrimeVue uses 0-based indexing, API uses 1-based
       this.unattachedFilters.per_page = event.rows;

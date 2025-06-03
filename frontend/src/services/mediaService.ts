@@ -1,9 +1,9 @@
 // services/mediaService.ts
 import apiService from './apiService';
-import type { 
-  MediaItem, 
-  MediaPaginatedData, 
-  MediaUploadData, 
+import type {
+  MediaItem,
+  MediaPaginatedData,
+  MediaUploadData,
   MediaUpdateData,
   MediaFilterParams,
   MediaItemWithLinkType
@@ -15,7 +15,7 @@ class MediaService {
    */
   async getMedia(conferenceId: number, params?: MediaFilterParams): Promise<MediaPaginatedData> {
     try {
-      const response = await apiService.get(`/v1/conferences/${conferenceId}/media`, { params });
+      const response = await apiService.get(`/v1/conference-management/conferences/${conferenceId}/media`, { params });
       return response.data.payload;
     } catch (error) {
       console.error('Error fetching media:', error);
@@ -32,7 +32,7 @@ class MediaService {
       formData.append('file', file);
       formData.append('collection', data.collection);
 
-      const response = await apiService.post(`/v1/conferences/${conferenceId}/media`, formData, {
+      const response = await apiService.post(`/v1/conference-management/conferences/${conferenceId}/media`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
@@ -48,7 +48,7 @@ class MediaService {
    */
   async updateMedia(conferenceId: number, mediaId: number, data: MediaUpdateData): Promise<MediaItem> {
     try {
-      const response = await apiService.put(`/v1/conferences/${conferenceId}/media/${mediaId}`, data);
+      const response = await apiService.put(`/v1/conference-management/conferences/${conferenceId}/media/${mediaId}`, data);
       return response.data.payload;
     } catch (error) {
       console.error('Error updating media:', error);
@@ -61,7 +61,7 @@ class MediaService {
    */
   async deleteMedia(conferenceId: number, mediaId: number): Promise<void> {
     try {
-      await apiService.delete(`/v1/conferences/${conferenceId}/media/${mediaId}`);
+      await apiService.delete(`/v1/conference-management/conferences/${conferenceId}/media/${mediaId}`);
     } catch (error) {
       console.error('Error deleting media:', error);
       throw error;
@@ -114,7 +114,7 @@ class MediaService {
    */
   getUrlByType(conferenceId: number, media: MediaItemWithLinkType, linkType?: 'serve' | 'download'): string {
     const type = linkType || media.linkType || 'serve';
-    
+
     if (type === 'download') {
       return media.download_url || this.getDownloadUrl(conferenceId, media.id);
     } else {
@@ -152,7 +152,7 @@ class MediaService {
    */
   async batchDeleteMedia(conferenceId: number, mediaIds: number[]): Promise<void> {
     try {
-      const deletePromises = mediaIds.map(id => 
+      const deletePromises = mediaIds.map(id =>
         this.deleteMedia(conferenceId, id)
       );
       await Promise.all(deletePromises);
@@ -311,7 +311,7 @@ class MediaService {
    */
   filterByMimeTypes(media: MediaItem[], allowedMimeTypes: string[]): MediaItem[] {
     if (allowedMimeTypes.length === 0) return media;
-    
+
     return media.filter(item => {
       return allowedMimeTypes.some(type => {
         if (type.endsWith('/*')) {

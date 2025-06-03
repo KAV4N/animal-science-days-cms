@@ -1,6 +1,6 @@
 <template>
   <div>
-    <UserToolbar 
+    <UserToolbar
       :has-selected-users="!!selectedUsers && selectedUsers.length > 0"
       @new-user="openNewUser"
       @delete-selected="confirmDeleteSelected"
@@ -35,9 +35,9 @@
             <div class="flex flex-column md:flex-row md:justify-between md:items-center gap-2">
               <h4 class="m-0">Manage Users</h4>
               <div class="flex items-center gap-2">
-                <Select v-model="filters.roles" :options="getRoleFilterOptions()" optionLabel="label" 
+                <Select v-model="filters.roles" :options="getRoleFilterOptions()" optionLabel="label"
                   optionValue="value" placeholder="Filter by Role" class="w-48" @change="onRoleFilterChange" />
-                
+
                 <InputGroup class="w-full md:w-auto">
                   <InputGroupAddon>
                     <i class="pi pi-search" />
@@ -53,7 +53,7 @@
 
           <!-- Fixed left column -->
           <Column selectionMode="multiple" style="width: 3rem" frozen alignFrozen="left" class="checkbox-column border-e shadow" :exportable="false"></Column>
-          
+
           <Column field="name" header="Name" sortable style="min-width: 16rem">
             <template #body="slotProps">
               <span v-tooltip.top="slotProps.data.name" class="truncate block">
@@ -70,12 +70,12 @@
           </Column>
           <Column header="Role" sortable :sortField="'roles'" style="min-width: 10rem">
             <template #body="slotProps">
-              <Tag v-for="role in slotProps.data.roles" :key="role.id" 
+              <Tag v-for="role in slotProps.data.roles" :key="role.id"
                   :value="getRoleLabel(role.name)" :severity="getRoleSeverity(role.name)"
                   class="mr-1" />
             </template>
-            <template #csv="slotProps">
-              {{ slotProps.data.roles ? slotProps.data.roles.map(role => role.name).join(', ') : '' }}
+            <template #csv="slotProps: any">
+              {{ slotProps.data.roles ? slotProps.data.roles.map((role: Role) => role.name).join(', ') : '' }}
             </template>
           </Column>
           <Column header="University" style="min-width: 16rem">
@@ -84,16 +84,16 @@
                 {{ truncateText(slotProps.data.university ? slotProps.data.university.full_name : 'Not Assigned', 25) }}
               </span>
             </template>
-            <template #csv="slotProps">
+            <template #csv="slotProps: any">
               {{ slotProps.data.university ? slotProps.data.university.full_name : 'Not Assigned' }}
             </template>
           </Column>
           <Column field="must_change_password" header="Password Status" style="min-width: 10rem">
             <template #body="slotProps">
-              <Tag :value="slotProps.data.must_change_password ? 'Needs Change' : 'Changed'" 
+              <Tag :value="slotProps.data.must_change_password ? 'Needs Change' : 'Changed'"
                     :severity="slotProps.data.must_change_password ? 'warning' : 'success'" />
             </template>
-            <template #csv="slotProps">
+            <template #csv="slotProps: any">
               {{ slotProps.data.must_change_password ? 'Needs Change' : 'Changed' }}
             </template>
           </Column>
@@ -107,7 +107,7 @@
               {{ formatDate(slotProps.data.updated_at) }}
             </template>
           </Column>
-          
+
           <!-- Fixed right column -->
           <Column :exportable="false" style="min-width: 8rem" frozen alignFrozen="right" class="action-buttons-column border-s shadow">
             <template #header>
@@ -117,8 +117,8 @@
               <div class="flex justify-center gap-2">
                 <Button icon="pi pi-pencil" outlined rounded class="p-button-sm" @click="editUser(slotProps.data)"
                   :disabled="!canEditUser(slotProps.data)" />
-                <Button icon="pi pi-trash" outlined rounded severity="danger" class="p-button-sm" 
-                  @click="confirmDeleteUser(slotProps.data)" 
+                <Button icon="pi pi-trash" outlined rounded severity="danger" class="p-button-sm"
+                  @click="confirmDeleteUser(slotProps.data)"
                   :disabled="!canDeleteUser(slotProps.data)" />
               </div>
             </template>
@@ -133,8 +133,8 @@
       </template>
     </Card>
 
-    <UserDialog 
-      v-model="userDialog" 
+    <UserDialog
+      v-model="userDialog"
       :user="selectedUser"
       :current-user-role="currentUserRole"
       :manageable-roles="getManageableRoles()"
@@ -153,7 +153,7 @@
       :multiple="true"
       @confirm="deleteSelectedUsers"
     />
-    
+
     <Dialog v-model:visible="showPasswordDialog" header="User Password" :style="{ width: '450px' }">
       <div class="flex flex-col gap-4">
         <div class="p-3 border rounded bg-gray-50">
@@ -169,7 +169,7 @@
         </div>
       </div>
     </Dialog>
-    
+
     <Toast />
   </div>
 </template>
@@ -219,7 +219,7 @@ interface Metadata {
 
 export default defineComponent({
   name: 'UserManagementView',
-  
+
   components: {
     UserDialog,
     DeleteConfirmDialog,
@@ -236,11 +236,11 @@ export default defineComponent({
     Dialog,
     Toast
   },
-  
+
   directives: {
     tooltip: Tooltip
   },
-  
+
   data() {
     return {
       users: [] as User[],
@@ -256,7 +256,7 @@ export default defineComponent({
       generatedPassword: '',
       selectedUser: null as User | null,
       currentUserRole: '',
-      
+
       filters: {
         search: '',
         roles: null,
@@ -266,127 +266,127 @@ export default defineComponent({
         page: 1,
         per_page: 10
       } as UserFilters,
-      
+
       debouncedSearch: () => {}
     };
   },
-  
+
   computed: {
     authStore() {
       return useAuthStore();
     },
-    
+
     canManageEditors(): boolean {
       return this.authStore.hasPermission('manage.editor');
     },
-    
+
     canManageAdmins(): boolean {
       return this.authStore.hasPermission('manage.admin');
     }
   },
-  
+
   created() {
     this.debouncedSearch = debounce(() => {
       this.filters.page = 1; // Reset to first page on search
       this.fetchUsers();
     }, 300);
   },
-  
+
   async mounted() {
     if (!this.authStore.getUser) {
       await this.authStore.fetchCurrentUser();
     }
-    
+
     if (this.authStore.getRoleNames.length > 0) {
       this.currentUserRole = this.authStore.getRoleNames[0];
     }
-    
+
     // Apply initial filters based on permissions
     this.applyPermissionBasedFilters();
-    
+
     this.fetchUsers();
   },
-  
+
   methods: {
     applyPermissionBasedFilters(): void {
       // If user can only manage editors, filter by editor role initially
       if (this.canManageEditors && !this.canManageAdmins) {
         this.filters.roles = 'editor';
       }
-      
+
       // If user can only manage admins, filter by admin role initially
       if (this.canManageAdmins && !this.canManageEditors) {
         this.filters.roles = 'admin';
       }
     },
-    
+
     isCurrentUser(userId: number): boolean {
       return userId === this.authStore.getUser?.id;
     },
-    
+
     canEditUser(user: User): boolean {
       // Can't edit yourself through this interface
       if (this.isCurrentUser(user.id)) {
         return false;
       }
-      
+
       // Super admin can edit anyone except other super admins
       if (this.authStore.hasRole('super_admin')) {
         return !user.roles.some(role => role.name === 'super_admin');
       }
-      
+
       // Check if user has admin role
       const isAdminUser = user.roles.some(role => role.name === 'admin');
-      
+
       // Check if user has editor role
       const isEditorUser = user.roles.some(role => role.name === 'editor');
-      
+
       // User with manage.admin permission can edit admins
       if (this.canManageAdmins && isAdminUser) {
         return true;
       }
-      
+
       // User with manage.editor permission can edit editors
       if (this.canManageEditors && isEditorUser) {
         return true;
       }
-      
+
       return false;
     },
-    
+
     canDeleteUser(user: User): boolean {
       // Can't delete yourself
       if (this.isCurrentUser(user.id)) {
         return false;
       }
-      
+
       // Super admin can delete anyone except other super admins
       if (this.authStore.hasRole('super_admin')) {
         return !user.roles.some(role => role.name === 'super_admin');
       }
-      
+
       // Check if user has admin role
       const isAdminUser = user.roles.some(role => role.name === 'admin');
-      
+
       // Check if user has editor role
       const isEditorUser = user.roles.some(role => role.name === 'editor');
-      
+
       // User with manage.admin permission can delete admins
       if (this.canManageAdmins && isAdminUser) {
         return true;
       }
-      
+
       // User with manage.editor permission can delete editors
       if (this.canManageEditors && isEditorUser) {
         return true;
       }
-      
+
       return false;
     },
-    
+
     getManageableRoles(): string[] {
       const roles: string[] = [];
-      
+
       if (this.authStore.hasRole('super_admin')) {
         roles.push('admin', 'editor');
       } else if (this.canManageAdmins) {
@@ -394,15 +394,15 @@ export default defineComponent({
       } else if (this.canManageEditors) {
         roles.push('editor');
       }
-      
+
       return roles;
     },
-    
+
     getRoleFilterOptions(): RoleOption[] {
       const options: RoleOption[] = [
         { label: 'All Roles', value: null }
       ];
-      
+
       // Super admin can see all roles
       if (this.authStore.hasRole('super_admin')) {
         options.push(
@@ -415,65 +415,65 @@ export default defineComponent({
         if (this.canManageAdmins) {
           options.push({ label: 'Admin', value: 'admin' });
         }
-        
+
         // Users with manage.editor permission can see editor role
         if (this.canManageEditors) {
           options.push({ label: 'Editor', value: 'editor' });
         }
       }
-      
+
       return options;
     },
-    
+
     truncateText(text: string | undefined, maxLength: number): string {
       if (!text) return '';
       if (text.length <= maxLength) return text;
       return text.substring(0, maxLength - 3) + '...';
     },
-    
+
     openNewUser(): void {
       this.selectedUser = null;
       this.userDialog = true;
     },
-    
+
     editUser(user: User): void {
       this.selectedUser = { ...user };
       this.userDialog = true;
     },
-    
+
     confirmDeleteUser(user: User): void {
       this.selectedUser = user;
       this.deleteUserDialog = true;
     },
-    
+
     confirmDeleteSelected(): void {
       this.deleteUsersDialog = true;
     },
-    
+
     async fetchUsers(): Promise<void> {
       this.loading = true;
       try {
         // Build query parameters
         const params = new URLSearchParams();
-        
+
         if (this.filters.search) {
           params.append('search', this.filters.search);
         }
-        
+
         if (this.filters.roles) {
           params.append('roles', this.filters.roles);
         }
-        
+
         if (this.filters.university_id) {
           params.append('university_id', this.filters.university_id.toString());
         }
-        
+
         params.append('sort_field', this.filters.sort_field);
         params.append('sort_order', this.filters.sort_order);
         params.append('page', this.filters.page.toString());
         params.append('per_page', this.filters.per_page.toString());
-        
-        const response = await apiService.get(`/v1/users?${params.toString()}`);
+
+        const response = await apiService.get(`/v1/user-management/users?${params.toString()}`);
         this.users = response.data.payload;
         this.meta = response.data.meta;
       } catch (error: any) {
@@ -482,51 +482,51 @@ export default defineComponent({
         this.loading = false;
       }
     },
-    
+
     onPage(event: any): void {
       this.filters.page = event.page + 1; // PrimeVue uses 0-based indexing, API uses 1-based
       this.filters.per_page = event.rows;
       this.fetchUsers();
     },
-    
+
     onSort(event: any): void {
       this.filters.sort_field = event.sortField;
       this.filters.sort_order = event.sortOrder === 1 ? 'asc' : 'desc';
       this.fetchUsers();
     },
-    
+
     onRoleFilterChange(): void {
       this.filters.page = 1; // Reset to first page when filter changes
       this.fetchUsers();
     },
-    
+
     clearSearch(): void {
       this.filters.search = '';
       this.filters.page = 1;
       this.fetchUsers();
     },
-    
+
     async saveUser(userData: User): Promise<void> {
       try {
         let response;
-        
+
         if (userData.id) {
-          response = await apiService.put(`/v1/users/${userData.id}`, userData);
+          response = await apiService.put(`/v1/user-management/users/${userData.id}`, userData);
         } else {
-          response = await apiService.post('/v1/users', userData);
+          response = await apiService.post('/v1/user-management/users', userData);
         }
-        
+
         const responseData = response.data.payload;
-        
+
         if (responseData.generated_password) {
           this.passwordUserName = userData.name;
           this.passwordUserEmail = userData.email;
           this.generatedPassword = responseData.generated_password;
           this.showPasswordDialog = true;
         }
-        
+
         await this.fetchUsers();
-        
+
         this.$toast.add({
           severity: 'success',
           summary: 'Successful',
@@ -542,22 +542,22 @@ export default defineComponent({
         });
       }
     },
-    
+
     async deleteUser(): Promise<void> {
       if (!this.selectedUser) return;
-      
+
       try {
-        await apiService.delete(`/v1/users/${this.selectedUser.id}`);
-        
+        await apiService.delete(`/v1/user-management/users/${this.selectedUser.id}`);
+
         await this.fetchUsers();
-        
+
         this.$toast.add({
           severity: 'success',
           summary: 'Successful',
           detail: 'User Deleted',
           life: 3000
         });
-        
+
         this.selectedUser = null;
       } catch (error: any) {
         this.$toast.add({
@@ -568,45 +568,45 @@ export default defineComponent({
         });
       }
     },
-    
+
     async deleteSelectedUsers(): Promise<void> {
       if (!this.selectedUsers || this.selectedUsers.length === 0) {
         return;
       }
-      
+
       try {
         const currentUserId = this.authStore.getUser?.id;
-        
+
         // Filter out users that cannot be deleted based on roles and permissions
         const usersToDelete = this.selectedUsers.filter(user => {
           const isSelf = user.id === currentUserId;
           const isSuperAdminUser = user.roles.some(role => role.name === 'super_admin');
           const isAdminUser = user.roles.some(role => role.name === 'admin');
           const isEditorUser = user.roles.some(role => role.name === 'editor');
-          
+
           // Current user can't delete themselves
           if (isSelf) {
             return false;
           }
-          
+
           // No one can delete super admins
           if (isSuperAdminUser) {
             return false;
           }
-          
+
           // User with manage.admin permission can delete admins
           if (isAdminUser) {
             return this.canManageAdmins;
           }
-          
+
           // User with manage.editor permission can delete editors
           if (isEditorUser) {
             return this.canManageEditors;
           }
-          
+
           return false;
         });
-        
+
         if (usersToDelete.length === 0) {
           this.$toast.add({
             severity: 'warn',
@@ -616,17 +616,17 @@ export default defineComponent({
           });
           return;
         }
-        
-        const deletePromises = usersToDelete.map(user => 
-          apiService.delete(`/v1/users/${user.id}`)
+
+        const deletePromises = usersToDelete.map(user =>
+          apiService.delete(`/v1/user-management/users/${user.id}`)
         );
-        
+
         await Promise.all(deletePromises);
-        
+
         await this.fetchUsers();
-        
+
         this.selectedUsers = null;
-        
+
         this.$toast.add({
           severity: 'success',
           summary: 'Successful',
@@ -642,25 +642,25 @@ export default defineComponent({
         });
       }
     },
-    
+
     exportTable(): void {
       if (this.$refs.dt) {
         (this.$refs.dt as any).exportCSV();
       }
     },
-    
+
     exportPassword(): void {
       if (!this.generatedPassword) return;
-      
-      const content = 
+
+      const content =
         `Username: ${this.passwordUserName}\n` +
         `Email: ${this.passwordUserEmail}\n` +
         `Password: ${this.generatedPassword}\n` +
         `Date: ${new Date().toLocaleString()}`;
-      
+
       const blob = new Blob([content], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
-      
+
       const link = document.createElement('a');
       link.href = url;
       link.download = `credentials_${this.passwordUserName.replace(/\s+/g, '_')}.txt`;
@@ -669,12 +669,12 @@ export default defineComponent({
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     },
-    
+
     closePasswordDialog(): void {
       this.showPasswordDialog = false;
       this.generatedPassword = '';
     },
-    
+
     formatDate(value: string): string {
       if (value) {
         return new Date(value).toLocaleDateString('en-US', {
@@ -685,7 +685,7 @@ export default defineComponent({
       }
       return '';
     },
-    
+
     getRoleLabel(roleName: string): string {
       switch (roleName) {
         case 'super_admin':
@@ -698,7 +698,7 @@ export default defineComponent({
           return roleName;
       }
     },
-    
+
     getRoleSeverity(roleName: string): string {
       switch (roleName) {
         case 'super_admin':
@@ -738,7 +738,7 @@ export default defineComponent({
   :deep(.p-datatable-wrapper) {
     overflow-x: auto;
   }
-  
+
   :deep(.p-datatable-tbody) tr td:first-child {
     position: sticky !important;
     border-right-width: 1px !important;
@@ -746,7 +746,7 @@ export default defineComponent({
     z-index: 1 !important;
     box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1) !important;
   }
-  
+
   :deep(.p-datatable-tbody) tr td:last-child {
     position: sticky !important;
     border-left-width: 1px !important;

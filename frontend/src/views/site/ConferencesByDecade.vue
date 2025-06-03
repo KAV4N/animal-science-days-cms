@@ -4,7 +4,7 @@
       <h1 class="text-4xl font-bold text-gray-800 mb-2">Conference Archive</h1>
       <p class="text-gray-500">Browse our historical collection of academic conferences</p>
     </div>
-    
+
     <div class="flex flex-col md:flex-row gap-2">
       <!-- Using h-full to match heights at the container level -->
       <div class="w-full md:w-72 flex flex-col">
@@ -28,7 +28,7 @@
                 <div v-for="decade in sortedDecades" :key="decade.decade"
                   @click="selectDecade(decade.decade)"
                   class="p-4 cursor-pointer border-b last:border-b-0 transition-all duration-200 flex justify-between items-center"
-                  :class="{'bg-primary-50 text-primary-800': selectedDecade === decade.decade, 
+                  :class="{'bg-primary-50 text-primary-800': selectedDecade === decade.decade,
                           'hover:bg-gray-50': selectedDecade !== decade.decade}">
                   <div class="flex items-center">
                     <i class="pi pi-calendar-plus mr-2" :class="{'text-primary': selectedDecade === decade.decade}"></i>
@@ -41,7 +41,7 @@
           </template>
         </Card>
       </div>
-      
+
       <!-- Using h-full to match heights at the container level -->
       <div class="flex-1 flex flex-col">
         <Card class="h-full flex flex-col">
@@ -56,28 +56,28 @@
               <h2 class="text-lg font-semibold">Conference Archive</h2>
             </div>
           </template>
-          
+
           <template #content>
             <!-- Flex-grow to make the content expand to fill available space -->
             <div class="flex-grow">
               <div v-if="conferencesLoading" class="flex justify-center items-center py-12">
                 <ProgressSpinner strokeWidth="4" />
               </div>
-              
+
               <div v-else-if="!selectedDecade" class="text-center py-12 px-4">
                 <i class="pi pi-calendar text-primary-200 text-6xl mb-4"></i>
                 <h3 class="text-xl text-gray-600 mb-2">Please select a decade</h3>
                 <p class="text-gray-500">Choose a decade from the sidebar to browse conferences</p>
               </div>
-              
+
               <div v-else-if="conferences.length === 0" class="p-6 rounded text-center">
                 <i class="pi pi-search text-primary-200 text-6xl mb-4"></i>
                 <h3 class="text-xl text-gray-600 mb-2">No conferences found</h3>
                 <p class="text-gray-500">There are no conferences available for this decade</p>
               </div>
-              
+
               <div v-else class="space-y-4 p-4">
-                <div v-for="conference in conferences" :key="conference.id" 
+                <div v-for="conference in conferences" :key="conference.id"
                     class="border-l-4 shadow pl-4 p-3 transition-colors rounded"
                     :style="{borderLeftColor: conference.primary_color || 'var(--primary-color)'}">
                   <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
@@ -86,28 +86,28 @@
                         <h3 class="text-xl font-medium text-primary-700 truncate" :title="conference.name + ' ' + conference.title">
                           {{ truncateText(conference.name + ' ' + conference.title, 60) }}
                         </h3>
-                        <Button 
-                          icon="pi pi-external-link" 
-                          label="View Details" 
+                        <Button
+                          icon="pi pi-external-link"
+                          label="View Details"
                           class="p-button-sm ml-2 flex-shrink-0"
                           @click="goToConference(conference)"
                         />
                       </div>
-                      
+
                       <div class="flex flex-wrap gap-2 mt-3">
                         <div class="flex items-center px-3 py-2 bg-gray-100 rounded-full">
                           <i class="pi pi-calendar mr-2 text-gray-600"></i>
                           <span class="text-sm">{{ formatDate(conference.start_date) }} - {{ formatDate(conference.end_date) }}</span>
                         </div>
-                        
+
                         <div class="flex items-center px-3 py-2 bg-gray-100 rounded-full">
                           <i class="pi pi-map-marker mr-2 text-gray-600"></i>
                           <span class="text-sm truncate" :title="conference.location">
                             {{ truncateText(conference.location, 30) }}
                           </span>
                         </div>
-                        
-                        <div v-if="conference.university && conference.university.full_name" 
+
+                        <div v-if="conference.university && conference.university.full_name"
                           class="flex items-center px-3 py-2 bg-gray-100 rounded-full">
                           <i class="pi pi-building mr-2 text-gray-600"></i>
                           <span class="text-sm truncate" :title="conference.university.full_name">
@@ -170,7 +170,7 @@ export default defineComponent({
       this.error = null;
 
       try {
-        const response = await apiService.get<ApiResponse<Decade[]>>('/v1/public/conferences/decades');
+        const response = await apiService.get<ApiResponse<Decade[]>>('/v1/conferences/decades');
         this.decades = response.data.payload.map(decade => ({
           ...decade,
           decade: typeof decade.decade === 'string' ? parseInt(decade.decade) : decade.decade
@@ -203,7 +203,7 @@ export default defineComponent({
 
       try {
         const response = await apiService.get<ApiPaginatedResponse<Conference[]>>(
-          `/v1/public/conferences/decades/${this.selectedDecade}`,
+          `/v1/conferences/decades/${this.selectedDecade}`,
           {
             params: {
               page: 1,
