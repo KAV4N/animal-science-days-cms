@@ -155,13 +155,13 @@ export default defineComponent({
       :class="{ ' shadow backdrop-blur-[5px]': isScrolled }">
       <div class="flex items-center justify-between">
 
-        <div class="flex items-center min-w-0">
+        <div class="flex items-center min-w-0 flex-1">
           <router-link to="/" class="w-fit flex items-center">
             <img class="h-10 w-auto flex-shrink-0" src="/school-logo.png" alt="School Conference Logo" />
           </router-link>
         </div>
 
-        <ul class="flex-none hidden md:flex items-center gap-4 mx-4">
+        <ul class="flex-none hidden md:flex items-center gap-4 absolute left-1/2 -translate-x-1/2">
           <li v-for="item in allItems" :key="item.label" class="relative">
             <router-link :to="item.route"
               class="hover-bg rounded-full px-5 py-2 transition-all duration-200 flex items-center whitespace-nowrap navbar-text font-medium text-sm"
@@ -172,7 +172,7 @@ export default defineComponent({
           </li>
         </ul>
 
-        <div class="md:flex hidden items-center justify-end gap-4 min-w-0">
+        <div class="md:flex hidden items-center justify-end gap-4 min-w-0 flex-1">
           <!-- User Avatar and Info (when authenticated) -->
           <div v-if="isAuthenticated" class="flex items-center gap-2">
             <div class="text-right text-xs hidden lg:block">
