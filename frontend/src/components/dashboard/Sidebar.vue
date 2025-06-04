@@ -6,7 +6,7 @@
         <!-- Logo/Header -->
         <div class="flex items-center justify-between px-4 py-3 shrink-0">
           <span class="inline-flex items-center">
-            <span class="font-semibold text-lg">BOKU</span>
+            <span class="font-semibold text-lg">Dashboard</span>
           </span>
         </div>
   
@@ -68,7 +68,7 @@
         <!-- Logo/Header -->
         <div class="flex items-center justify-between px-4 pt-2 shrink-0">
           <span class="inline-flex items-center">
-            <span class="font-semibold text-lg">BOKU</span>
+            <span class="font-semibold text-lg">Dashboard</span>
           </span>
           <span>
             <Button type="button" @click="closeCallback" icon="pi pi-times" rounded outlined size="small"></Button>
