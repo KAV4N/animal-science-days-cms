@@ -488,7 +488,7 @@
                       <h4 class="font-semibold truncate text-base">{{ menu.title }}</h4>
                       <p class="text-sm mt-2 truncate">/{{ menu.slug }}</p>
                     </div>
-                    <div class="flex items-center gap-2 opacity-100  transition-opacity ml-4 flex-shrink-0">
+                    <div class="flex items-center gap-2 opacity-100 transition-opacity ml-4 flex-shrink-0">
                       <Button
                         icon="pi pi-pencil"
                         size="small"
@@ -655,6 +655,17 @@
             </div>
 
             <div class="space-y-6">
+              <div>
+                <label for="editMenuTitle" class="block text-sm font-medium mb-2">Page Title *</label>
+                <InputText
+                  id="editMenuTitle"
+                  v-model="editMenuTitle"
+                  class="w-full"
+                  placeholder="Enter page title..."
+                />
+                <small v-if="titleError" class="mt-2 block">{{ titleError }}</small>
+              </div>
+
               <div>
                 <label for="editMenuSlug" class="block text-sm font-medium mb-2">Page Slug</label>
                 <InputText
@@ -1098,6 +1109,10 @@ export default defineComponent({
           slug: this.editMenuSlug.trim(),
           is_published: this.editMenuPublished
         });
+        // Re-fetch the selected menu to ensure components load correctly
+        if (this.pageMenuStore.selectedMenu?.id === this.editMenuId) {
+          await this.pageMenuStore.fetchMenu(this.editMenuId);
+        }
         this.showEditMenuDialog = false;
       } catch (error: any) {
         if (error.response && error.response.data && error.response.data.errors) {
