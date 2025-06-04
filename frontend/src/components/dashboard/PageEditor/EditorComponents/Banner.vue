@@ -241,6 +241,25 @@
               <!-- Single Color Picker -->
               <div v-if="localBannerData.backgroundType === 'solid'">
                 <h5 class="text-md font-medium mb-3">Shape Color</h5>
+                
+                <!-- Conference Color Presets -->
+                <div v-if="conferenceColors.length > 0" class="mb-4">
+                  <label class="block text-sm font-medium mb-2">Conference Colors</label>
+                  <div class="flex gap-2 flex-wrap">
+                    <button
+                      v-for="color in conferenceColors"
+                      :key="color.value"
+                      @click="useConferenceColor(color.value)"
+                      :class="[
+                        'w-12 h-12 rounded-lg border-2 transition-all duration-200 hover:scale-110',
+                        localBannerData.color === color.value ? 'border-gray-800 ring-2 ring-blue-500' : 'border-gray-300 hover:border-gray-500'
+                      ]"
+                      :style="{ backgroundColor: color.value }"
+                      :title="`Use ${color.label}`"
+                    />
+                  </div>
+                </div>
+
                 <div class="color-picker-container">
                   <div class="color-preview" :style="{ backgroundColor: localBannerData.color }"></div>
                   <TransparentColorPicker 
@@ -256,6 +275,46 @@
               <!-- Dual Color Picker for Gradient -->
               <div v-if="localBannerData.backgroundType === 'gradient'">
                 <h5 class="text-md font-medium mb-3">Gradient Colors</h5>
+                
+                <!-- Conference Color Presets for Gradients -->
+                <div v-if="conferenceColors.length > 0" class="mb-4">
+                  <label class="block text-sm font-medium mb-2">Conference Colors</label>
+                  <div class="grid grid-cols-2 gap-4 mb-3">
+                    <div>
+                      <label class="block text-xs text-gray-600 mb-1">Primary Color</label>
+                      <div class="flex gap-2 flex-wrap">
+                        <button
+                          v-for="color in conferenceColors"
+                          :key="`grad1-${color.value}`"
+                          @click="useConferenceGradientColor(color.value, 1)"
+                          :class="[
+                            'w-8 h-8 rounded border-2 transition-all duration-200 hover:scale-110',
+                            localBannerData.gradientColor1 === color.value ? 'border-gray-800 ring-1 ring-blue-500' : 'border-gray-300 hover:border-gray-500'
+                          ]"
+                          :style="{ backgroundColor: color.value }"
+                          :title="`Use ${color.label} for primary`"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label class="block text-xs text-gray-600 mb-1">Secondary Color</label>
+                      <div class="flex gap-2 flex-wrap">
+                        <button
+                          v-for="color in conferenceColors"
+                          :key="`grad2-${color.value}`"
+                          @click="useConferenceGradientColor(color.value, 2)"
+                          :class="[
+                            'w-8 h-8 rounded border-2 transition-all duration-200 hover:scale-110',
+                            localBannerData.gradientColor2 === color.value ? 'border-gray-800 ring-1 ring-blue-500' : 'border-gray-300 hover:border-gray-500'
+                          ]"
+                          :style="{ backgroundColor: color.value }"
+                          :title="`Use ${color.label} for secondary`"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <DualColorPickerTab
                   :initial-primary-color="localBannerData.gradientColor1"
                   :initial-secondary-color="localBannerData.gradientColor2"
@@ -404,6 +463,7 @@
 
 <script lang="ts">
 import { defineComponent, type PropType, computed } from 'vue';
+import { useConferenceStore } from '@/stores/conferenceStore';
 import MediaManager from '@/components/dashboard/PageEditor/MediaManager.vue';
 import BannerPublic from '@/components/site/SiteComponents/Banner.vue';
 import TransparentColorPicker from '@/components/dashboard/ConferenceManagement/TransparentColorPicker.vue';
@@ -430,6 +490,11 @@ interface BannerData {
   shapeImageOpacity: number;
   backgroundImageOpacity: number;
   imageOpacity?: number; // For backward compatibility
+}
+
+interface ConferenceColor {
+  label: string;
+  value: string;
 }
 
 export default defineComponent({
@@ -482,6 +547,10 @@ export default defineComponent({
     }
   },
   emits: ['update:visible', 'save', 'cancel'],
+  setup() {
+    const conferenceStore = useConferenceStore();
+    return { conferenceStore };
+  },
   data() {
     return {
       localComponentName: '',
@@ -541,6 +610,35 @@ export default defineComponent({
         width: this.localBannerData.density,
         imageOpacity: this.localBannerData.shapeImageOpacity // For backward compatibility
       };
+    },
+
+    conferenceColors(): ConferenceColor[] {
+      const colors: ConferenceColor[] = [];
+      
+      // Get current conference from store
+      const currentConference = this.conferenceStore.conferences.find(c => c.id === this.conferenceId) 
+        || this.conferenceStore.latestConference 
+        || this.conferenceStore.currentPublicConference;
+      
+      if (currentConference) {
+        // Add primary color if it exists
+        if (currentConference.primary_color) {
+          colors.push({
+            label: 'Primary Color',
+            value: currentConference.primary_color
+          });
+        }
+        
+        // Add secondary color if it exists
+        if (currentConference.secondary_color) {
+          colors.push({
+            label: 'Secondary Color',
+            value: currentConference.secondary_color
+          });
+        }
+      }
+      
+      return colors;
     }
   },
   watch: {
@@ -671,6 +769,19 @@ export default defineComponent({
 
     updateGradientColor2(color: string) {
       this.localBannerData.gradientColor2 = color;
+    },
+
+    // Conference color methods
+    useConferenceColor(color: string) {
+      this.localBannerData.color = color;
+    },
+
+    useConferenceGradientColor(color: string, position: 1 | 2) {
+      if (position === 1) {
+        this.localBannerData.gradientColor1 = color;
+      } else {
+        this.localBannerData.gradientColor2 = color;
+      }
     }
   }
 });
@@ -724,5 +835,4 @@ export default defineComponent({
     height: 2.5rem;
     min-width: 180px;
   }
-}
-</style>
+}</style>

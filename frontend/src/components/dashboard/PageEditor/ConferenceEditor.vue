@@ -1,3 +1,4 @@
+<!-- ConferenceEditor.vue -->
 <template>
   <div class="conference-editor h-screen flex flex-col">
     <!-- Top Header -->
@@ -67,7 +68,7 @@
     </Card>
 
     <!-- Mobile Menu Toggle -->
-    <div class="lg:hidden p-4">
+    <div class="xl:hidden p-4">
       <div class="flex justify-between items-center">
         <Button
           :icon="showLeftPanel ? 'pi pi-times' : 'pi pi-bars'"
@@ -91,7 +92,7 @@
       <!-- Conference Overview Panel (Left) -->
       <div :class="[
         'flex flex-col transition-all duration-300 z-20 bg-surface-100 rounded shadow',
-        'lg:w-80 lg:relative lg:translate-x-0',
+        'xl:w-80 xl:relative xl:translate-x-0',
         'absolute inset-y-0 left-0 w-80 max-w-[90vw]',
         showLeftPanel ? 'translate-x-0 shadow-lg' : '-translate-x-full'
       ]">
@@ -109,6 +110,10 @@
               <div class="flex items-center gap-2">
                 <i class="pi pi-file"></i>
                 <span>{{ pageMenuStore.menus.length }} Pages Total</span>
+              </div>
+              <div v-if="conferenceStore.getCurrentPublicConference" class="flex items-center gap-2">
+                <i class="pi pi-info-circle"></i>
+                <span>{{ conferenceStore.getCurrentPublicConference.title }}</span>
               </div>
             </div>
           </template>
@@ -157,6 +162,18 @@
               <div class="text-center p-0">
                 <i class="pi pi-spin pi-spinner text-3xl mb-4"></i>
                 <p class="text-sm">Loading conference data...</p>
+              </div>
+            </template>
+          </Card>
+        </div>
+
+        <!-- Empty State -->
+        <div v-else-if="conferenceStore.loading" class="flex-1 flex items-center justify-center p-4">
+          <Card class="w-full">
+            <template #content>
+              <div class="text-center p-0">
+                <i class="pi pi-spin pi-spinner text-3xl mb-4"></i>
+                <p class="text-sm">Loading conference details...</p>
               </div>
             </template>
           </Card>
@@ -423,7 +440,7 @@
       <!-- Pages Sidebar (Right) -->
       <div :class="[
         'flex flex-col transition-all duration-300 z-10 bg-surface-100 rounded shadow',
-        'lg:w-96 lg:relative lg:translate-x-0',
+        'xl:w-96 xl:relative xl:translate-x-0',
         'absolute inset-y-0 right-0 w-80 max-w-[90vw]',
         showRightPanel ? 'translate-x-0 shadow-lg' : 'translate-x-full'
       ]">
@@ -488,7 +505,7 @@
                       <h4 class="font-semibold truncate text-base">{{ menu.title }}</h4>
                       <p class="text-sm mt-2 truncate">/{{ menu.slug }}</p>
                     </div>
-                    <div class="flex items-center gap-2 opacity-100  transition-opacity ml-4 flex-shrink-0">
+                    <div class="flex items-center gap-2 opacity-100 transition-opacity ml-4 flex-shrink-0">
                       <Button
                         icon="pi pi-pencil"
                         size="small"
@@ -549,7 +566,7 @@
       <div
         v-if="(showLeftPanel || showRightPanel)"
         @click="showLeftPanel = false; showRightPanel = false"
-        class="absolute inset-0 z-5 lg:hidden"
+        class="absolute inset-0 z-5 xl:hidden"
       ></div>
     </div>
 
@@ -656,6 +673,17 @@
 
             <div class="space-y-6">
               <div>
+                <label for="editMenuTitle" class="block text-sm font-medium mb-2">Page Title *</label>
+                <InputText
+                  id="editMenuTitle"
+                  v-model="editMenuTitle"
+                  class="w-full"
+                  placeholder="Enter page title..."
+                />
+                <small v-if="titleError" class="mt-2 block">{{ titleError }}</small>
+              </div>
+
+              <div>
                 <label for="editMenuSlug" class="block text-sm font-medium mb-2">Page Slug</label>
                 <InputText
                   id="editMenuSlug"
@@ -721,62 +749,49 @@
               <p>Create a new content component for your page</p>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div class="space-y-6">
-                <div>
-                  <label for="componentName" class="block text-sm font-medium mb-2">Component Name</label>
-                  <InputText
-                    id="componentName"
-                    v-model="newComponentName"
-                    class="w-full"
-                    placeholder="Enter component name..."
-                  />
-                </div>
-
-                <div>
-                  <label for="componentType" class="block text-sm font-medium mb-2">Component Type</label>
-                  <Select
-                    id="componentType"
-                    v-model="newComponentType"
-                    :options="availableComponentTypes"
-                    option-label="label"
-                    option-value="value"
-                    placeholder="Select component type"
-                    class="w-full"
-                    @change="updateComponentData"
-                  >
-                    <template #option="slotProps">
-                      <div class="flex items-center gap-2">
-                        <i :class="slotProps.option.icon"></i>
-                        <span>{{ slotProps.option.label }}</span>
-                      </div>
-                    </template>
-                  </Select>
-                </div>
-
-                <Card>
-                  <template #content>
-                    <div class="flex items-center p-0">
-                      <Checkbox v-model="newComponentPublished" inputId="newComponentPublished" binary />
-                      <label for="newComponentPublished" class="ml-4 text-sm font-medium">
-                        Publish immediately
-                      </label>
-                    </div>
-                    <p class="text-sm mt-3 ml-8">Published components are visible to attendees</p>
-                  </template>
-                </Card>
-              </div>
-
-              <div v-if="newComponentType === 'wysiwyg'" class="space-y-4">
-                <label for="initialContent" class="block text-sm font-medium">Initial Content</label>
-                <Textarea
-                  id="initialContent"
-                  v-model="newComponentData.content"
-                  :rows="12"
+            <div class="space-y-6">
+              <div>
+                <label for="componentName" class="block text-sm font-medium mb-2">Component Name</label>
+                <InputText
+                  id="componentName"
+                  v-model="newComponentName"
                   class="w-full"
-                  placeholder="Enter initial content for your editor component..."
+                  placeholder="Enter component name..."
                 />
               </div>
+
+              <div>
+                <label for="componentType" class="block text-sm font-medium mb-2">Component Type</label>
+                <Select
+                  id="componentType"
+                  v-model="newComponentType"
+                  :options="availableComponentTypes"
+                  option-label="label"
+                  option-value="value"
+                  placeholder="Select component type"
+                  class="w-full"
+                  @change="updateComponentData"
+                >
+                  <template #option="slotProps">
+                    <div class="flex items-center gap-2">
+                      <i :class="slotProps.option.icon"></i>
+                      <span>{{ slotProps.option.label }}</span>
+                    </div>
+                  </template>
+                </Select>
+              </div>
+
+              <Card>
+                <template #content>
+                  <div class="flex items-center p-0">
+                    <Checkbox v-model="newComponentPublished" inputId="newComponentPublished" binary />
+                    <label for="newComponentPublished" class="ml-4 text-sm font-medium">
+                      Publish immediately
+                    </label>
+                  </div>
+                  <p class="text-sm mt-3 ml-8">Published components are visible to attendees</p>
+                </template>
+              </Card>
             </div>
 
             <div class="flex flex-col sm:flex-row justify-center gap-4 pt-4">
@@ -872,6 +887,7 @@
 <script lang="ts">
 import { defineComponent, ref, shallowRef } from 'vue';
 import { usePageMenuStore } from '@/stores/pageMenuStore';
+import { useConferenceStore } from '@/stores/conferenceStore'; // Import conference store
 import { useRoute } from 'vue-router';
 import apiService from '@/services/apiService';
 import MediaManager from '@/components/dashboard/PageEditor/MediaManager.vue';
@@ -944,13 +960,17 @@ export default defineComponent({
     pageMenuStore() {
       return usePageMenuStore();
     },
+    conferenceStore() {
+      return useConferenceStore(); // Add conference store to computed properties
+    },
     conferenceId(): number {
       return Number(this.$route.params.id);
     },
   },
-  created() {
+  async created() {
     this.pageMenuStore.setConferenceId(this.conferenceId);
-    this.fetchMenus();
+    await this.fetchConferenceData(); // Fetch conference data first
+    await this.fetchMenus();
   },
   mounted() {
     window.addEventListener('resize', this.handleResize);
@@ -962,8 +982,15 @@ export default defineComponent({
     }
   },
   methods: {
+    async fetchConferenceData() {
+      try {
+        await this.conferenceStore.fetchConference(this.conferenceId);
+      } catch (error) {
+        console.error('Error fetching conference data:', error);
+      }
+    },
     handleResize() {
-      if (window.innerWidth >= 1024) {
+      if (window.innerWidth >= 1280) {
         this.showLeftPanel = false;
         this.showRightPanel = false;
       }
@@ -995,9 +1022,7 @@ export default defineComponent({
     },
     async openLivePreview() {
       try {
-        const response = await apiService.get(`/v1/conference-management/conferences/${this.conferenceId}`);
-        const conference = response.data.payload;
-
+        const conference = this.conferenceStore.getConferences.find(c => c.id === this.conferenceId);
         if (!conference || !conference.slug) {
           console.error('Conference not found or missing slug');
           return;
@@ -1111,6 +1136,10 @@ export default defineComponent({
           slug: this.editMenuSlug.trim(),
           is_published: this.editMenuPublished
         });
+        // Re-fetch the selected menu to ensure components load correctly
+        if (this.pageMenuStore.selectedMenu?.id === this.editMenuId) {
+          await this.pageMenuStore.fetchMenu(this.editMenuId);
+        }
         this.showEditMenuDialog = false;
       } catch (error: any) {
         if (error.response && error.response.data && error.response.data.errors) {

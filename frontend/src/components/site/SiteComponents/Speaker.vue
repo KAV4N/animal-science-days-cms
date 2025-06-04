@@ -1,5 +1,5 @@
 <template>
-  <Card class="w-full cursor-pointer shadow-none" @click="toggleExpanded">
+  <Card class="w-full cursor-pointer shadow-none " @click="toggleExpanded">
     <template #content>
       <div class="p-2 flex flex-col">
         <!-- Unified Header -->
