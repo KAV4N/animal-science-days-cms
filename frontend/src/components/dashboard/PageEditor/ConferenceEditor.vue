@@ -1,3 +1,4 @@
+<!-- ConferenceEditor.vue -->
 <template>
   <div class="conference-editor h-screen flex flex-col">
     <!-- Top Header -->
@@ -67,7 +68,7 @@
     </Card>
 
     <!-- Mobile Menu Toggle -->
-    <div class="lg:hidden p-4">
+    <div class="xl:hidden p-4">
       <div class="flex justify-between items-center">
         <Button
           :icon="showLeftPanel ? 'pi pi-times' : 'pi pi-bars'"
@@ -91,7 +92,7 @@
       <!-- Conference Overview Panel (Left) -->
       <div :class="[
         'flex flex-col transition-all duration-300 z-20 bg-surface-100 rounded shadow',
-        'lg:w-80 lg:relative lg:translate-x-0',
+        'xl:w-80 xl:relative xl:translate-x-0',
         'absolute inset-y-0 left-0 w-80 max-w-[90vw]',
         showLeftPanel ? 'translate-x-0 shadow-lg' : '-translate-x-full'
       ]">
@@ -109,6 +110,10 @@
               <div class="flex items-center gap-2">
                 <i class="pi pi-file"></i>
                 <span>{{ pageMenuStore.menus.length }} Pages Total</span>
+              </div>
+              <div v-if="conferenceStore.getCurrentPublicConference" class="flex items-center gap-2">
+                <i class="pi pi-info-circle"></i>
+                <span>{{ conferenceStore.getCurrentPublicConference.title }}</span>
               </div>
             </div>
           </template>
@@ -157,6 +162,18 @@
               <div class="text-center p-0">
                 <i class="pi pi-spin pi-spinner text-3xl mb-4"></i>
                 <p class="text-sm">Loading conference data...</p>
+              </div>
+            </template>
+          </Card>
+        </div>
+
+        <!-- Empty State -->
+        <div v-else-if="conferenceStore.loading" class="flex-1 flex items-center justify-center p-4">
+          <Card class="w-full">
+            <template #content>
+              <div class="text-center p-0">
+                <i class="pi pi-spin pi-spinner text-3xl mb-4"></i>
+                <p class="text-sm">Loading conference details...</p>
               </div>
             </template>
           </Card>
@@ -423,7 +440,7 @@
       <!-- Pages Sidebar (Right) -->
       <div :class="[
         'flex flex-col transition-all duration-300 z-10 bg-surface-100 rounded shadow',
-        'lg:w-96 lg:relative lg:translate-x-0',
+        'xl:w-96 xl:relative xl:translate-x-0',
         'absolute inset-y-0 right-0 w-80 max-w-[90vw]',
         showRightPanel ? 'translate-x-0 shadow-lg' : 'translate-x-full'
       ]">
@@ -549,7 +566,7 @@
       <div
         v-if="(showLeftPanel || showRightPanel)"
         @click="showLeftPanel = false; showRightPanel = false"
-        class="absolute inset-0 z-5 lg:hidden"
+        class="absolute inset-0 z-5 xl:hidden"
       ></div>
     </div>
 
@@ -870,6 +887,7 @@
 <script lang="ts">
 import { defineComponent, ref, shallowRef } from 'vue';
 import { usePageMenuStore } from '@/stores/pageMenuStore';
+import { useConferenceStore } from '@/stores/conferenceStore'; // Import conference store
 import { useRoute } from 'vue-router';
 import apiService from '@/services/apiService';
 import MediaManager from '@/components/dashboard/PageEditor/MediaManager.vue';
@@ -942,13 +960,17 @@ export default defineComponent({
     pageMenuStore() {
       return usePageMenuStore();
     },
+    conferenceStore() {
+      return useConferenceStore(); // Add conference store to computed properties
+    },
     conferenceId(): number {
       return Number(this.$route.params.id);
     },
   },
-  created() {
+  async created() {
     this.pageMenuStore.setConferenceId(this.conferenceId);
-    this.fetchMenus();
+    await this.fetchConferenceData(); // Fetch conference data first
+    await this.fetchMenus();
   },
   mounted() {
     window.addEventListener('resize', this.handleResize);
@@ -960,8 +982,15 @@ export default defineComponent({
     }
   },
   methods: {
+    async fetchConferenceData() {
+      try {
+        await this.conferenceStore.fetchConference(this.conferenceId);
+      } catch (error) {
+        console.error('Error fetching conference data:', error);
+      }
+    },
     handleResize() {
-      if (window.innerWidth >= 1024) {
+      if (window.innerWidth >= 1280) {
         this.showLeftPanel = false;
         this.showRightPanel = false;
       }
@@ -993,9 +1022,7 @@ export default defineComponent({
     },
     async openLivePreview() {
       try {
-        const response = await apiService.get(`/v1/conference-management/conferences/${this.conferenceId}`);
-        const conference = response.data.payload;
-
+        const conference = this.conferenceStore.getConferences.find(c => c.id === this.conferenceId);
         if (!conference || !conference.slug) {
           console.error('Conference not found or missing slug');
           return;

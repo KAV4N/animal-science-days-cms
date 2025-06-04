@@ -47,7 +47,7 @@ const authService = {
    * Get current authenticated user
    */
   getCurrentUser() {
-    return api.get<UserResponse>('/v1/users/me');
+    return api.get<UserResponse>('/v1/user-management/users/me');
   },
 
   /**
@@ -66,18 +66,18 @@ const authService = {
  */
 const apiService = {
   auth: authService,
-  
+
   /**
    * Generic GET request
    */
   get<T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
     return api.get<T>(url, config);
   },
-  
+
   post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
     return api.post<T>(url, data, config);
   },
-  
+
   put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
     return api.put<T>(url, data, config);
   },
@@ -85,7 +85,7 @@ const apiService = {
   patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
     return api.patch<T>(url, data, config);
   },
-  
+
   delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
     return api.delete<T>(url, config);
   }

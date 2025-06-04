@@ -1,18 +1,18 @@
 import { defineStore } from 'pinia';
 import apiService from '@/services/apiService';
-import type { 
-  PageMenu, 
-  PageData, 
-  PageMenuResponse, 
+import type {
+  PageMenu,
+  PageData,
+  PageMenuResponse,
   PageMenuListResponse,
   PageDataResponse,
   PageDataListResponse,
   PageMenuStoreRequest,
   PageMenuUpdateRequest,
   PageDataStoreRequest,
-  PageDataUpdateRequest,
-  ApiResponse
+  PageDataUpdateRequest
 } from '@/types/pageMenu';
+import type { ApiResponse } from '@/types/common';
 
 interface PageMenuState {
   conferenceId: number | null;
@@ -61,11 +61,11 @@ export const usePageMenuStore = defineStore('pageMenu', {
     getMenuById: (state) => (id: number) => {
       return state.menus.find(menu => menu.id === id) || null;
     },
-    
+
     hasMenus: (state) => {
       return state.menus.length > 0;
     },
-    
+
     isLocked: (state) => {
       return state.lockStatus.isLocked;
     },
@@ -95,17 +95,17 @@ export const usePageMenuStore = defineStore('pageMenu', {
       this.pageDataCurrentPage = {};
       this.pageDataTotalPages = {};
     },
-    
+
     sortMenusByOrder() {
-      this.menus.sort((a, b) => a.order - b.order);
+      this.menus.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity));
     },
-    
+
     async acquireLock() {
       if (!this.conferenceId) return false;
-      
+
       try {
         this.loading = true;
-        const response = await apiService.post(`/v1/conferences/${this.conferenceId}/lock`);
+        const response = await apiService.post(`/v1/conference-management/conferences/${this.conferenceId}/lock`);
         this.lockStatus = {
           isLocked: true,
           lockInfo: response.data.payload
@@ -118,12 +118,12 @@ export const usePageMenuStore = defineStore('pageMenu', {
         this.loading = false;
       }
     },
-    
+
     async refreshLock() {
       if (!this.conferenceId || !this.lockStatus.isLocked) return false;
-      
+
       try {
-        const response = await apiService.post(`/v1/conferences/${this.conferenceId}/lock/refresh`);
+        const response = await apiService.post(`/v1/conference-management/conferences/${this.conferenceId}/lock/refresh`);
         this.lockStatus = {
           isLocked: true,
           lockInfo: response.data.payload
@@ -134,13 +134,13 @@ export const usePageMenuStore = defineStore('pageMenu', {
         return false;
       }
     },
-    
+
     async releaseLock() {
       if (!this.conferenceId) return false;
-      
+
       try {
         this.loading = true;
-        await apiService.delete(`/v1/conferences/${this.conferenceId}/lock`);
+        await apiService.delete(`/v1/conference-management/conferences/${this.conferenceId}/lock`);
         this.lockStatus = {
           isLocked: false,
           lockInfo: null
@@ -156,7 +156,7 @@ export const usePageMenuStore = defineStore('pageMenu', {
 
     async fetchAllMenus(params: Record<string, any> = {}) {
       if (!this.conferenceId) return;
-      
+
       try {
         this.menusLoading = true;
         this.error = null;
@@ -165,9 +165,9 @@ export const usePageMenuStore = defineStore('pageMenu', {
         this.menusHasMore = true;
 
         await this.loadAllMenusPages(params);
-        
+
         this.sortMenusByOrder();
-        
+
         if (this.menus.length > 0 && !this.selectedMenu) {
           this.selectedMenu = this.menus[0];
         }
@@ -181,45 +181,45 @@ export const usePageMenuStore = defineStore('pageMenu', {
     async loadAllMenusPages(params: Record<string, any> = {}) {
       while (this.menusHasMore && !this.error) {
         const nextPage = this.menusCurrentPage + 1;
-        
+
         const response = await apiService.get<PageMenuListResponse>(
-          `/v1/conferences/${this.conferenceId}/menus`,
-          { 
-            params: { 
+          `/v1/conference-management/conferences/${this.conferenceId}/menus`,
+          {
+            params: {
               ...params,
-              page: nextPage 
-            } 
+              page: nextPage
+            }
           }
         );
 
         const newMenus = response.data.payload;
         this.menus.push(...newMenus);
-        
+
         // Update pagination state
         this.menusCurrentPage = response.data.meta.current_page;
         this.menusTotalPages = response.data.meta.last_page;
         this.menusHasMore = this.menusCurrentPage < this.menusTotalPages;
       }
     },
-    
+
     // Legacy method for backward compatibility
     async fetchMenus() {
       return this.fetchAllMenus();
     },
-    
+
     async fetchMenu(menuId: number) {
       if (!this.conferenceId) return;
-      
+
       try {
         this.loading = true;
         this.error = null;
-        
+
         const response = await apiService.get<PageMenuResponse>(
-          `/v1/conferences/${this.conferenceId}/menus/${menuId}`
+          `/v1/conference-management/conferences/${this.conferenceId}/menus/${menuId}`
         );
-        
+
         const fetchedMenu = response.data.payload;
-        
+
         // Load all page data for this menu
         if (fetchedMenu.page_data) {
           fetchedMenu.page_data.sort((a, b) => a.order - b.order);
@@ -231,16 +231,16 @@ export const usePageMenuStore = defineStore('pageMenu', {
             fetchedMenu.page_data = menuWithData.page_data;
           }
         }
-        
+
         const index = this.menus.findIndex(m => m.id === menuId);
         if (index !== -1) {
           this.menus[index] = fetchedMenu;
         } else {
           this.menus.push(fetchedMenu);
         }
-        
+
         this.selectedMenu = fetchedMenu;
-        
+
         return fetchedMenu;
       } catch (error: any) {
         this.error = error.response?.data?.message || 'Failed to fetch menu';
@@ -252,15 +252,15 @@ export const usePageMenuStore = defineStore('pageMenu', {
 
     async fetchAllPageData(menuId: number, params: Record<string, any> = {}) {
       if (!this.conferenceId) return;
-      
+
       try {
         this.pageDataLoading[menuId] = true;
         this.error = null;
-        
+
         // Reset page data pagination state for this menu
         this.pageDataCurrentPage[menuId] = 0;
         this.pageDataHasMore[menuId] = true;
-        
+
         // Find the menu and reset its page_data
         const menu = this.menus.find(m => m.id === menuId);
         if (menu) {
@@ -268,12 +268,12 @@ export const usePageMenuStore = defineStore('pageMenu', {
         }
 
         await this.loadAllPageDataPages(menuId, params);
-        
+
         // Sort page data by order
         if (menu && menu.page_data) {
           menu.page_data.sort((a, b) => a.order - b.order);
         }
-        
+
       } catch (error: any) {
         this.error = error.response?.data?.message || 'Failed to fetch page data';
       } finally {
@@ -284,19 +284,19 @@ export const usePageMenuStore = defineStore('pageMenu', {
     async loadAllPageDataPages(menuId: number, params: Record<string, any> = {}) {
       while (this.pageDataHasMore[menuId] && !this.error) {
         const nextPage = (this.pageDataCurrentPage[menuId] || 0) + 1;
-        
+
         const response = await apiService.get<PageDataListResponse>(
-          `/v1/conferences/${this.conferenceId}/menus/${menuId}/data`,
-          { 
-            params: { 
+          `/v1/conference-management/conferences/${this.conferenceId}/menus/${menuId}/data`,
+          {
+            params: {
               ...params,
-              page: nextPage 
-            } 
+              page: nextPage
+            }
           }
         );
 
         const newPageData = response.data.payload;
-        
+
         // Find the menu and add the new page data
         const menu = this.menus.find(m => m.id === menuId);
         if (menu) {
@@ -305,31 +305,31 @@ export const usePageMenuStore = defineStore('pageMenu', {
           }
           menu.page_data.push(...newPageData);
         }
-        
+
         // Update pagination state
         this.pageDataCurrentPage[menuId] = response.data.meta.current_page;
         this.pageDataTotalPages[menuId] = response.data.meta.last_page;
         this.pageDataHasMore[menuId] = this.pageDataCurrentPage[menuId] < this.pageDataTotalPages[menuId];
       }
     },
-    
+
     async createMenu(menuData: PageMenuStoreRequest) {
       if (!this.conferenceId) return null;
-      
+
       try {
         this.loading = true;
         this.error = null;
-        
+
         const response = await apiService.post<PageMenuResponse>(
-          `/v1/conferences/${this.conferenceId}/menus`,
+          `/v1/conference-management/conferences/${this.conferenceId}/menus`,
           menuData
         );
-        
+
         const newMenu = response.data.payload;
         this.menus.push(newMenu);
         this.sortMenusByOrder();
         this.selectedMenu = newMenu;
-        
+
         return newMenu;
       } catch (error: any) {
         this.error = error.response?.data?.message || 'Failed to create menu';
@@ -338,30 +338,30 @@ export const usePageMenuStore = defineStore('pageMenu', {
         this.loading = false;
       }
     },
-    
+
     async updateMenu(menuId: number, menuData: PageMenuUpdateRequest) {
       if (!this.conferenceId) return null;
-      
+
       try {
         this.loading = true;
         this.error = null;
-        
+
         const response = await apiService.put<PageMenuResponse>(
-          `/v1/conferences/${this.conferenceId}/menus/${menuId}`,
+          `/v1/conference-management/conferences/${this.conferenceId}/menus/${menuId}`,
           menuData
         );
-        
+
         const updatedMenu = response.data.payload;
-        
+
         const index = this.menus.findIndex(m => m.id === menuId);
         if (index !== -1) {
           this.menus[index] = updatedMenu;
         }
-        
+
         if (this.selectedMenu && this.selectedMenu.id === menuId) {
           this.selectedMenu = updatedMenu;
         }
-        
+
         return updatedMenu;
       } catch (error: any) {
         this.error = error.response?.data?.message || 'Failed to update menu';
@@ -370,19 +370,19 @@ export const usePageMenuStore = defineStore('pageMenu', {
         this.loading = false;
       }
     },
-    
+
     async moveMenuUp(menuId: number) {
       if (!this.conferenceId) return;
-      
+
       try {
         this.loading = true;
         this.error = null;
-        
+
         const response = await apiService.patch<ApiResponse<PageMenu[]>>(
-          `/v1/conferences/${this.conferenceId}/menus/${menuId}/position`,
+          `/v1/conference-management/conferences/${this.conferenceId}/menus/${menuId}/position`,
           { direction: 'up' }
         );
-        
+
         this.menus = response.data.payload;
         this.sortMenusByOrder();
       } catch (error: any) {
@@ -391,19 +391,19 @@ export const usePageMenuStore = defineStore('pageMenu', {
         this.loading = false;
       }
     },
-    
+
     async moveMenuDown(menuId: number) {
       if (!this.conferenceId) return;
-      
+
       try {
         this.loading = true;
         this.error = null;
-        
+
         const response = await apiService.patch<ApiResponse<PageMenu[]>>(
-          `/v1/conferences/${this.conferenceId}/menus/${menuId}/position`,
+          `/v1/conference-management/conferences/${this.conferenceId}/menus/${menuId}/position`,
           { direction: 'down' }
         );
-        
+
         this.menus = response.data.payload;
         this.sortMenusByOrder();
       } catch (error: any) {
@@ -412,32 +412,32 @@ export const usePageMenuStore = defineStore('pageMenu', {
         this.loading = false;
       }
     },
-    
+
     async deleteMenu(menuId: number) {
       if (!this.conferenceId) return false;
-      
+
       try {
         this.loading = true;
         this.error = null;
-        
-        await apiService.delete(`/v1/conferences/${this.conferenceId}/menus/${menuId}`);
-        
+
+        await apiService.delete(`/v1/conference-management/conferences/${this.conferenceId}/menus/${menuId}`);
+
         this.menus = this.menus.filter(m => m.id !== menuId);
-        
+
         if (this.selectedMenu && this.selectedMenu.id === menuId) {
           this.selectedMenu = this.menus.length > 0 ? this.menus[0] : null;
-          
+
           if (this.selectedMenu) {
             await this.fetchMenu(this.selectedMenu.id);
           }
         }
-        
+
         // Clean up pagination state for deleted menu
         delete this.pageDataLoading[menuId];
         delete this.pageDataHasMore[menuId];
         delete this.pageDataCurrentPage[menuId];
         delete this.pageDataTotalPages[menuId];
-        
+
         return true;
       } catch (error: any) {
         this.error = error.response?.data?.message || 'Failed to delete menu';
@@ -446,30 +446,30 @@ export const usePageMenuStore = defineStore('pageMenu', {
         this.loading = false;
       }
     },
-    
+
     async createPageData(menuId: number, pageData: PageDataStoreRequest) {
       if (!this.conferenceId) return null;
-      
+
       try {
         this.loading = true;
         this.error = null;
-        
+
         const response = await apiService.post<PageDataResponse>(
-          `/v1/conferences/${this.conferenceId}/menus/${menuId}/data`,
+          `/v1/conference-management/conferences/${this.conferenceId}/menus/${menuId}/data`,
           pageData
         );
-        
+
         const newPageData = response.data.payload;
-        
+
         const menu = this.menus.find(m => m.id === menuId);
         if (menu && menu.page_data) {
           menu.page_data.push(newPageData);
           menu.page_data.sort((a, b) => a.order - b.order);
         }
-        
+
         // Optionally refresh the full menu to ensure consistency
         await this.fetchMenu(menuId);
-        
+
         return newPageData;
       } catch (error: any) {
         this.error = error.response?.data?.message || 'Failed to create page data';
@@ -478,21 +478,21 @@ export const usePageMenuStore = defineStore('pageMenu', {
         this.loading = false;
       }
     },
-    
+
     async updatePageData(menuId: number, dataId: number, pageData: PageDataUpdateRequest) {
       if (!this.conferenceId) return null;
-      
+
       try {
         this.loading = true;
         this.error = null;
-        
+
         const response = await apiService.put<PageDataResponse>(
-          `/v1/conferences/${this.conferenceId}/menus/${menuId}/data/${dataId}`,
+          `/v1/conference-management/conferences/${this.conferenceId}/menus/${menuId}/data/${dataId}`,
           pageData
         );
-        
+
         const updatedPageData = response.data.payload;
-        
+
         const menu = this.menus.find(m => m.id === menuId);
         if (menu && menu.page_data) {
           const index = menu.page_data.findIndex(pd => pd.id === dataId);
@@ -501,7 +501,7 @@ export const usePageMenuStore = defineStore('pageMenu', {
             menu.page_data.sort((a, b) => a.order - b.order);
           }
         }
-        
+
         return updatedPageData;
       } catch (error: any) {
         this.error = error.response?.data?.message || 'Failed to update page data';
@@ -510,26 +510,26 @@ export const usePageMenuStore = defineStore('pageMenu', {
         this.loading = false;
       }
     },
-    
+
     async movePageDataUp(menuId: number, dataId: number) {
       if (!this.conferenceId) return;
-      
+
       try {
         this.loading = true;
         this.error = null;
-        
+
         const response = await apiService.patch<ApiResponse<PageData[]>>(
-          `/v1/conferences/${this.conferenceId}/menus/${menuId}/data/${dataId}/position`,
+          `/v1/conference-management/conferences/${this.conferenceId}/menus/${menuId}/data/${dataId}/position`,
           { direction: 'up' }
         );
-        
+
         const updatedPageData = response.data.payload;
         const menu = this.menus.find(m => m.id === menuId);
-        if (menu) {
+        if (menu && menu.page_data) {
           menu.page_data = updatedPageData;
           menu.page_data.sort((a, b) => a.order - b.order);
         }
-        if (this.selectedMenu && this.selectedMenu.id === menuId) {
+        if (this.selectedMenu && this.selectedMenu.id === menuId && this.selectedMenu.page_data) {
           this.selectedMenu.page_data = updatedPageData;
         }
       } catch (error: any) {
@@ -538,26 +538,26 @@ export const usePageMenuStore = defineStore('pageMenu', {
         this.loading = false;
       }
     },
-    
+
     async movePageDataDown(menuId: number, dataId: number) {
       if (!this.conferenceId) return;
-      
+
       try {
         this.loading = true;
         this.error = null;
-        
+
         const response = await apiService.patch<ApiResponse<PageData[]>>(
-          `/v1/conferences/${this.conferenceId}/menus/${menuId}/data/${dataId}/position`,
+          `/v1/conference-management/conferences/${this.conferenceId}/menus/${menuId}/data/${dataId}/position`,
           { direction: 'down' }
         );
-        
+
         const updatedPageData = response.data.payload;
         const menu = this.menus.find(m => m.id === menuId);
-        if (menu) {
+        if (menu && menu.page_data) {
           menu.page_data = updatedPageData;
           menu.page_data.sort((a, b) => a.order - b.order);
         }
-        if (this.selectedMenu && this.selectedMenu.id === menuId) {
+        if (this.selectedMenu && this.selectedMenu.id === menuId && this.selectedMenu.page_data) {
           this.selectedMenu.page_data = updatedPageData;
         }
       } catch (error: any) {
@@ -566,23 +566,23 @@ export const usePageMenuStore = defineStore('pageMenu', {
         this.loading = false;
       }
     },
-    
+
     async deletePageData(menuId: number, dataId: number) {
       if (!this.conferenceId) return false;
-      
+
       try {
         this.loading = true;
         this.error = null;
-        
         await apiService.delete(
-          `/v1/conferences/${this.conferenceId}/menus/${menuId}/data/${dataId}`
+          `/v1/conference-management/conferences/${this.conferenceId}/menus/${menuId}/data/${dataId}`
         );
-        
+
+
         const menu = this.menus.find(m => m.id === menuId);
         if (menu && menu.page_data) {
           menu.page_data = menu.page_data.filter(pd => pd.id !== dataId);
         }
-        
+
         return true;
       } catch (error: any) {
         this.error = error.response?.data?.message || 'Failed to delete page data';
@@ -591,7 +591,7 @@ export const usePageMenuStore = defineStore('pageMenu', {
         this.loading = false;
       }
     },
-    
+
     resetState() {
       this.conferenceId = null;
       this.menus = [];

@@ -1,5 +1,5 @@
 <template>
-  <div class="site-editor-content p-4">
+  <div class="site-editor-content p-4 ">
     <!-- Content Display -->
     <div 
       v-if="data?.content"

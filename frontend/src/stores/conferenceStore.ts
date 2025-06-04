@@ -72,7 +72,7 @@ export const useConferenceStore = defineStore('conference', {
       this.error = null;
 
       try {
-        const response = await apiService.get<ConferencePaginatedResponse>('/v1/conferences', {
+        const response = await apiService.get<ConferencePaginatedResponse>('/v1/conference-management/conferences', {
           params: filters
         });
 
@@ -94,7 +94,7 @@ export const useConferenceStore = defineStore('conference', {
       this.error = null;
 
       try {
-        const response = await apiService.get<ConferencePaginatedResponse>('/v1/conferences/my', {
+        const response = await apiService.get<ConferencePaginatedResponse>('/v1/conference-management/conferences/my', {
           params: filters
         });
 
@@ -116,7 +116,7 @@ export const useConferenceStore = defineStore('conference', {
       this.error = null;
 
       try {
-        const response = await apiService.get<ConferenceResponse>('/v1/conferences/latest');
+        const response = await apiService.get<ConferenceResponse>('/v1/conference-management/conferences/latest');
         this.latestConference = response.data.payload;
         return response.data;
       } catch (error) {
@@ -134,7 +134,7 @@ export const useConferenceStore = defineStore('conference', {
       this.error = null;
 
       try {
-        const response = await apiService.get<ConferenceResponse>(`/v1/conferences/${id}`);
+        const response = await apiService.get<ConferenceResponse>(`/v1/conference-management/conferences/${id}`);
         const conference = response.data.payload;
 
         const index = this.conferences.findIndex(c => c.id === id);
@@ -159,7 +159,7 @@ export const useConferenceStore = defineStore('conference', {
       this.error = null;
 
       try {
-        const response = await apiService.post<ConferenceResponse>('/v1/conferences', conferenceData);
+        const response = await apiService.post<ConferenceResponse>('/v1/conference-management/conferences', conferenceData);
         const newConference = response.data.payload;
 
         if (newConference.is_latest) {
@@ -183,7 +183,7 @@ export const useConferenceStore = defineStore('conference', {
       this.error = null;
 
       try {
-        const response = await apiService.put<ConferenceResponse>(`/v1/conferences/${id}`, conferenceData);
+        const response = await apiService.put<ConferenceResponse>(`/v1/conference-management/conferences/${id}`, conferenceData);
         const updatedConference = response.data.payload;
 
         const index = this.conferences.findIndex(c => c.id === id);
@@ -212,7 +212,7 @@ export const useConferenceStore = defineStore('conference', {
       this.error = null;
 
       try {
-        const response = await apiService.patch<ConferenceResponse>(`/v1/conferences/${id}/status`, statusData);
+        const response = await apiService.patch<ConferenceResponse>(`/v1/conference-management/conferences/${id}/status`, statusData);
         const updatedConference = response.data.payload;
 
         const index = this.conferences.findIndex(c => c.id === id);
@@ -243,7 +243,7 @@ export const useConferenceStore = defineStore('conference', {
       this.error = null;
 
       try {
-        const response = await apiService.delete(`/v1/conferences/${id}`);
+        const response = await apiService.delete(`/v1/conference-management/conferences/${id}`);
 
         this.conferences = this.conferences.filter(c => c.id !== id);
 
@@ -278,7 +278,7 @@ export const useConferenceStore = defineStore('conference', {
       this.currentPublicConference = null;
 
       try {
-        const response = await apiService.get<{ payload: Conference }>(`/v1/public/conferences/${slug}`);
+        const response = await apiService.get<{ payload: Conference }>(`/v1/conferences/${slug}`);
         this.currentPublicConference = response.data.payload;
         return this.currentPublicConference;
       } catch (error) {

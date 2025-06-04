@@ -1,34 +1,36 @@
 <template>
-  <div class="min-h-screen">
-    <div class="max-w-7xl mx-auto px-1 py-1">
+  <div class="min-h-screen  ">
+    <div class="max-w-7xl mx-auto">
 
       <!-- Loading State -->
-      <div v-if="publicConferenceLoading" class="flex flex-col items-center justify-center min-h-[60vh] space-y-1">
-        <Card class="w-full max-w-md mx-auto">
+      <div v-if="publicConferenceLoading" class="flex items-center justify-center min-h-screen">
+        <Card class="w-full max-w-sm border-0 shadow-xl bg-white/80 backdrop-blur-sm">
           <template #content>
-            <div class="flex flex-col items-center space-y-1 p-1">
-              <ProgressSpinner class="w-12 h-12" strokeWidth="3" />
-              <p class="text-lg font-medium">Loading conference...</p>
+            <div class="flex flex-col items-center space-y-4">
+              <ProgressSpinner class="w-10 h-10 text-blue-600" strokeWidth="3" />
+              <p class="text-lg font-semibold text-slate-700">Loading conference...</p>
             </div>
           </template>
         </Card>
       </div>
 
       <!-- Error State -->
-      <div v-else-if="publicConferenceError" class="flex flex-col items-center justify-center min-h-[60vh] space-y-1">
-        <Card class="w-full max-w-md text-center">
+      <div v-else-if="publicConferenceError" class="flex items-center justify-center min-h-screen px-4">
+        <Card class="w-full max-w-md border-0 shadow-xl bg-white/90 backdrop-blur-sm">
           <template #content>
-            <div class="flex flex-col items-center space-y-1 p-1">
+            <div class="flex flex-col items-center space-y-4 p-8 text-center">
               <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
-                <i class="pi pi-exclamation-triangle text-2xl text-red-600"></i>
+                <i class="pi pi-exclamation-triangle text-2xl text-red-500"></i>
               </div>
-              <h2 class="text-2xl font-bold text-gray-900">Something went wrong</h2>
-              <p class="text-gray-600">{{ publicConferenceError }}</p>
+              <div>
+                <h2 class="text-xl font-bold text-slate-800 mb-2">Something went wrong</h2>
+                <p class="text-slate-600">{{ publicConferenceError }}</p>
+              </div>
               <Button
                 label="Try Again"
                 @click="loadConferenceData"
-                class="mt-1"
                 icon="pi pi-refresh"
+                class="bg-blue-600 hover:bg-blue-700 border-blue-600 px-6"
               />
             </div>
           </template>
@@ -36,215 +38,247 @@
       </div>
 
       <!-- Main Content -->
-      <div v-else-if="currentPublicConference" class="space-y-1">
+      <div v-else-if="currentPublicConference" class="min-h-screen">
 
-        <!-- Conference Header -->
-        <div class="bg-white rounded-lg shadow-sm p-2">
-          <div class="px-1 py-1 text-center">
-            <h1 class="text-4xl font-bold text-gray-900 mb-1">{{ currentPublicConference.title }}</h1>
-            <div class="flex flex-col sm:flex-row items-center justify-center space-y-1 sm:space-y-0 sm:space-x-8 text-gray-600">
-              <div class="flex items-center space-x-1">
-                <i class="pi pi-map-marker text-primary"></i>
-                <span>{{ currentPublicConference.location }}</span>
+        <div class="relative overflow-hidden" :style="{ background: `linear-gradient(to right, ${currentPublicConference?.primary_color || '#1E3A8A'}, ${currentPublicConference?.secondary_color || '#6B7280'})` }">
+          <div class="absolute inset-0 bg-black/20"></div>
+          <div class="relative max-w-7xl mx-auto px-4 py-16 lg:py-24">
+            <div class="text-center text-white">
+              <h1 class="text-4xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">
+                {{ currentPublicConference.title }}
+              </h1>
+              <div class="flex flex-col lg:flex-row items-center justify-center space-y-4 lg:space-y-0 lg:space-x-12 mb-8">
+                <div class="flex items-center space-x-3 text-lg">
+                  <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                    <i class="pi pi-map-marker text-white"></i>
+                  </div>
+                  <span class="font-medium">{{ currentPublicConference.location }}</span>
+                </div>
+                <div class="flex items-center space-x-3 text-lg">
+                  <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                    <i class="pi pi-calendar text-white"></i>
+                  </div>
+                  <span class="font-medium">
+                    {{ formatDate(currentPublicConference.start_date) }} - {{ formatDate(currentPublicConference.end_date) }}
+                  </span>
+                </div>
               </div>
-              <div class="flex items-center space-x-1">
-                <i class="pi pi-calendar text-primary"></i>
-                <span>
-                  {{ formatDate(currentPublicConference.start_date) }} - {{ formatDate(currentPublicConference.end_date) }}
-                </span>
-              </div>
+              <p v-if="currentPublicConference.description" 
+                class="text-xl text-blue-100 max-w-4xl mx-auto leading-relaxed">
+                {{ currentPublicConference.description }}
+              </p>
             </div>
-            <div v-if="currentPublicConference.description" class="mt-1 text-gray-700 max-w-3xl mx-auto">
-              <p>{{ currentPublicConference.description }}</p>
-            </div>
+          </div>
+          
+          <!-- Decorative Elements -->
+          <div class="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+            <div class="absolute -top-24 -right-24 w-96 h-96 bg-white/5 rounded-full"></div>
+            <div class="absolute -bottom-32 -left-32 w-80 h-80 bg-white/3 rounded-full"></div>
           </div>
         </div>
 
-        <!-- Mobile Menu Toggle -->
-        <div class="lg:hidden bg-white rounded-lg shadow-sm p-4 mb-4">
-          <Button
-            :icon="isMobileMenuOpen ? 'pi pi-times' : 'pi pi-bars'"
-            :label="isMobileMenuOpen ? 'Close Menu' : 'Open Menu'"
-            @click="toggleMobileMenu"
-            class="w-full"
-            outlined
-          />
-        </div>
-
-        <!-- Navigation & Content Layout -->
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-1">
-
-
-          <!-- Sidebar Navigation -->
-          <div class="lg:col-span-1">
-            <div 
-              :class="[
-                'bg-white rounded-lg shadow-sm p-1 transition-transform duration-300 ease-in-out',
-                'lg:sticky lg:top-1',
-                'lg:transform-none lg:translate-x-0',
-                isMobileMenuOpen 
-                  ? 'fixed top-0 left-0 h-full w-80 max-w-[90vw] z-50 transform translate-x-0 overflow-y-auto' 
-                  : 'fixed top-0 left-0 h-full w-80 max-w-[90vw] z-50 transform -translate-x-full overflow-y-auto lg:relative lg:w-auto lg:h-auto'
-              ]"
-            >
-              <!-- Mobile Menu Header -->
-              <div class="lg:hidden flex items-center justify-between p-4 border-b border-gray-200 mb-4">
-                <h2 class="text-lg font-semibold text-gray-900">Navigation</h2>
-                <Button
-                  icon="pi pi-times"
-                  @click="closeMobileMenu"
-                  text
-                  class="p-2"
-                  aria-label="Close Menu"
-                />
+        <!-- Navigation & Content -->
+        <div class="flex min-h-[calc(100vh-280px)]">
+          
+          <!-- Sidebar -->
+          <div class="hidden lg:block w-80 bg-white border-r border-slate-200">
+            <div class="sticky top-0 h-screen overflow-y-auto">
+              <div class="p-3 border-b border-slate-100 bg-slate-50">
+                <h2 class="text-sm font-medium text-slate-600 flex items-center gap-2">
+                  <i class="pi pi-list text-xs text-blue-500"></i>
+                  Pages
+                </h2>
               </div>
 
-              <h2 class="text-lg font-semibold text-gray-900 mb-1 flex items-center">
-                <i class="pi pi-list mr-1 text-primary p-4"></i>
-                Pages
-              </h2>
-
-              <div v-if="pagesLoading" class="flex flex-col items-center space-y-1 py-1">
-                <ProgressSpinner class="w-6 h-6" strokeWidth="4" />
-                <p class="text-sm text-gray-600">Loading pages...</p>
+              <div v-if="pagesLoading" class="flex flex-col items-center justify-center py-12">
+                <ProgressSpinner class="w-8 h-8 text-blue-600 mb-3" strokeWidth="4" />
+                <p class="text-sm text-slate-500">Loading pages...</p>
               </div>
 
-              <nav v-else-if="sortedPages?.length > 0" class="space-y-1">
+              <nav v-else-if="sortedPages?.length > 0" class="p-3">
                 <button
                   v-for="page in sortedPages"
                   :key="page.id"
                   @click="selectPage(page)"
                   :class="[
-                    'w-full text-left px-3 py-3 transition-colors duration-200 cursor-pointer block',
+                    'w-full text-left p-4 mb-1 transition-all duration-200 group',
                     activePageId === page.id
-                      ? 'bg-primary-50 text-primary-700 border-l-4 border-primary-600'
-                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                      ? 'bg-blue-50 text-blue-700 shadow-sm border-l-4 border-blue-500'
+                      : 'text-slate-700 hover:bg-slate-50 hover:shadow-sm'
                   ]"
                 >
-                  <div class="flex items-center space-x-1">
-                    <i class="pi pi-file text-xs"></i>
-                    <span>{{ page.title }}</span>
+                  <div class="flex items-center gap-3">
+                    <i class="pi pi-file-o text-sm opacity-70 group-hover:opacity-100"></i>
+                    <span class="font-medium">{{ page.title }}</span>
                   </div>
                 </button>
               </nav>
 
-              <div v-else class="text-center py-1">
-                <div class="flex flex-col items-center space-y-1">
-                  <i class="pi pi-inbox text-3xl text-gray-400"></i>
-                  <p class="text-sm text-gray-600">No pages available</p>
+              <div v-else class="flex flex-col items-center justify-center py-16">
+                <i class="pi pi-inbox text-4xl text-slate-300 mb-4"></i>
+                <p class="text-slate-500">No pages available</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mobile Menu Button -->
+          <div class="lg:hidden fixed bottom-6 right-6 z-50">
+            <Button
+              :icon="isMobileMenuOpen ? 'pi pi-times' : 'pi pi-bars'"
+              @click="toggleMobileMenu"
+              class="w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 border-blue-600 shadow-lg"
+              aria-label="Toggle Menu"
+            />
+          </div>
+
+          <!-- Mobile Sidebar Overlay -->
+          <div
+            v-if="isMobileMenuOpen"
+            class="lg:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+            @click="closeMobileMenu"
+          ></div>
+
+          <!-- Mobile Sidebar -->
+          <div
+            :class="[
+              'lg:hidden fixed top-0 left-0 h-full w-80 max-w-[90vw] z-50 bg-white shadow-2xl transform transition-transform duration-300',
+              isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+            ]"
+          >
+            <div class="h-full overflow-y-auto">
+              <div class="p-4 border-b border-slate-100 bg-gradient-to-r from-blue-600 to-purple-600">
+                <div class="flex items-center justify-between text-white">
+                  <h2 class="text-lg font-semibold">Navigation</h2>
+                  <Button
+                    icon="pi pi-times"
+                    @click="closeMobileMenu"
+                    text
+                    class="text-white hover:bg-white/20 p-2"
+                    aria-label="Close Menu"
+                  />
+                </div>
+              </div>
+
+              <div class="p-3">
+                <h3 class="text-sm font-medium text-slate-600 mb-3 px-3 flex items-center gap-2">
+                  <i class="pi pi-list text-xs text-blue-500"></i>
+                  Pages
+                </h3>
+
+                <div v-if="pagesLoading" class="flex flex-col items-center justify-center py-8">
+                  <ProgressSpinner class="w-8 h-8 text-blue-600 mb-3" strokeWidth="4" />
+                  <p class="text-sm text-slate-500">Loading pages...</p>
+                </div>
+
+                <nav v-else-if="sortedPages?.length > 0">
+                  <button
+                    v-for="page in sortedPages"
+                    :key="page.id"
+                    @click="selectPage(page)"
+                    :class="[
+                      'w-full text-left p-4 mb-1 transition-all duration-200',
+                      activePageId === page.id
+                        ? 'bg-blue-50 text-blue-700 shadow-sm border-l-4 border-blue-500'
+                        : 'text-slate-700 hover:bg-slate-50'
+                    ]"
+                  >
+                    <div class="flex items-center gap-3">
+                      <i class="pi pi-file-o text-sm opacity-70"></i>
+                      <span class="font-medium">{{ page.title }}</span>
+                    </div>
+                  </button>
+                </nav>
+
+                <div v-else class="flex flex-col items-center justify-center py-12">
+                  <i class="pi pi-inbox text-4xl text-slate-300 mb-3"></i>
+                  <p class="text-slate-500 text-sm">No pages available</p>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Main Content Area -->
-          <div class="lg:col-span-3 space-y-1">
+          <!-- Main Content -->
+          <div class="flex-1 bg-slate-50">
+            <div class="">
 
-            <!-- Page Loading State -->
-            <div v-if="pageDataLoading" class="bg-white rounded-lg shadow-sm">
-              <div class="flex flex-col items-center justify-center space-y-1 p-1">
-                <ProgressSpinner class="w-8 h-8" strokeWidth="3" />
-                <p class="text-lg font-medium">Loading page content...</p>
+              <!-- Page Loading State -->
+              <div v-if="pageDataLoading" class="flex items-center justify-center py-20">
+                <div class="text-center">
+                  <ProgressSpinner class="w-10 h-10 text-blue-600 mb-4" strokeWidth="3" />
+                  <p class="text-lg font-medium text-slate-700">Loading page content...</p>
+                </div>
               </div>
-            </div>
 
-            <!-- Active Page Header -->
-            <div v-else-if="activePage" class="p-4 bg-white rounded-lg shadow-sm">
-              <div class="px-1 py-1">
-                <div class="flex items-start justify-between">
-                  <div class="flex-1">
-                    <h2 class="text-3xl font-bold text-gray-900 mb-1">{{ activePage.title }}</h2>
-                    <div class="flex items-center space-x-1 text-sm text-gray-500">
-                      <span class="flex items-center space-x-1">
-                        <i class="pi pi-clock"></i>
-                        <span>Last updated {{ formatDate(activePage.updated_at || activePage.created_at) }}</span>
-                      </span>
+            
+              <!-- Page Components -->
+              <div v-if="activePage?.page_data?.length" class="space-y-1">
+                <div
+                  v-for="(pageData, index) in publishedPageData"
+                  :key="pageData.id"
+                  class="border-0 shadow-sm bg-white overflow-hidden"
+                >
+                 
+                    <div class="">
+                      <!-- Dynamic Component Rendering -->
+                      <component
+                        :is="getPublicComponent(pageData.component_type)"
+                        :data="pageData.data"
+                        :component-name="pageData.tag"
+                        :conference-id="currentPublicConference.id"
+                        v-if="getPublicComponent(pageData.component_type)"
+                      />
+
+                      <!-- Fallback for unknown component types -->
+                      <div v-else class="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-8 border-2 border-dashed border-slate-300">
+                        <div class="text-center">
+                          <i class="pi pi-code text-3xl text-slate-400 mb-4"></i>
+                          <h3 class="text-xl font-semibold text-slate-800 mb-2">Unknown Component</h3>
+                          <p class="text-slate-600 mb-4">Component type "{{ pageData.component_type }}" is not recognized.</p>
+                          <details class="text-left max-w-2xl mx-auto">
+                            <summary class="cursor-pointer text-sm text-slate-500 hover:text-slate-700 font-medium">View Raw Data</summary>
+                            <pre class="mt-3 p-4 bg-white rounded-lg border text-xs overflow-x-auto text-slate-700">{{ JSON.stringify(pageData.data, null, 2) }}</pre>
+                          </details>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div class="flex items-center space-x-1">
-                    <Chip
-                      :label="`Page ${activePage.order || 1}`"
-                      class="bg-primary-100 text-primary-800"
-                    />
-                  </div>
-                </div>
               </div>
-            </div>
 
-            <!-- Welcome/Default State -->
-            <div v-else class="bg-white rounded-lg shadow-sm">
-              <div class="text-center space-y-1 p-1">
-                <div class="w-20 h-20 bg-primary-100 rounded-full flex items-center justify-center mx-auto">
-                  <i class="pi pi-home text-3xl text-primary-600"></i>
-                </div>
-                <div>
-                  <h2 class="text-3xl font-bold text-gray-900 mb-1">
-                    Welcome to {{ currentPublicConference.title }}
-                  </h2>
-                  <p v-if="pagesLoading" class="text-gray-600">Loading pages...</p>
-                  <p v-else-if="sortedPages?.length" class="text-gray-600">
-                    Select a page from the sidebar to view its content.
-                  </p>
-                  <p v-else class="text-gray-600">No pages are available for this conference yet.</p>
-                </div>
-                <div v-if="sortedPages?.length" class="flex flex-wrap gap-1 justify-center">
-                  <Button
-                    v-for="page in sortedPages.slice(0, 3)"
-                    :key="page.id"
-                    :label="page.title"
-                    @click="selectPage(page)"
-                    outlined
-                    size="small"
-                    class="rounded-full"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <!-- Page Components -->
-            <template v-if="activePage?.page_data?.length">
-              <div
-                v-for="(pageData, index) in publishedPageData"
-                :key="pageData.id"
-                class="bg-white rounded-lg shadow-sm overflow-hidden"
-              >
-                <div class="p-1">
-                  <!-- Dynamic Component Rendering -->
-                  <component
-                    :is="getPublicComponent(pageData.component_type)"
-                    :data="pageData.data"
-                    :component-name="pageData.tag"
-                    :conference-id="currentPublicConference.id"
-                    v-if="getPublicComponent(pageData.component_type)"
-                  />
-
-                  <!-- Fallback for unknown component types -->
-                  <div v-else class="bg-gray-50 rounded-lg p-1 border-2 border-dashed border-gray-300">
-                    <div class="text-center">
-                      <i class="pi pi-code text-2xl text-gray-400 mb-1"></i>
-                      <h3 class="text-lg font-medium text-gray-900 mb-1">Unknown Component</h3>
-                      <p class="text-gray-600 mb-1">Component type "{{ pageData.component_type }}" is not recognized.</p>
-                      <details class="text-left">
-                        <summary class="cursor-pointer text-sm text-gray-500 hover:text-gray-700">View Raw Data</summary>
-                        <pre class="mt-1 p-1 bg-white rounded border text-xs overflow-x-auto">{{ JSON.stringify(pageData.data, null, 2) }}</pre>
-                      </details>
+              <!-- Empty Page State -->
+              <div v-else-if="activePage && !activePage.page_data?.length && !pageDataLoading" class="flex items-center justify-center py-20">
+                <Card class="w-full max-w-md border-0 shadow-sm bg-white">
+                  <template #content>
+                    <div class="text-center p-12">
+                      <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="pi pi-file-o text-2xl text-slate-400"></i>
+                      </div>
+                      <h3 class="text-xl font-semibold text-slate-800 mb-2">No content available</h3>
+                      <p class="text-slate-600">This page doesn't have any content yet.</p>
                     </div>
-                  </div>
-                </div>
+                  </template>
+                </Card>
               </div>
-            </template>
 
-            <!-- Empty Page State -->
-            <div v-else-if="activePage && !activePage.page_data?.length && !pageDataLoading" class="bg-white rounded-lg shadow-sm">
-              <div class="text-center space-y-1 p-1">
-                <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
-                  <i class="pi pi-file-o text-2xl text-gray-400"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="bg-gray-900 text-white mt-16">
+          <div class="max-w-7xl mx-auto px-4 py-12">
+            <div class="text-center">
+              <h3 class="text-2xl font-bold mb-4">{{ currentPublicConference.title }}</h3>
+              <div class="flex flex-col lg:flex-row items-center justify-center space-y-2 lg:space-y-0 lg:space-x-8 text-gray-300">
+                <div class="flex items-center space-x-2">
+                  <i class="pi pi-map-marker"></i>
+                  <span>{{ currentPublicConference.location }}</span>
                 </div>
-                <h3 class="text-xl font-semibold text-gray-900">No content available</h3>
-                <p class="text-gray-600">This page doesn't have any content yet.</p>
+                <div class="flex items-center space-x-2">
+                  <i class="pi pi-calendar"></i>
+                  <span>{{ formatDate(currentPublicConference.start_date) }} - {{ formatDate(currentPublicConference.end_date) }}</span>
+                </div>
               </div>
             </div>
-
           </div>
         </div>
       </div>
@@ -259,7 +293,7 @@ import { useConferenceStore } from '@/stores/conferenceStore';
 import { storeToRefs } from 'pinia';
 import apiService from '@/services/apiService';
 import { getComponentDefinition } from '@/utils/componentRegistry';
-import type { Conference } from '@/types/conference'; // Import Conference type for direct API call
+import type { Conference } from '@/types/conference';
 import type { PageMenu } from '@/types/pageMenu';
 
 interface ComponentData {
@@ -328,12 +362,10 @@ export default defineComponent({
   },
   async mounted() {
     await this.loadConferenceData();
-    // Add event listener for window resize to close mobile menu
     window.addEventListener('resize', this.handleResize);
   },
   beforeUnmount() {
     this.conferenceStore.clearCurrentPublicConference();
-    // Remove event listener
     window.removeEventListener('resize', this.handleResize);
   },
   watch: {
@@ -345,7 +377,7 @@ export default defineComponent({
     },
     pageSlug: {
       handler: 'handlePageSlugChange',
-      immediate: true // Ensure it runs on initial load and when pageSlug becomes empty
+      immediate: true
     },
     currentPublicConference: {
       async handler(newConference, oldConference) {
@@ -369,10 +401,14 @@ export default defineComponent({
     },
 
     handleResize() {
-      // Close mobile menu on desktop breakpoint
       if (window.innerWidth >= 1024) {
         this.isMobileMenuOpen = false;
       }
+    },
+
+    getPageIndex(pageId: number): number {
+      const index = this.sortedPages.findIndex(page => page.id === pageId);
+      return index !== -1 ? index + 1 : 1;
     },
 
     async loadConferenceData(): Promise<void> {
@@ -386,7 +422,7 @@ export default defineComponent({
       if (!slugToLoad) {
         this.conferenceStore.publicConferenceLoading = true;
         try {
-          const latestResponse = await apiService.get<{ payload: Conference }>('/v1/public/conferences?latest=1');
+          const latestResponse = await apiService.get<{ payload: Conference }>('/v1/conferences?latest=1');
           const latestConference = latestResponse.data.payload;
 
           if (latestConference?.slug) {
@@ -437,7 +473,7 @@ export default defineComponent({
       this.activePage = null;
       this.activePageId = null;
       try {
-        const response = await apiService.get<{ payload: PageMenu[] }>(`/v1/public/conferences/${conferenceSlug}/pages`);
+        const response = await apiService.get<{ payload: PageMenu[] }>(`/v1/conferences/${conferenceSlug}/pages`);
         this.pages = response.data.payload;
 
         if (this.pageSlug) {
@@ -509,12 +545,11 @@ export default defineComponent({
       this.pageDataLoading = true;
       this.activePage = null;
 
-      // Close mobile menu when page is selected
       this.closeMobileMenu();
 
       try {
         const response = await apiService.get<{ payload: PageMenu }>(
-          `/v1/public/conferences/${this.currentPublicConference.slug}/pages/${page.slug}`
+          `/v1/conferences/${this.currentPublicConference.slug}/pages/${page.slug}`
         );
         this.activePage = response.data.payload;
 
@@ -536,38 +571,35 @@ export default defineComponent({
     },
 
     getPublicComponent(componentType: string) {
-      // Check if component is already loaded
       if (this.loadedComponents.has(componentType)) {
         return this.loadedComponents.get(componentType);
       }
 
-      // Get component definition
       const definition = getComponentDefinition(componentType);
       if (!definition) {
         return null;
       }
 
-      // Create async component
       const asyncComponent = defineAsyncComponent({
         loader: definition.public,
         loadingComponent: {
           template: `
-            <div class="flex items-center justify-center p-1">
-              <div class="flex items-center space-x-1">
-                <i class="pi pi-spin pi-spinner text-primary-600"></i>
-                <span class="text-gray-600">Loading component...</span>
+            <div class="flex items-center justify-center p-8">
+              <div class="flex items-center space-x-3">
+                <i class="pi pi-spin pi-spinner text-blue-600 text-lg"></i>
+                <span class="text-slate-600 font-medium">Loading component...</span>
               </div>
             </div>
           `
         },
         errorComponent: {
           template: `
-            <div class="bg-red-50 border border-red-200 rounded-lg p-1">
-              <div class="flex items-center space-x-1 text-red-800">
-                <i class="pi pi-exclamation-triangle"></i>
-                <span class="font-medium">Failed to load component</span>
+            <div class="bg-red-50 border border-red-200 rounded-xl p-6">
+              <div class="flex items-center space-x-3 text-red-800 mb-2">
+                <i class="pi pi-exclamation-triangle text-lg"></i>
+                <span class="font-semibold">Failed to load component</span>
               </div>
-              <p class="text-red-700 text-sm mt-1">Component type: {{ componentType }}</p>
+              <p class="text-red-700 text-sm">Component type: {{ componentType }}</p>
             </div>
           `,
           props: ['componentType']
@@ -576,7 +608,6 @@ export default defineComponent({
         timeout: 10000
       });
 
-      // Cache the component
       this.loadedComponents.set(componentType, asyncComponent);
       return asyncComponent;
     },

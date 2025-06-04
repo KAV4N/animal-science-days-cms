@@ -1,5 +1,5 @@
 <template name="GalleryPublic">
-  <div class="gallery-container p-4" :class="`spacing-${galleryData.spacing}`">
+  <div class="gallery-container p-4 " :class="`spacing-${galleryData.spacing}` ">
     <!-- Gallery Header -->
     <div v-if="galleryData.title || galleryData.description" class="gallery-header mb-6 text-center">
       <h2 v-if="galleryData.title" class="text-3xl font-bold mb-4">

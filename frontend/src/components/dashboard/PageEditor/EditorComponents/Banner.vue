@@ -23,50 +23,6 @@
           />
         </div>
 
-        <!-- Copy/Paste Settings -->
-        <Card>
-          <template #title>
-            <h4 class="text-lg font-semibold">Settings Management</h4>
-          </template>
-          <template #content>
-            <div class="flex flex-wrap gap-3 p-0">
-              <Button
-                label="Copy Settings"
-                icon="pi pi-copy"
-                @click="copySettings"
-                outlined
-                size="small"
-                :disabled="!hasValidSettings"
-              />
-              <Button
-                label="Paste Settings"
-                icon="pi pi-clipboard"
-                @click="pasteSettings"
-                outlined
-                size="small"
-                :disabled="!canPaste"
-              />
-              <Button
-                label="Reset to Default"
-                icon="pi pi-refresh"
-                @click="resetToDefault"
-                outlined
-                severity="secondary"
-                size="small"
-              />
-            </div>
-            <div class="mt-3 text-sm text-gray-600">
-              <p v-if="copiedSettingsInfo">
-                <i class="pi pi-check-circle text-green-500 mr-1"></i>
-                {{ copiedSettingsInfo }}
-              </p>
-              <p v-else-if="!hasValidSettings" class="text-gray-400">
-                Configure settings first to enable copying
-              </p>
-            </div>
-          </template>
-        </Card>
-
         <!-- Shape Configuration -->
         <Card>
           <template #title>
@@ -285,6 +241,25 @@
               <!-- Single Color Picker -->
               <div v-if="localBannerData.backgroundType === 'solid'">
                 <h5 class="text-md font-medium mb-3">Shape Color</h5>
+                
+                <!-- Conference Color Presets -->
+                <div v-if="conferenceColors.length > 0" class="mb-4">
+                  <label class="block text-sm font-medium mb-2">Conference Colors</label>
+                  <div class="flex gap-2 flex-wrap">
+                    <button
+                      v-for="color in conferenceColors"
+                      :key="color.value"
+                      @click="useConferenceColor(color.value)"
+                      :class="[
+                        'w-12 h-12 rounded-lg border-2 transition-all duration-200 hover:scale-110',
+                        localBannerData.color === color.value ? 'border-gray-800 ring-2 ring-blue-500' : 'border-gray-300 hover:border-gray-500'
+                      ]"
+                      :style="{ backgroundColor: color.value }"
+                      :title="`Use ${color.label}`"
+                    />
+                  </div>
+                </div>
+
                 <div class="color-picker-container">
                   <div class="color-preview" :style="{ backgroundColor: localBannerData.color }"></div>
                   <TransparentColorPicker 
@@ -300,6 +275,46 @@
               <!-- Dual Color Picker for Gradient -->
               <div v-if="localBannerData.backgroundType === 'gradient'">
                 <h5 class="text-md font-medium mb-3">Gradient Colors</h5>
+                
+                <!-- Conference Color Presets for Gradients -->
+                <div v-if="conferenceColors.length > 0" class="mb-4">
+                  <label class="block text-sm font-medium mb-2">Conference Colors</label>
+                  <div class="grid grid-cols-2 gap-4 mb-3">
+                    <div>
+                      <label class="block text-xs text-gray-600 mb-1">Primary Color</label>
+                      <div class="flex gap-2 flex-wrap">
+                        <button
+                          v-for="color in conferenceColors"
+                          :key="`grad1-${color.value}`"
+                          @click="useConferenceGradientColor(color.value, 1)"
+                          :class="[
+                            'w-8 h-8 rounded border-2 transition-all duration-200 hover:scale-110',
+                            localBannerData.gradientColor1 === color.value ? 'border-gray-800 ring-1 ring-blue-500' : 'border-gray-300 hover:border-gray-500'
+                          ]"
+                          :style="{ backgroundColor: color.value }"
+                          :title="`Use ${color.label} for primary`"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label class="block text-xs text-gray-600 mb-1">Secondary Color</label>
+                      <div class="flex gap-2 flex-wrap">
+                        <button
+                          v-for="color in conferenceColors"
+                          :key="`grad2-${color.value}`"
+                          @click="useConferenceGradientColor(color.value, 2)"
+                          :class="[
+                            'w-8 h-8 rounded border-2 transition-all duration-200 hover:scale-110',
+                            localBannerData.gradientColor2 === color.value ? 'border-gray-800 ring-1 ring-blue-500' : 'border-gray-300 hover:border-gray-500'
+                          ]"
+                          :style="{ backgroundColor: color.value }"
+                          :title="`Use ${color.label} for secondary`"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <DualColorPickerTab
                   :initial-primary-color="localBannerData.gradientColor1"
                   :initial-secondary-color="localBannerData.gradientColor2"
@@ -443,14 +458,12 @@
       @select="handleMediaSelect"
       :conferenceId="conferenceId"
     />
-
-    <!-- Copy/Paste Confirmation Toast -->
-    <Toast ref="toast" />
   </Dialog>
 </template>
 
 <script lang="ts">
 import { defineComponent, type PropType, computed } from 'vue';
+import { useConferenceStore } from '@/stores/conferenceStore';
 import MediaManager from '@/components/dashboard/PageEditor/MediaManager.vue';
 import BannerPublic from '@/components/site/SiteComponents/Banner.vue';
 import TransparentColorPicker from '@/components/dashboard/ConferenceManagement/TransparentColorPicker.vue';
@@ -479,10 +492,9 @@ interface BannerData {
   imageOpacity?: number; // For backward compatibility
 }
 
-interface CopiedSettings {
-  data: BannerData;
-  timestamp: number;
-  version: string;
+interface ConferenceColor {
+  label: string;
+  value: string;
 }
 
 export default defineComponent({
@@ -535,6 +547,10 @@ export default defineComponent({
     }
   },
   emits: ['update:visible', 'save', 'cancel'],
+  setup() {
+    const conferenceStore = useConferenceStore();
+    return { conferenceStore };
+  },
   data() {
     return {
       localComponentName: '',
@@ -562,8 +578,6 @@ export default defineComponent({
       localVisible: false,
       showMediaManager: false,
       currentImageType: '' as 'background' | 'shape',
-      copiedSettings: null as CopiedSettings | null,
-      copiedSettingsInfo: '',
       shapeOptions: [
         { label: 'Wave', value: 'wave' },
         { label: 'Curve', value: 'curve' },
@@ -585,27 +599,7 @@ export default defineComponent({
         { label: 'Bottom to Top', value: 'to top' },
         { label: 'Diagonal ↗', value: '45deg' },
         { label: 'Diagonal ↖', value: '-45deg' }
-      ],
-      defaultSettings: {
-        shapeType: 'wave',
-        position: 'bottom',
-        flipX: false,
-        flipY: false,
-        height: 120,
-        density: 100,
-        color: '#6366f1',
-        backgroundType: 'solid',
-        gradientColor1: '#6366f1',
-        gradientColor2: '#8b5cf6',
-        gradientDirection: 'to right',
-        opacity: 100,
-        blur: false,
-        blurAmount: 5,
-        shapeImage: '',
-        backgroundImage: '',
-        shapeImageOpacity: 100,
-        backgroundImageOpacity: 100
-      } as BannerData
+      ]
     };
   },
   computed: {
@@ -617,12 +611,34 @@ export default defineComponent({
         imageOpacity: this.localBannerData.shapeImageOpacity // For backward compatibility
       };
     },
-    hasValidSettings() {
-      // Check if current settings are different from defaults
-      return JSON.stringify(this.localBannerData) !== JSON.stringify(this.defaultSettings);
-    },
-    canPaste() {
-      return this.copiedSettings !== null;
+
+    conferenceColors(): ConferenceColor[] {
+      const colors: ConferenceColor[] = [];
+      
+      // Get current conference from store
+      const currentConference = this.conferenceStore.conferences.find(c => c.id === this.conferenceId) 
+        || this.conferenceStore.latestConference 
+        || this.conferenceStore.currentPublicConference;
+      
+      if (currentConference) {
+        // Add primary color if it exists
+        if (currentConference.primary_color) {
+          colors.push({
+            label: 'Primary Color',
+            value: currentConference.primary_color
+          });
+        }
+        
+        // Add secondary color if it exists
+        if (currentConference.secondary_color) {
+          colors.push({
+            label: 'Secondary Color',
+            value: currentConference.secondary_color
+          });
+        }
+      }
+      
+      return colors;
     }
   },
   watch: {
@@ -631,7 +647,6 @@ export default defineComponent({
         this.localVisible = newVal;
         if (newVal) {
           this.initializeData();
-          this.loadCopiedSettings();
         }
       },
       immediate: true
@@ -689,91 +704,6 @@ export default defineComponent({
       };
       
       this.localPublished = this.isPublished;
-    },
-
-    // Copy/Paste functionality
-    copySettings() {
-      try {
-        const settingsToCopy: CopiedSettings = {
-          data: { ...this.localBannerData },
-          timestamp: Date.now(),
-          version: '1.0'
-        };
-
-        // Store in session storage for persistence across dialog closes
-        sessionStorage.setItem('bannerEditorCopiedSettings', JSON.stringify(settingsToCopy));
-        this.copiedSettings = settingsToCopy;
-        
-        const shapeLabel = this.getShapeLabel(this.localBannerData.shapeType);
-        this.copiedSettingsInfo = `Copied: ${shapeLabel} shape (${this.localBannerData.height}px height)`;
-        
-        this.showToast('success', 'Settings Copied', 'Shape divider settings have been copied to clipboard.');
-      } catch (error) {
-        console.error('Failed to copy settings:', error);
-        this.showToast('error', 'Copy Failed', 'Failed to copy settings. Please try again.');
-      }
-    },
-
-    pasteSettings() {
-      if (!this.copiedSettings) {
-        this.showToast('warn', 'No Settings', 'No settings available to paste.');
-        return;
-      }
-
-      try {
-        // Create a copy of the settings to avoid reference issues
-        const settingsToPaste = { ...this.copiedSettings.data };
-        
-        // Update local data with copied settings
-        this.localBannerData = settingsToPaste;
-        
-        const shapeLabel = this.getShapeLabel(settingsToPaste.shapeType);
-        this.showToast('success', 'Settings Pasted', `Applied ${shapeLabel} shape configuration.`);
-      } catch (error) {
-        console.error('Failed to paste settings:', error);
-        this.showToast('error', 'Paste Failed', 'Failed to paste settings. Please try again.');
-      }
-    },
-
-    resetToDefault() {
-      this.localBannerData = { ...this.defaultSettings };
-      this.showToast('info', 'Settings Reset', 'All settings have been reset to default values.');
-    },
-
-    loadCopiedSettings() {
-      try {
-        const stored = sessionStorage.getItem('bannerEditorCopiedSettings');
-        if (stored) {
-          const parsedSettings: CopiedSettings = JSON.parse(stored);
-          
-          // Check if settings are less than 24 hours old
-          const twentyFourHours = 24 * 60 * 60 * 1000;
-          if (Date.now() - parsedSettings.timestamp < twentyFourHours) {
-            this.copiedSettings = parsedSettings;
-            const shapeLabel = this.getShapeLabel(parsedSettings.data.shapeType);
-            this.copiedSettingsInfo = `Available: ${shapeLabel} shape (${parsedSettings.data.height}px height)`;
-          } else {
-            // Clear expired settings
-            sessionStorage.removeItem('bannerEditorCopiedSettings');
-            this.copiedSettings = null;
-            this.copiedSettingsInfo = '';
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load copied settings:', error);
-        sessionStorage.removeItem('bannerEditorCopiedSettings');
-      }
-    },
-
-    showToast(severity: string, summary: string, detail: string) {
-      if (this.$refs.toast) {
-        (this.$refs.toast as any).add({
-          severity,
-          summary,
-          detail,
-          life: 3000
-        });
-      }
     },
     
     handleSave() {
@@ -839,6 +769,19 @@ export default defineComponent({
 
     updateGradientColor2(color: string) {
       this.localBannerData.gradientColor2 = color;
+    },
+
+    // Conference color methods
+    useConferenceColor(color: string) {
+      this.localBannerData.color = color;
+    },
+
+    useConferenceGradientColor(color: string, position: 1 | 2) {
+      if (position === 1) {
+        this.localBannerData.gradientColor1 = color;
+      } else {
+        this.localBannerData.gradientColor2 = color;
+      }
     }
   }
 });
@@ -882,29 +825,6 @@ export default defineComponent({
   flex: 1;
 }
 
-/* Copy/Paste button styling */
-.settings-management .p-button {
-  transition: all 0.2s ease;
-}
-
-.settings-management .p-button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.settings-management .p-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* Success/info text styling */
-.settings-info {
-  padding: 8px 12px;
-  border-radius: 6px;
-  background-color: #f0f9ff;
-  border-left: 4px solid #0ea5e9;
-}
-
 /* Mobile responsive adjustments */
 @media (max-width: 768px) {
   .color-picker-container {
@@ -915,15 +835,4 @@ export default defineComponent({
     height: 2.5rem;
     min-width: 180px;
   }
-  
-  .settings-management {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .settings-management .p-button {
-    width: 100%;
-    margin-bottom: 8px;
-  }
-}
-</style>
+}</style>
