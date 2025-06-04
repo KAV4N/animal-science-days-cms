@@ -23,6 +23,50 @@
           />
         </div>
 
+        <!-- Copy/Paste Settings -->
+        <Card>
+          <template #title>
+            <h4 class="text-lg font-semibold">Settings Management</h4>
+          </template>
+          <template #content>
+            <div class="flex flex-wrap gap-3 p-0">
+              <Button
+                label="Copy Settings"
+                icon="pi pi-copy"
+                @click="copySettings"
+                outlined
+                size="small"
+                :disabled="!hasValidSettings"
+              />
+              <Button
+                label="Paste Settings"
+                icon="pi pi-clipboard"
+                @click="pasteSettings"
+                outlined
+                size="small"
+                :disabled="!canPaste"
+              />
+              <Button
+                label="Reset to Default"
+                icon="pi pi-refresh"
+                @click="resetToDefault"
+                outlined
+                severity="secondary"
+                size="small"
+              />
+            </div>
+            <div class="mt-3 text-sm text-gray-600">
+              <p v-if="copiedSettingsInfo">
+                <i class="pi pi-check-circle text-green-500 mr-1"></i>
+                {{ copiedSettingsInfo }}
+              </p>
+              <p v-else-if="!hasValidSettings" class="text-gray-400">
+                Configure settings first to enable copying
+              </p>
+            </div>
+          </template>
+        </Card>
+
         <!-- Shape Configuration -->
         <Card>
           <template #title>
@@ -57,15 +101,17 @@
                 />
               </div>
 
-              <!-- Invert Shape -->
+              <!-- Density (replaces Width) -->
               <div>
-                <div class="flex items-center">
-                  <Checkbox v-model="localBannerData.invert" inputId="invert" binary />
-                  <label for="invert" class="ml-2 text-sm">Invert Shape</label>
-                </div>
-                <p class="text-xs text-gray-500 mt-1">
-                  Automatically adjusts based on position, but can be overridden manually
-                </p>
+                <label for="density" class="block text-sm font-medium mb-2">Shape Density: {{ localBannerData.density }}%</label>
+                <Slider
+                  id="density"
+                  v-model="localBannerData.density"
+                  :min="50"
+                  :max="200"
+                  :step="10"
+                  class="w-full"
+                />
               </div>
 
               <!-- Flip Options -->
@@ -77,119 +123,6 @@
                 <div class="flex items-center">
                   <Checkbox v-model="localBannerData.flipY" inputId="flipY" binary />
                   <label for="flipY" class="ml-2 text-sm">Flip Vertical</label>
-                </div>
-              </div>
-            </div>
-          </template>
-        </Card>
-
-        <!-- Text Configuration -->
-        <Card>
-          <template #title>
-            <h4 class="text-lg font-semibold">Text Configuration</h4>
-          </template>
-          <template #content>
-            <div class="p-0 space-y-4">
-              <!-- Enable Text -->
-              <div class="flex items-center">
-                <Checkbox v-model="localBannerData.enableText" inputId="enableText" binary />
-                <label for="enableText" class="ml-2 text-sm font-medium">Enable Text Overlay</label>
-              </div>
-
-              <!-- Text Settings (shown when text is enabled) -->
-              <div v-if="localBannerData.enableText" class="space-y-4">
-                <!-- Text Content -->
-                <div>
-                  <label for="textContent" class="block text-sm font-medium mb-2">Text Content</label>
-                  <InputText
-                    id="textContent"
-                    v-model="localBannerData.textContent"
-                    class="w-full"
-                    placeholder="Enter your text..."
-                  />
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <!-- Text Size -->
-                  <div>
-                    <label for="textSize" class="block text-sm font-medium mb-2">
-                      Text Size: {{ localBannerData.textSize }}px
-                    </label>
-                    <Slider
-                      id="textSize"
-                      v-model="localBannerData.textSize"
-                      :min="12"
-                      :max="120"
-                      :step="2"
-                      class="w-full"
-                    />
-                  </div>
-
-                  <!-- Text Weight -->
-                  <div>
-                    <label for="textWeight" class="block text-sm font-medium mb-2">Text Weight</label>
-                    <Select
-                      id="textWeight"
-                      v-model="localBannerData.textWeight"
-                      :options="textWeightOptions"
-                      optionLabel="label"
-                      optionValue="value"
-                      placeholder="Select weight"
-                      class="w-full"
-                    />
-                  </div>
-                </div>
-
-                <!-- Text Color -->
-                <div>
-                  <label class="block text-sm font-medium mb-2">Text Color</label>
-                  <div class="color-picker-container">
-                    <div class="color-preview" :style="{ backgroundColor: localBannerData.textColor }"></div>
-                    <TransparentColorPicker 
-                      v-model="localBannerData.textColor"
-                      theme="light"
-                      format="hex"
-                      custom-class="text-color-picker"
-                      @update:modelValue="updateTextColor"
-                    />
-                  </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <!-- Text Alignment -->
-                  <div>
-                    <label for="textAlign" class="block text-sm font-medium mb-2">Text Alignment</label>
-                    <Select
-                      id="textAlign"
-                      v-model="localBannerData.textAlign"
-                      :options="textAlignOptions"
-                      optionLabel="label"
-                      optionValue="value"
-                      placeholder="Select alignment"
-                      class="w-full"
-                    />
-                  </div>
-
-                  <!-- Text Opacity -->
-                  <div>
-                    <label for="textOpacity" class="block text-sm font-medium mb-2">
-                      Text Opacity: {{ localBannerData.textOpacity }}%
-                    </label>
-                    <Slider
-                      id="textOpacity"
-                      v-model="localBannerData.textOpacity"
-                      :min="10"
-                      :max="100"
-                      :step="5"
-                      class="w-full"
-                    />
-                  </div>
-                </div>
-
-                <!-- Text Shadow -->
-                <div class="flex items-center">
-                  <Checkbox v-model="localBannerData.textShadow" inputId="textShadow" binary />
-                  <label for="textShadow" class="ml-2 text-sm">Add Text Shadow</label>
                 </div>
               </div>
             </div>
@@ -409,6 +342,37 @@
           </template>
         </Card>
 
+        <!-- Effects -->
+        <Card>
+          <template #title>
+            <h4 class="text-lg font-semibold">Effects</h4>
+          </template>
+          <template #content>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-0">
+              <!-- Blur Effect -->
+              <div class="flex items-center">
+                <Checkbox v-model="localBannerData.blur" inputId="blur" binary />
+                <label for="blur" class="ml-2 text-sm font-medium">Enable Blur Effect</label>
+              </div>
+
+              <!-- Blur Amount -->
+              <div v-if="localBannerData.blur">
+                <label for="blurAmount" class="block text-sm font-medium mb-2">
+                  Blur Amount: {{ localBannerData.blurAmount }}px
+                </label>
+                <Slider
+                  id="blurAmount"
+                  v-model="localBannerData.blurAmount"
+                  :min="1"
+                  :max="20"
+                  :step="1"
+                  class="w-full"
+                />
+              </div>
+            </div>
+          </template>
+        </Card>
+
         <!-- Published Checkbox -->
         <Card>
           <template #content>
@@ -462,9 +426,8 @@
               </div>
               <div class="mt-3 text-sm text-gray-600 space-y-1">
                 <p><strong>Height:</strong> {{ localBannerData.height }}px</p>
+                <p><strong>Density:</strong> {{ localBannerData.density }}%</p>
                 <p><strong>Shape:</strong> {{ getShapeLabel(localBannerData.shapeType) }}</p>
-                <p><strong>Inverted:</strong> {{ shouldShowInvertStatus ? 'Yes' : 'No' }}</p>
-                <p v-if="localBannerData.enableText"><strong>Text:</strong> {{ localBannerData.textContent || 'No text' }}</p>
               </div>
             </div>
           </template>
@@ -480,6 +443,9 @@
       @select="handleMediaSelect"
       :conferenceId="conferenceId"
     />
+
+    <!-- Copy/Paste Confirmation Toast -->
+    <Toast ref="toast" />
   </Dialog>
 </template>
 
@@ -496,6 +462,7 @@ interface BannerData {
   flipX: boolean;
   flipY: boolean;
   height: number;
+  density: number;
   width?: number; // For backward compatibility
   color: string;
   backgroundType: 'solid' | 'gradient';
@@ -503,20 +470,19 @@ interface BannerData {
   gradientColor2: string;
   gradientDirection: string;
   opacity: number;
+  blur: boolean;
+  blurAmount: number;
   shapeImage: string;
   backgroundImage: string;
   shapeImageOpacity: number;
   backgroundImageOpacity: number;
   imageOpacity?: number; // For backward compatibility
-  invert?: boolean; // New property for manual shape inversion control
-  enableText: boolean;
-  textContent: string;
-  textSize: number;
-  textColor: string;
-  textWeight: string;
-  textAlign: string;
-  textOpacity: number;
-  textShadow: boolean;
+}
+
+interface CopiedSettings {
+  data: BannerData;
+  timestamp: number;
+  version: string;
 }
 
 export default defineComponent({
@@ -544,25 +510,19 @@ export default defineComponent({
         flipX: false,
         flipY: false,
         height: 120,
+        density: 100,
         color: '#6366f1',
         backgroundType: 'solid',
         gradientColor1: '#6366f1',
         gradientColor2: '#8b5cf6',
         gradientDirection: 'to right',
         opacity: 100,
+        blur: false,
+        blurAmount: 5,
         shapeImage: '',
         backgroundImage: '',
         shapeImageOpacity: 100,
-        backgroundImageOpacity: 100,
-        invert: false,
-        enableText: false,
-        textContent: '',
-        textSize: 32,
-        textColor: '#ffffff',
-        textWeight: '600',
-        textAlign: 'center',
-        textOpacity: 100,
-        textShadow: true
+        backgroundImageOpacity: 100
       })
     },
     isPublished: {
@@ -584,45 +544,35 @@ export default defineComponent({
         flipX: false,
         flipY: false,
         height: 120,
+        density: 100,
         color: '#6366f1',
         backgroundType: 'solid',
         gradientColor1: '#6366f1',
         gradientColor2: '#8b5cf6',
         gradientDirection: 'to right',
         opacity: 100,
+        blur: false,
+        blurAmount: 5,
         shapeImage: '',
         backgroundImage: '',
         shapeImageOpacity: 100,
-        backgroundImageOpacity: 100,
-        invert: false,
-        enableText: false,
-        textContent: '',
-        textSize: 32,
-        textColor: '#ffffff',
-        textWeight: '600',
-        textAlign: 'center',
-        textOpacity: 100,
-        textShadow: true
+        backgroundImageOpacity: 100
       } as BannerData,
       localPublished: false,
       localVisible: false,
       showMediaManager: false,
       currentImageType: '' as 'background' | 'shape',
+      copiedSettings: null as CopiedSettings | null,
+      copiedSettingsInfo: '',
       shapeOptions: [
         { label: 'Wave', value: 'wave' },
-        { label: 'Waves with Opacity', value: 'waves-opacity' },
         { label: 'Curve', value: 'curve' },
-        { label: 'Curve Asymmetrical', value: 'curve-asymmetrical' },
         { label: 'Triangle', value: 'triangle' },
-        { label: 'Triangle Asymmetrical', value: 'triangle-asymmetrical' },
-        { label: 'Arrow', value: 'arrow' },
-        { label: 'Book', value: 'book' },
-        { label: 'Tilt', value: 'tilt' },
-        { label: 'Split', value: 'split' },
-        // Legacy shapes for backward compatibility
         { label: 'Zigzag', value: 'zigzag' },
         { label: 'Mountains', value: 'mountains' },
-        { label: 'Clouds', value: 'clouds' }
+        { label: 'Clouds', value: 'clouds' },
+        { label: 'Book', value: 'book' },
+        { label: 'Arrow', value: 'arrow' }
       ],
       backgroundTypeOptions: [
         { label: 'Solid Color', value: 'solid' },
@@ -636,35 +586,43 @@ export default defineComponent({
         { label: 'Diagonal ↗', value: '45deg' },
         { label: 'Diagonal ↖', value: '-45deg' }
       ],
-      textWeightOptions: [
-        { label: 'Light', value: '300' },
-        { label: 'Normal', value: '400' },
-        { label: 'Medium', value: '500' },
-        { label: 'Semi Bold', value: '600' },
-        { label: 'Bold', value: '700' },
-        { label: 'Extra Bold', value: '800' }
-      ],
-      textAlignOptions: [
-        { label: 'Left', value: 'left' },
-        { label: 'Center', value: 'center' },
-        { label: 'Right', value: 'right' }
-      ]
+      defaultSettings: {
+        shapeType: 'wave',
+        position: 'bottom',
+        flipX: false,
+        flipY: false,
+        height: 120,
+        density: 100,
+        color: '#6366f1',
+        backgroundType: 'solid',
+        gradientColor1: '#6366f1',
+        gradientColor2: '#8b5cf6',
+        gradientDirection: 'to right',
+        opacity: 100,
+        blur: false,
+        blurAmount: 5,
+        shapeImage: '',
+        backgroundImage: '',
+        shapeImageOpacity: 100,
+        backgroundImageOpacity: 100
+      } as BannerData
     };
   },
   computed: {
     previewData() {
+      // Convert density to width for the BannerPublic component
       return {
         ...this.localBannerData,
-        width: 100, // Set to default width since density is removed
+        width: this.localBannerData.density,
         imageOpacity: this.localBannerData.shapeImageOpacity // For backward compatibility
       };
     },
-    shouldShowInvertStatus() {
-      // Show invert status based on explicit setting or auto-invert logic
-      if (this.localBannerData.invert !== undefined) {
-        return this.localBannerData.invert;
-      }
-      return this.localBannerData.position === 'bottom';
+    hasValidSettings() {
+      // Check if current settings are different from defaults
+      return JSON.stringify(this.localBannerData) !== JSON.stringify(this.defaultSettings);
+    },
+    canPaste() {
+      return this.copiedSettings !== null;
     }
   },
   watch: {
@@ -673,6 +631,7 @@ export default defineComponent({
         this.localVisible = newVal;
         if (newVal) {
           this.initializeData();
+          this.loadCopiedSettings();
         }
       },
       immediate: true
@@ -714,28 +673,107 @@ export default defineComponent({
         flipX: bannerData.flipX || false,
         flipY: bannerData.flipY || false,
         height: bannerData.height || 120,
+        density: bannerData.density || bannerData.width || 100, // Migration support
         color: bannerData.color || '#6366f1',
         backgroundType: bannerData.backgroundType || 'solid',
         gradientColor1: bannerData.gradientColor1 || '#6366f1',
         gradientColor2: bannerData.gradientColor2 || '#8b5cf6',
         gradientDirection: bannerData.gradientDirection || 'to right',
         opacity: bannerData.opacity || 100,
+        blur: bannerData.blur || false,
+        blurAmount: bannerData.blurAmount || 5,
         shapeImage: bannerData.shapeImage || '',
         backgroundImage: bannerData.backgroundImage || '',
         shapeImageOpacity: bannerData.shapeImageOpacity || bannerData.imageOpacity || 100,
-        backgroundImageOpacity: bannerData.backgroundImageOpacity || 100,
-        invert: bannerData.invert !== undefined ? bannerData.invert : false,
-        enableText: bannerData.enableText || false,
-        textContent: bannerData.textContent || '',
-        textSize: bannerData.textSize || 32,
-        textColor: bannerData.textColor || '#ffffff',
-        textWeight: bannerData.textWeight || '600',
-        textAlign: bannerData.textAlign || 'center',
-        textOpacity: bannerData.textOpacity || 100,
-        textShadow: bannerData.textShadow !== undefined ? bannerData.textShadow : true
+        backgroundImageOpacity: bannerData.backgroundImageOpacity || 100
       };
       
       this.localPublished = this.isPublished;
+    },
+
+    // Copy/Paste functionality
+    copySettings() {
+      try {
+        const settingsToCopy: CopiedSettings = {
+          data: { ...this.localBannerData },
+          timestamp: Date.now(),
+          version: '1.0'
+        };
+
+        // Store in session storage for persistence across dialog closes
+        sessionStorage.setItem('bannerEditorCopiedSettings', JSON.stringify(settingsToCopy));
+        this.copiedSettings = settingsToCopy;
+        
+        const shapeLabel = this.getShapeLabel(this.localBannerData.shapeType);
+        this.copiedSettingsInfo = `Copied: ${shapeLabel} shape (${this.localBannerData.height}px height)`;
+        
+        this.showToast('success', 'Settings Copied', 'Shape divider settings have been copied to clipboard.');
+      } catch (error) {
+        console.error('Failed to copy settings:', error);
+        this.showToast('error', 'Copy Failed', 'Failed to copy settings. Please try again.');
+      }
+    },
+
+    pasteSettings() {
+      if (!this.copiedSettings) {
+        this.showToast('warn', 'No Settings', 'No settings available to paste.');
+        return;
+      }
+
+      try {
+        // Create a copy of the settings to avoid reference issues
+        const settingsToPaste = { ...this.copiedSettings.data };
+        
+        // Update local data with copied settings
+        this.localBannerData = settingsToPaste;
+        
+        const shapeLabel = this.getShapeLabel(settingsToPaste.shapeType);
+        this.showToast('success', 'Settings Pasted', `Applied ${shapeLabel} shape configuration.`);
+      } catch (error) {
+        console.error('Failed to paste settings:', error);
+        this.showToast('error', 'Paste Failed', 'Failed to paste settings. Please try again.');
+      }
+    },
+
+    resetToDefault() {
+      this.localBannerData = { ...this.defaultSettings };
+      this.showToast('info', 'Settings Reset', 'All settings have been reset to default values.');
+    },
+
+    loadCopiedSettings() {
+      try {
+        const stored = sessionStorage.getItem('bannerEditorCopiedSettings');
+        if (stored) {
+          const parsedSettings: CopiedSettings = JSON.parse(stored);
+          
+          // Check if settings are less than 24 hours old
+          const twentyFourHours = 24 * 60 * 60 * 1000;
+          if (Date.now() - parsedSettings.timestamp < twentyFourHours) {
+            this.copiedSettings = parsedSettings;
+            const shapeLabel = this.getShapeLabel(parsedSettings.data.shapeType);
+            this.copiedSettingsInfo = `Available: ${shapeLabel} shape (${parsedSettings.data.height}px height)`;
+          } else {
+            // Clear expired settings
+            sessionStorage.removeItem('bannerEditorCopiedSettings');
+            this.copiedSettings = null;
+            this.copiedSettingsInfo = '';
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load copied settings:', error);
+        sessionStorage.removeItem('bannerEditorCopiedSettings');
+      }
+    },
+
+    showToast(severity: string, summary: string, detail: string) {
+      if (this.$refs.toast) {
+        (this.$refs.toast as any).add({
+          severity,
+          summary,
+          detail,
+          life: 3000
+        });
+      }
     },
     
     handleSave() {
@@ -801,10 +839,6 @@ export default defineComponent({
 
     updateGradientColor2(color: string) {
       this.localBannerData.gradientColor2 = color;
-    },
-
-    updateTextColor(color: string) {
-      this.localBannerData.textColor = color;
     }
   }
 });
@@ -848,6 +882,29 @@ export default defineComponent({
   flex: 1;
 }
 
+/* Copy/Paste button styling */
+.settings-management .p-button {
+  transition: all 0.2s ease;
+}
+
+.settings-management .p-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.settings-management .p-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Success/info text styling */
+.settings-info {
+  padding: 8px 12px;
+  border-radius: 6px;
+  background-color: #f0f9ff;
+  border-left: 4px solid #0ea5e9;
+}
+
 /* Mobile responsive adjustments */
 @media (max-width: 768px) {
   .color-picker-container {
@@ -857,6 +914,16 @@ export default defineComponent({
   .color-preview {
     height: 2.5rem;
     min-width: 180px;
+  }
+  
+  .settings-management {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .settings-management .p-button {
+    width: 100%;
+    margin-bottom: 8px;
   }
 }
 </style>

@@ -8,7 +8,7 @@
             <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold truncate">Conference Page Editor</h1>
             <p class="mt-2 text-sm sm:text-base hidden sm:block">Manage and edit conference pages and components</p>
           </div>
-          
+
           <!-- Lock status and actions -->
           <div class="flex items-center gap-4 flex-wrap">
             <div v-if="pageMenuStore.lockStatus.isLocked" class="flex items-center gap-2 p-2 rounded-lg text-sm">
@@ -16,46 +16,46 @@
               <span class="font-medium hidden sm:inline">Editing Mode Active</span>
               <span class="font-medium sm:hidden">Editing</span>
             </div>
-            
+
             <div v-else-if="!pageMenuStore.loading" class="flex items-center gap-2 p-2 rounded-lg text-sm">
               <i class="pi pi-lock-open"></i>
               <span class="hidden sm:inline">Read Only Mode</span>
               <span class="sm:hidden">Read Only</span>
-              <Button 
-                label="Enable" 
-                icon="pi pi-lock" 
+              <Button
+                label="Enable"
+                icon="pi pi-lock"
                 @click="acquireLock"
                 size="small"
                 class="ml-2 text-xs"
               />
             </div>
-            
-            <Button 
-              icon="pi pi-times" 
+
+            <Button
+              icon="pi pi-times"
               class="hidden sm:inline-flex"
               label="Exit"
               @click="handleExit"
               outlined
               size="small"
             />
-            <Button 
-              icon="pi pi-times" 
+            <Button
+              icon="pi pi-times"
               class="sm:hidden"
               @click="handleExit"
               outlined
               size="small"
             />
 
-            <Button 
-              label="Live Preview" 
-              icon="pi pi-eye" 
+            <Button
+              label="Live Preview"
+              icon="pi pi-eye"
               @click="openLivePreview"
               class="hidden sm:inline-flex"
               outlined
               size="small"
             />
-            <Button 
-              icon="pi pi-eye" 
+            <Button
+              icon="pi pi-eye"
               @click="openLivePreview"
               class="sm:hidden"
               outlined
@@ -69,14 +69,14 @@
     <!-- Mobile Menu Toggle -->
     <div class="lg:hidden p-4">
       <div class="flex justify-between items-center">
-        <Button 
+        <Button
           :icon="showLeftPanel ? 'pi pi-times' : 'pi pi-bars'"
           :label="showLeftPanel ? 'Close' : 'Overview'"
           @click="showLeftPanel = !showLeftPanel"
           outlined
           size="small"
         />
-        <Button 
+        <Button
           :icon="showRightPanel ? 'pi pi-times' : 'pi pi-list'"
           :label="showRightPanel ? 'Close' : 'Pages'"
           @click="showRightPanel = !showRightPanel"
@@ -120,26 +120,26 @@
           </template>
           <template #content>
             <div class="space-y-3 p-0">
-              <Button 
-                label="Create New Page" 
-                icon="pi pi-plus" 
+              <Button
+                label="Create New Page"
+                icon="pi pi-plus"
                 @click="openAddMenuDialog"
                 :disabled="!pageMenuStore.isLocked"
                 class="w-full text-sm"
                 size="small"
               />
-              <Button 
-                label="Add Component" 
-                icon="pi pi-plus-circle" 
+              <Button
+                label="Add Component"
+                icon="pi pi-plus-circle"
                 @click="openAddComponentDialog"
                 :disabled="!pageMenuStore.selectedMenu || !pageMenuStore.isLocked"
                 outlined
                 class="w-full text-sm"
                 size="small"
               />
-              <Button 
-                label="Manage Media" 
-                icon="pi pi-images" 
+              <Button
+                label="Manage Media"
+                icon="pi pi-images"
                 @click="showMediaManager = true"
                 :disabled="!pageMenuStore.isLocked"
                 outlined
@@ -170,9 +170,9 @@
                 <i class="pi pi-file text-6xl mb-4"></i>
                 <h3 class="text-lg font-medium mb-4">No Pages Created</h3>
                 <p class="mb-4 text-sm">Get started by creating your first conference page</p>
-                <Button 
-                  label="Create First Page" 
-                  icon="pi pi-plus" 
+                <Button
+                  label="Create First Page"
+                  icon="pi pi-plus"
                   @click="openAddMenuDialog"
                   :disabled="!pageMenuStore.isLocked"
                   size="small"
@@ -198,7 +198,7 @@
                 </div>
               </template>
             </Card>
-            
+
             <Card>
               <template #content>
                 <div class="flex items-center gap-4 p-0">
@@ -265,16 +265,16 @@
                 <div class="min-w-0">
                   <h2 class="text-2xl font-bold truncate">{{ pageMenuStore.selectedMenu.title }}</h2>
                   <div class="flex flex-wrap items-center gap-4 mt-3">
-                    <Badge 
-                      :value="pageMenuStore.selectedMenu.is_published ? 'Published' : 'Draft'" 
+                    <Badge
+                      :value="pageMenuStore.selectedMenu.is_published ? 'Published' : 'Draft'"
                       :severity="pageMenuStore.selectedMenu.is_published ? 'success' : 'warning'"
                     />
                     <span class="text-sm">Slug: /{{ pageMenuStore.selectedMenu.slug }}</span>
                     <span class="text-sm">Order: {{ pageMenuStore.selectedMenu.order }}</span>
                   </div>
                 </div>
-                <Button 
-                  icon="pi pi-cog" 
+                <Button
+                  icon="pi pi-cog"
                   class="hidden sm:inline-flex"
                   label="Page Settings"
                   @click="handleEditMenuTitle(pageMenuStore.selectedMenu.id)"
@@ -297,16 +297,16 @@
                     <span class="text-sm">
                       {{ pageMenuStore.selectedMenu.page_data?.length || 0 }} components
                     </span>
-                    <Button 
-                      icon="pi pi-plus" 
+                    <Button
+                      icon="pi pi-plus"
                       class="hidden sm:inline-flex"
                       label="Add Component"
                       @click="openAddComponentDialog"
                       :disabled="!pageMenuStore.isLocked"
                       size="small"
                     />
-                    <Button 
-                      icon="pi pi-plus" 
+                    <Button
+                      icon="pi pi-plus"
                       class="sm:hidden"
                       @click="openAddComponentDialog"
                       :disabled="!pageMenuStore.isLocked"
@@ -318,7 +318,7 @@
             </Card>
 
             <!-- Empty Components State -->
-            <div v-if="!pageMenuStore.selectedMenu.page_data || pageMenuStore.selectedMenu.page_data.length === 0" 
+            <div v-if="!pageMenuStore.selectedMenu.page_data || pageMenuStore.selectedMenu.page_data.length === 0"
                  class="flex-1 flex items-center justify-center p-4">
               <Card class="max-w-md">
                 <template #content>
@@ -326,9 +326,9 @@
                     <i class="pi pi-plus-circle text-6xl mb-4"></i>
                     <h3 class="text-xl font-medium mb-4">No Components Yet</h3>
                     <p class="mb-6 text-base">Start building your page by adding components like text editors, images, or other content blocks</p>
-                    <Button 
-                      label="Add Your First Component" 
-                      icon="pi pi-plus" 
+                    <Button
+                      label="Add Your First Component"
+                      icon="pi pi-plus"
                       @click="openAddComponentDialog"
                       :disabled="!pageMenuStore.isLocked"
                       size="small"
@@ -337,15 +337,15 @@
                 </template>
               </Card>
             </div>
-            
+
             <!-- Components List -->
             <div v-else class="flex-1 overflow-y-auto">
               <Divider />
               <div class="space-y-4">
-                <Card v-for="(component, index) in pageMenuStore.selectedMenu.page_data" 
+                <Card v-for="(component, index) in pageMenuStore.selectedMenu.page_data"
                      :key="component.id"
                      class="group hover:shadow-md transition-all duration-200">
-                  
+
                   <!-- Component Header -->
                   <template #header>
                     <div class="p-2">
@@ -359,8 +359,8 @@
                               {{ getComponentName(component.component_type) }}: {{ component.tag || 'Unnamed Component' }}
                             </h4>
                             <div class="flex flex-wrap items-center gap-3 mt-2">
-                              <Badge 
-                                :value="component.is_published ? 'Published' : 'Draft'" 
+                              <Badge
+                                :value="component.is_published ? 'Published' : 'Draft'"
                                 :severity="component.is_published ? 'success' : 'warning'"
                                 class="text-xs"
                               />
@@ -368,21 +368,21 @@
                             </div>
                           </div>
                         </div>
-                        
+
                         <!-- Component Actions -->
                         <div class="flex items-center gap-2 opacity-100 transition-opacity flex-shrink-0">
                           <div class="flex flex-col sm:flex-row gap-2">
                             <div class="flex gap-2">
-                              <Button 
-                                icon="pi pi-arrow-up" 
+                              <Button
+                                icon="pi pi-arrow-up"
                                 size="small"
                                 :disabled="isFirstComponent(component.id) || !pageMenuStore.isLocked"
                                 @click="moveComponentUp(component.id)"
                                 outlined
                                 class="p-2"
                               />
-                              <Button 
-                                icon="pi pi-arrow-down" 
+                              <Button
+                                icon="pi pi-arrow-down"
                                 size="small"
                                 :disabled="isLastComponent(component.id) || !pageMenuStore.isLocked"
                                 @click="moveComponentDown(component.id)"
@@ -391,16 +391,16 @@
                               />
                             </div>
                             <div class="flex gap-2">
-                              <Button 
-                                icon="pi pi-pencil" 
+                              <Button
+                                icon="pi pi-pencil"
                                 size="small"
                                 :disabled="!pageMenuStore.isLocked"
                                 @click="editComponent(component.id)"
                                 outlined
                                 class="p-2"
                               />
-                              <Button 
-                                icon="pi pi-trash" 
+                              <Button
+                                icon="pi pi-trash"
                                 size="small"
                                 :disabled="!pageMenuStore.isLocked"
                                 @click="confirmDeleteComponent(component.id)"
@@ -412,7 +412,7 @@
                         </div>
                       </div>
                     </div>
-                  </template>              
+                  </template>
                 </Card>
               </div>
             </div>
@@ -432,8 +432,8 @@
           <template #title>
             <div class="flex justify-between items-center">
               <h3 class="text-lg font-bold">Pages</h3>
-              <Button 
-                icon="pi pi-plus" 
+              <Button
+                icon="pi pi-plus"
                 size="small"
                 @click="openAddMenuDialog"
                 :disabled="!pageMenuStore.isLocked"
@@ -458,7 +458,7 @@
               </template>
             </Card>
           </div>
-          
+
           <div v-else-if="pageMenuStore.menus.length === 0" class="flex items-center justify-center h-32">
             <Card>
               <template #content>
@@ -469,18 +469,18 @@
               </template>
             </Card>
           </div>
-          
+
           <div v-else class="space-y-4">
-            <Card v-for="menu in pageMenuStore.menus" 
+            <Card v-for="menu in pageMenuStore.menus"
                  :key="menu.id"
                  :class="[
                    'group cursor-pointer transition-all duration-200 hover:shadow-md',
-                   pageMenuStore.selectedMenu?.id === menu.id 
-                     ? 'shadow-md border-l-4 border-primary' 
+                   pageMenuStore.selectedMenu?.id === menu.id
+                     ? 'shadow-md border-l-4 border-primary'
                      : ''
                  ]"
                  @click="selectMenu(menu.id)">
-              
+
               <template #content>
                 <div class="p-0">
                   <div class="flex justify-between items-start mb-4">
@@ -489,16 +489,16 @@
                       <p class="text-sm mt-2 truncate">/{{ menu.slug }}</p>
                     </div>
                     <div class="flex items-center gap-2 opacity-100  transition-opacity ml-4 flex-shrink-0">
-                      <Button 
-                        icon="pi pi-pencil" 
+                      <Button
+                        icon="pi pi-pencil"
                         size="small"
                         :disabled="!pageMenuStore.isLocked"
                         @click.stop="handleEditMenuTitle(menu.id)"
                         text
                         class="p-2"
                       />
-                      <Button 
-                        icon="pi pi-trash" 
+                      <Button
+                        icon="pi pi-trash"
                         size="small"
                         :disabled="!pageMenuStore.isLocked"
                         @click.stop="confirmDeleteMenu(menu.id)"
@@ -507,28 +507,28 @@
                       />
                     </div>
                   </div>
-                  
+
                   <div class="flex items-center justify-between">
                     <div class="flex flex-wrap items-center gap-3">
-                      <Badge 
-                        :value="menu.is_published ? 'Published' : 'Draft'" 
+                      <Badge
+                        :value="menu.is_published ? 'Published' : 'Draft'"
                         :severity="menu.is_published ? 'success' : 'warning'"
                         class="text-xs"
                       />
                       <span class="text-xs">{{ menu.page_data?.length || 0 }} components</span>
                     </div>
-                    
+
                     <div class="flex items-center gap-2">
-                      <Button 
-                        icon="pi pi-arrow-up" 
+                      <Button
+                        icon="pi pi-arrow-up"
                         size="small"
                         :disabled="isFirstMenu(menu.id) || !pageMenuStore.isLocked"
                         @click.stop="moveMenuUp(menu.id)"
                         text
                         class="p-2"
                       />
-                      <Button 
-                        icon="pi pi-arrow-down" 
+                      <Button
+                        icon="pi pi-arrow-down"
                         size="small"
                         :disabled="isLastMenu(menu.id) || !pageMenuStore.isLocked"
                         @click.stop="moveMenuDown(menu.id)"
@@ -546,18 +546,18 @@
       </div>
 
       <!-- Mobile Overlay -->
-      <div 
+      <div
         v-if="(showLeftPanel || showRightPanel)"
         @click="showLeftPanel = false; showRightPanel = false"
         class="absolute inset-0 z-5 lg:hidden"
       ></div>
     </div>
-    
+
     <!-- Add Menu Dialog -->
-    <Dialog 
-      v-model:visible="showAddMenuDialog" 
-      header="Create New Page" 
-      :style="{ width: '95vw', maxWidth: '600px' }" 
+    <Dialog
+      v-model:visible="showAddMenuDialog"
+      header="Create New Page"
+      :style="{ width: '95vw', maxWidth: '600px' }"
       :modal="true"
       :maximizable="false"
       :closable="true"
@@ -573,32 +573,32 @@
               <h2 class="text-3xl font-bold mb-4">Create New Page</h2>
               <p>Add a new page to your conference website</p>
             </div>
-            
+
             <div class="space-y-6">
               <div>
                 <label for="newMenuTitle" class="block text-sm font-medium mb-2">Page Title *</label>
-                <InputText 
-                  id="newMenuTitle" 
-                  v-model="newMenuTitle" 
-                  autofocus 
-                  class="w-full" 
+                <InputText
+                  id="newMenuTitle"
+                  v-model="newMenuTitle"
+                  autofocus
+                  class="w-full"
                   placeholder="Enter page title..."
                 />
                 <small v-if="titleError" class="mt-2 block">{{ titleError }}</small>
               </div>
-              
+
               <div>
                 <label for="newMenuSlug" class="block text-sm font-medium mb-2">Page Slug</label>
-                <InputText 
-                  id="newMenuSlug" 
-                  v-model="newMenuSlug" 
-                  class="w-full" 
+                <InputText
+                  id="newMenuSlug"
+                  v-model="newMenuSlug"
+                  class="w-full"
                   placeholder="Auto-generated from title"
                 />
                 <small class="mt-2 block">URL-friendly version of the title (auto-generated if left empty)</small>
                 <small v-if="slugError" class="mt-2 block">{{ slugError }}</small>
               </div>
-              
+
               <Card>
                 <template #content>
                   <div class="flex items-center p-0">
@@ -611,19 +611,19 @@
                 </template>
               </Card>
             </div>
-            
+
             <div class="flex flex-col sm:flex-row justify-center gap-4 pt-4">
-              <Button 
-                label="Cancel" 
-                icon="pi pi-times" 
-                @click="cancelAddMenu" 
+              <Button
+                label="Cancel"
+                icon="pi pi-times"
+                @click="cancelAddMenu"
                 outlined
                 class="w-full sm:w-auto"
               />
-              <Button 
-                label="Create Page" 
-                icon="pi pi-check" 
-                @click="handleAddMenu" 
+              <Button
+                label="Create Page"
+                icon="pi pi-check"
+                @click="handleAddMenu"
                 autofocus
                 class="w-full sm:w-auto"
               />
@@ -632,12 +632,12 @@
         </template>
       </Card>
     </Dialog>
-    
+
     <!-- Edit Menu Dialog -->
-    <Dialog 
-      v-model:visible="showEditMenuDialog" 
-      header="Edit Page Settings" 
-      :style="{ width: '95vw', maxWidth: '600px' }" 
+    <Dialog
+      v-model:visible="showEditMenuDialog"
+      header="Edit Page Settings"
+      :style="{ width: '95vw', maxWidth: '600px' }"
       :modal="true"
       :maximizable="false"
       :closable="true"
@@ -653,19 +653,19 @@
               <h2 class="text-3xl font-bold mb-4">Edit Page Settings</h2>
               <p>Update your page configuration and settings</p>
             </div>
-            
+
             <div class="space-y-6">
               <div>
                 <label for="editMenuSlug" class="block text-sm font-medium mb-2">Page Slug</label>
-                <InputText 
-                  id="editMenuSlug" 
-                  v-model="editMenuSlug" 
+                <InputText
+                  id="editMenuSlug"
+                  v-model="editMenuSlug"
                   class="w-full"
                 />
                 <small class="mt-2 block">URL-friendly version of the title</small>
                 <small v-if="slugError" class="mt-2 block">{{ slugError }}</small>
               </div>
-              
+
               <Card>
                 <template #content>
                   <div class="flex items-center p-0">
@@ -678,19 +678,19 @@
                 </template>
               </Card>
             </div>
-            
+
             <div class="flex flex-col sm:flex-row justify-center gap-4 pt-4">
-              <Button 
-                label="Cancel" 
-                icon="pi pi-times" 
-                @click="cancelEditMenu" 
+              <Button
+                label="Cancel"
+                icon="pi pi-times"
+                @click="cancelEditMenu"
                 outlined
                 class="w-full sm:w-auto"
               />
-              <Button 
-                label="Save Changes" 
-                icon="pi pi-check" 
-                @click="saveEditMenu" 
+              <Button
+                label="Save Changes"
+                icon="pi pi-check"
+                @click="saveEditMenu"
                 autofocus
                 class="w-full sm:w-auto"
               />
@@ -699,12 +699,12 @@
         </template>
       </Card>
     </Dialog>
-    
+
     <!-- Add Component Dialog -->
-    <Dialog 
-      v-model:visible="showAddComponentDialog" 
-      header="Add New Component" 
-      :style="{ width: '95vw', maxWidth: '800px' }" 
+    <Dialog
+      v-model:visible="showAddComponentDialog"
+      header="Add New Component"
+      :style="{ width: '95vw', maxWidth: '800px' }"
       :modal="true"
       :maximizable="false"
       :closable="true"
@@ -720,77 +720,64 @@
               <h2 class="text-3xl font-bold mb-4">Add New Component</h2>
               <p>Create a new content component for your page</p>
             </div>
-            
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div class="space-y-6">
-                <div>
-                  <label for="componentName" class="block text-sm font-medium mb-2">Component Name</label>
-                  <InputText 
-                    id="componentName" 
-                    v-model="newComponentName" 
-                    class="w-full" 
-                    placeholder="Enter component name..."
-                  />
-                </div>
-                
-                <div>
-                  <label for="componentType" class="block text-sm font-medium mb-2">Component Type</label>
-                  <Select
-                    id="componentType"
-                    v-model="newComponentType"
-                    :options="availableComponentTypes"
-                    option-label="label"
-                    option-value="value"
-                    placeholder="Select component type"
-                    class="w-full"
-                    @change="updateComponentData"
-                  >
-                    <template #option="slotProps">
-                      <div class="flex items-center gap-2">
-                        <i :class="slotProps.option.icon"></i>
-                        <span>{{ slotProps.option.label }}</span>
-                      </div>
-                    </template>
-                  </Select>
-                </div>
-                
-                <Card>
-                  <template #content>
-                    <div class="flex items-center p-0">
-                      <Checkbox v-model="newComponentPublished" inputId="newComponentPublished" binary />
-                      <label for="newComponentPublished" class="ml-4 text-sm font-medium">
-                        Publish immediately
-                      </label>
-                    </div>
-                    <p class="text-sm mt-3 ml-8">Published components are visible to attendees</p>
-                  </template>
-                </Card>
-              </div>
-              
-              <div v-if="newComponentType === 'wysiwyg'" class="space-y-4">
-                <label for="initialContent" class="block text-sm font-medium">Initial Content</label>
-                <Textarea
-                  id="initialContent"
-                  v-model="newComponentData.content"
-                  :rows="12"
+
+            <div class="space-y-6">
+              <div>
+                <label for="componentName" class="block text-sm font-medium mb-2">Component Name</label>
+                <InputText
+                  id="componentName"
+                  v-model="newComponentName"
                   class="w-full"
-                  placeholder="Enter initial content for your editor component..."
+                  placeholder="Enter component name..."
                 />
               </div>
+
+              <div>
+                <label for="componentType" class="block text-sm font-medium mb-2">Component Type</label>
+                <Select
+                  id="componentType"
+                  v-model="newComponentType"
+                  :options="availableComponentTypes"
+                  option-label="label"
+                  option-value="value"
+                  placeholder="Select component type"
+                  class="w-full"
+                  @change="updateComponentData"
+                >
+                  <template #option="slotProps">
+                    <div class="flex items-center gap-2">
+                      <i :class="slotProps.option.icon"></i>
+                      <span>{{ slotProps.option.label }}</span>
+                    </div>
+                  </template>
+                </Select>
+              </div>
+
+              <Card>
+                <template #content>
+                  <div class="flex items-center p-0">
+                    <Checkbox v-model="newComponentPublished" inputId="newComponentPublished" binary />
+                    <label for="newComponentPublished" class="ml-4 text-sm font-medium">
+                      Publish immediately
+                    </label>
+                  </div>
+                  <p class="text-sm mt-3 ml-8">Published components are visible to attendees</p>
+                </template>
+              </Card>
             </div>
-            
+
             <div class="flex flex-col sm:flex-row justify-center gap-4 pt-4">
-              <Button 
-                label="Cancel" 
-                icon="pi pi-times" 
-                @click="cancelAddComponent" 
+              <Button
+                label="Cancel"
+                icon="pi pi-times"
+                @click="cancelAddComponent"
                 outlined
                 class="w-full sm:w-auto"
               />
-              <Button 
-                label="Add Component" 
-                icon="pi pi-check" 
-                @click="handleAddComponent" 
+              <Button
+                label="Add Component"
+                icon="pi pi-check"
+                @click="handleAddComponent"
                 autofocus
                 class="w-full sm:w-auto"
               />
@@ -799,12 +786,12 @@
         </template>
       </Card>
     </Dialog>
-    
+
     <!-- Confirm Delete Dialog -->
-    <Dialog 
-      v-model:visible="showConfirmDeleteDialog" 
-      header="Confirm Deletion" 
-      :style="{ width: '95vw', maxWidth: '500px' }" 
+    <Dialog
+      v-model:visible="showConfirmDeleteDialog"
+      header="Confirm Deletion"
+      :style="{ width: '95vw', maxWidth: '500px' }"
       :modal="true"
       :maximizable="false"
       :closable="true"
@@ -820,25 +807,25 @@
               <h2 class="text-3xl font-bold mb-4">Confirm Deletion</h2>
               <p>This action cannot be undone</p>
             </div>
-            
+
             <Card>
               <template #content>
                 <p class="text-center p-0">{{ confirmDeleteMessage }}</p>
               </template>
             </Card>
-            
+
             <div class="flex flex-col sm:flex-row justify-center gap-4">
-              <Button 
-                label="Cancel" 
-                icon="pi pi-times" 
-                @click="cancelDelete" 
+              <Button
+                label="Cancel"
+                icon="pi pi-times"
+                @click="cancelDelete"
                 outlined
                 class="w-full sm:w-auto"
               />
-              <Button 
-                label="Delete" 
-                icon="pi pi-trash" 
-                @click="confirmDelete" 
+              <Button
+                label="Delete"
+                icon="pi pi-trash"
+                @click="confirmDelete"
                 autofocus
                 class="w-full sm:w-auto"
               />
@@ -849,7 +836,7 @@
     </Dialog>
 
     <!-- Dynamic Component Dialog -->
-    <component 
+    <component
       :is="currentComponentEditor"
       v-if="currentComponentEditor"
       v-model:visible="showComponentDialog"
@@ -875,9 +862,9 @@ import { usePageMenuStore } from '@/stores/pageMenuStore';
 import { useRoute } from 'vue-router';
 import apiService from '@/services/apiService';
 import MediaManager from '@/components/dashboard/PageEditor/MediaManager.vue';
-import { 
-  componentRegistry, 
-  getAvailableComponentTypes, 
+import {
+  componentRegistry,
+  getAvailableComponentTypes,
   getComponentIcon as getRegistryComponentIcon,
   getComponentDefaultData,
   getComponentDefinition
@@ -890,7 +877,7 @@ export default defineComponent({
   },
   setup() {
     const currentComponentEditor = shallowRef(null);
-    
+
     return {
       currentComponentEditor
     };
@@ -898,25 +885,25 @@ export default defineComponent({
   data() {
     return {
       availableComponentTypes: getAvailableComponentTypes(),
-      
+
       showAddMenuDialog: false,
       newMenuTitle: '',
       newMenuSlug: '',
       newMenuPublished: false,
       showMediaManager: false,
-      
+
       showEditMenuDialog: false,
       editMenuId: 0,
       editMenuTitle: '',
       editMenuSlug: '',
       editMenuPublished: false,
-      
+
       showAddComponentDialog: false,
       newComponentType: '',
       newComponentName: '',
       newComponentData: {} as any,
       newComponentPublished: false,
-      
+
       // Component editing
       showComponentDialog: false,
       editComponentId: 0,
@@ -924,17 +911,17 @@ export default defineComponent({
       editComponentName: '',
       editComponentData: {} as any,
       editComponentPublished: false,
-      
+
       titleError: '',
       slugError: '',
-      
+
       showConfirmDeleteDialog: false,
       deleteType: '',
       deleteId: 0,
       confirmDeleteMessage: '',
-      
+
       loadingSelectedMenu: false,
-      
+
       // Mobile panel states
       showLeftPanel: false,
       showRightPanel: false,
@@ -977,9 +964,9 @@ export default defineComponent({
     },
     async checkLock() {
       try {
-        const response = await apiService.get(`/v1/conferences/${this.conferenceId}/lock`);
+        const response = await apiService.get(`/v1/conference-management/conferences/${this.conferenceId}/lock`);
         if (response.data.payload.is_locked) {
-          const currentUser = await apiService.get('/v1/users/me');
+          const currentUser = await apiService.get('/v1/user-management/users/me');
           const userId = currentUser.data.payload.id;
           this.pageMenuStore.lockStatus = {
             isLocked: response.data.payload.lock_info.user_id === userId,
@@ -995,16 +982,16 @@ export default defineComponent({
     },
     async openLivePreview() {
       try {
-        const response = await apiService.get(`/v1/conferences/${this.conferenceId}`);
+        const response = await apiService.get(`/v1/conference-management/conferences/${this.conferenceId}`);
         const conference = response.data.payload;
-        
+
         if (!conference || !conference.slug) {
           console.error('Conference not found or missing slug');
           return;
         }
-        
+
         const previewUrl = `/preview/conferences/${conference.slug}`;
-        
+
         if (this.pageMenuStore.selectedMenu) {
           const pagePreviewUrl = `/preview/conferences/${conference.slug}/pages/${this.pageMenuStore.selectedMenu.slug}`;
           window.open(pagePreviewUrl, '_blank', 'noopener,noreferrer');
@@ -1186,7 +1173,7 @@ export default defineComponent({
         this.editComponentName = component.tag || '';
         this.editComponentData = { ...component.data };
         this.editComponentPublished = component.is_published;
-        
+
         const definition = getComponentDefinition(component.component_type);
         if (definition?.edit) {
           try {
