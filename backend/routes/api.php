@@ -18,24 +18,25 @@ use App\Http\Controllers\Api\PublicPageMenuController;
 use App\Http\Controllers\Api\MediaController;
 
 Route::prefix('v1')->group(function () {
-    // Public routes for universities - READ ONLY
-    Route::apiResource('universities', UniversityController::class)->only(['index', 'show']);
+    // Public routes for universities
+    Route::get('universities', [UniversityController::class, 'index']);
+    Route::get('universities/{university}', [UniversityController::class, 'show']);
 
     // Public routes for conferences and pages
     Route::get('/conferences/decades', [PublicConferenceController::class, 'getDecades']);
     Route::get('/conferences/decades/{decade}', [PublicConferenceController::class, 'getByDecade']);
 
-    // New routes for latest conference
+    // Latest conference routes
     Route::get('/conferences', [PublicConferenceController::class, 'index']);
     Route::get('/conferences/{conferenceSlug}', [PublicConferenceController::class, 'show']);
 
-    // Public routes for page menus - get all pages without content
+    // Public routes for page menus
     Route::get('/conferences/{conferenceSlug}/pages', [PublicPageMenuController::class, 'index']);
 
     // Public route for specific page with its data components
     Route::get('/conferences/{conferenceSlug}/pages/{pageSlug}', [PublicPageMenuController::class, 'show']);
 
-    // Preview routes (requires authentication)
+    // Preview routes
     Route::middleware('auth:sanctum')->prefix('preview')->group(function () {
         Route::get('/conferences/{conferenceSlug}', [PreviewConferenceController::class, 'show']);
         Route::get('/conferences/{conferenceSlug}/pages', [PreviewConferenceController::class, 'pages']);
@@ -61,7 +62,7 @@ Route::prefix('v1')->group(function () {
 
     // Routes for authenticated users
     Route::middleware('auth:sanctum')->group(function () {
-        // User-specific route outside of password change middleware
+        // User-specific route
         Route::get('/user-management/users/me', [UserController::class, 'current']);
 
         // Protected routes requiring password change
@@ -81,11 +82,11 @@ Route::prefix('v1')->group(function () {
                     Route::post('/refresh', [ConferenceLockController::class, 'refreshLock']);
                 });
 
-                // Media management routes (policy-protected)
+                // Media management routes
                 Route::prefix('conferences/{conference}/media')->group(function () {
                     Route::get('/', [MediaController::class, 'index']);
                     Route::post('/', [MediaController::class, 'store'])
-                        ->middleware('check.conference.lock'); // Only creating requires lock
+                        ->middleware('check.conference.lock');
                     Route::get('/{media}', [MediaController::class, 'show']);
                     Route::put('/{media}', [MediaController::class, 'update'])
                         ->middleware('check.conference.lock');
@@ -114,7 +115,7 @@ Route::prefix('v1')->group(function () {
                 });
             });
 
-            // User management (remains outside conference-management)
+            // User management
             Route::middleware('permission:access.admin')->group(function () {
                 Route::prefix('user-management')->group(function () {
                     Route::get('/users', [UserController::class, 'index']);

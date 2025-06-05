@@ -1,4 +1,3 @@
-
 <template>
   <Toolbar class="mb-6 flex flex-wrap gap-2 rounded-md shadow" style="border:none; margin-bottom: 1rem;">
     <template #start>

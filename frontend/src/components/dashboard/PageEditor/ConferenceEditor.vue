@@ -1,4 +1,3 @@
-<!-- ConferenceEditor.vue -->
 <template>
   <div class="conference-editor h-screen flex flex-col">
     <!-- Top Header -->

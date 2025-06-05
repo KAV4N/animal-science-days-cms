@@ -1,4 +1,3 @@
-<!-- components/dashboard/ConfirmationDialog.vue -->
 <template>
   <Dialog 
     v-model:visible="dialogVisible" 

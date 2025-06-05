@@ -23,7 +23,7 @@
         <Card class="w-full max-w-sm border-0 shadow-xl bg-white/80 backdrop-blur-sm">
           <template #content>
             <div class="flex flex-col items-center space-y-4">
-              <ProgressSpinner class="w-10 h-10 text-blue-600" strokeWidth="3" />
+              <ProgressSpinner class="w-10 h-10 text-primary-600" strokeWidth="3" />
               <p class="text-lg font-semibold text-slate-700">Loading conference...</p>
             </div>
           </template>
@@ -46,7 +46,7 @@
                 label="Try Again"
                 @click="loadConference"
                 icon="pi pi-refresh"
-                class="bg-blue-600 hover:bg-blue-700 border-blue-600 px-6"
+                class="bg-primary-600 hover:bg-primary-700 border-primary-600 px-6"
               />
             </div>
           </template>
@@ -68,7 +68,7 @@
                 </span>
               </div>
               
-              <h1 class="text-4xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">
+              <h1 class="text-4xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-white to-primary-100 bg-clip-text text-transparent">
                 {{ conference.title }}
               </h1>
               <div class="flex flex-col lg:flex-row items-center justify-center space-y-4 lg:space-y-0 lg:space-x-12 mb-8">
@@ -88,7 +88,7 @@
                 </div>
               </div>
               <p v-if="conference.description" 
-                class="text-xl text-blue-100 max-w-4xl mx-auto leading-relaxed">
+                class="text-xl text-primary-100 max-w-4xl mx-auto leading-relaxed">
                 {{ conference.description }}
               </p>
             </div>
@@ -109,13 +109,13 @@
             <div class="sticky top-0 h-screen overflow-y-auto">
               <div class="p-3 border-b border-slate-100 bg-slate-50">
                 <h2 class="text-sm font-medium text-slate-600 flex items-center gap-2">
-                  <i class="pi pi-list text-xs text-blue-500"></i>
+                  <i class="pi pi-list text-xs text-primary-500"></i>
                   Pages
                 </h2>
               </div>
 
               <div v-if="pagesLoading" class="flex flex-col items-center justify-center py-12">
-                <ProgressSpinner class="w-8 h-8 text-blue-600 mb-3" strokeWidth="4" />
+                <ProgressSpinner class="w-8 h-8 text-primary-600 mb-3" strokeWidth="4" />
                 <p class="text-sm text-slate-500">Loading pages...</p>
               </div>
 
@@ -127,7 +127,7 @@
                   :class="[
                     'w-full text-left p-4 mb-1 transition-all duration-200 group relative',
                     activePageId === page.id
-                      ? 'bg-blue-50 text-blue-700 shadow-sm border-l-4 border-blue-500'
+                      ? 'bg-primary-50 text-primary-700 shadow-sm border-l-4 border-primary-500'
                       : 'text-slate-700 hover:bg-slate-50 hover:shadow-sm'
                   ]"
                 >
@@ -154,7 +154,7 @@
             <Button
               :icon="isMobileMenuOpen ? 'pi pi-times' : 'pi pi-bars'"
               @click="toggleMobileMenu"
-              class="w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 border-blue-600 shadow-lg"
+              class="w-14 h-14 rounded-full bg-primary-600 hover:bg-primary-700 border-primary-600 shadow-lg"
               aria-label="Toggle Menu"
             />
           </div>
@@ -174,7 +174,7 @@
             ]"
           >
             <div class="h-full overflow-y-auto">
-              <div class="p-4 border-b border-slate-100 bg-gradient-to-r from-blue-600 to-purple-600">
+              <div class="p-4 border-b border-slate-100 bg-gradient-to-r from-primary-600 to-purple-600">
                 <div class="flex items-center justify-between text-white">
                   <h2 class="text-lg font-semibold">Navigation</h2>
                   <Button
@@ -189,12 +189,12 @@
 
               <div class="p-3">
                 <h3 class="text-sm font-medium text-slate-600 mb-3 px-3 flex items-center gap-2">
-                  <i class="pi pi-list text-xs text-blue-500"></i>
+                  <i class="pi pi-list text-xs text-primary-500"></i>
                   Pages
                 </h3>
 
                 <div v-if="pagesLoading" class="flex flex-col items-center justify-center py-8">
-                  <ProgressSpinner class="w-8 h-8 text-blue-600 mb-3" strokeWidth="4" />
+                  <ProgressSpinner class="w-8 h-8 text-primary-600 mb-3" strokeWidth="4" />
                   <p class="text-sm text-slate-500">Loading pages...</p>
                 </div>
 
@@ -206,7 +206,7 @@
                     :class="[
                       'w-full text-left p-4 mb-1 transition-all duration-200 relative',
                       activePageId === page.id
-                        ? 'bg-blue-50 text-blue-700 shadow-sm border-l-4 border-blue-500'
+                        ? 'bg-primary-50 text-primary-700 shadow-sm border-l-4 border-primary-500'
                         : 'text-slate-700 hover:bg-slate-50'
                     ]"
                   >
@@ -236,7 +236,7 @@
               <!-- Page Loading State -->
               <div v-if="pageDataLoading" class="flex items-center justify-center py-20">
                 <div class="text-center">
-                  <ProgressSpinner class="w-10 h-10 text-blue-600 mb-4" strokeWidth="3" />
+                  <ProgressSpinner class="w-10 h-10 text-primary-600 mb-4" strokeWidth="3" />
                   <p class="text-lg font-medium text-slate-700">Loading page content...</p>
                 </div>
               </div>
@@ -582,7 +582,7 @@ export default defineComponent({
           template: `
             <div class="flex items-center justify-center p-8">
               <div class="flex items-center space-x-3">
-                <i class="pi pi-spin pi-spinner text-blue-600 text-lg"></i>
+                <i class="pi pi-spin pi-spinner text-primary-600 text-lg"></i>
                 <span class="text-slate-600 font-medium">Loading component...</span>
               </div>
             </div>

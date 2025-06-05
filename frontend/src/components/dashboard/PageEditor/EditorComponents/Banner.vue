@@ -23,6 +23,49 @@
           />
         </div>
 
+        <!-- Copy/Paste Section -->
+        <Card>
+          <template #title>
+            <h4 class="text-lg font-semibold">Copy & Paste Configuration</h4>
+          </template>
+          <template #content>
+            <div class="flex flex-col sm:flex-row gap-3 p-0">
+              <Button
+                label="Copy Config"
+                icon="pi pi-copy"
+                @click="copyConfiguration"
+                outlined
+                size="small"
+                class="flex-1"
+                :disabled="!hasValidConfiguration"
+              />
+              <Button
+                label="Paste Config"
+                icon="pi pi-clipboard"
+                @click="pasteConfiguration"
+                outlined
+                size="small"
+                class="flex-1"
+                :disabled="!canPaste"
+              />
+              <Button
+                v-if="copiedConfig"
+                label="Clear"
+                icon="pi pi-times"
+                @click="clearCopiedConfig"
+                outlined
+                severity="secondary"
+                size="small"
+              />
+            </div>
+            <div class="mt-3 text-xs text-gray-600">
+              <p v-if="copyMessage" class="text-green-600">{{ copyMessage }}</p>
+              <p v-else-if="copiedConfig">Configuration copied and ready to paste</p>
+              <p v-else>Copy configuration to reuse in other banner components</p>
+            </div>
+          </template>
+        </Card>
+
         <!-- Shape Configuration -->
         <Card>
           <template #title>
@@ -57,17 +100,15 @@
                 />
               </div>
 
-              <!-- Density (replaces Width) -->
+              <!-- Invert Shape -->
               <div>
-                <label for="density" class="block text-sm font-medium mb-2">Shape Density: {{ localBannerData.density }}%</label>
-                <Slider
-                  id="density"
-                  v-model="localBannerData.density"
-                  :min="50"
-                  :max="200"
-                  :step="10"
-                  class="w-full"
-                />
+                <div class="flex items-center">
+                  <Checkbox v-model="localBannerData.invert" inputId="invert" binary />
+                  <label for="invert" class="ml-2 text-sm">Invert Shape</label>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">
+                  Automatically adjusts based on position, but can be overridden manually
+                </p>
               </div>
 
               <!-- Flip Options -->
@@ -79,6 +120,138 @@
                 <div class="flex items-center">
                   <Checkbox v-model="localBannerData.flipY" inputId="flipY" binary />
                   <label for="flipY" class="ml-2 text-sm">Flip Vertical</label>
+                </div>
+              </div>
+            </div>
+          </template>
+        </Card>
+
+        <!-- Text Configuration -->
+        <Card>
+          <template #title>
+            <h4 class="text-lg font-semibold">Text Configuration</h4>
+          </template>
+          <template #content>
+            <div class="p-0 space-y-4">
+              <!-- Enable Text -->
+              <div class="flex items-center">
+                <Checkbox v-model="localBannerData.enableText" inputId="enableText" binary />
+                <label for="enableText" class="ml-2 text-sm font-medium">Enable Text Overlay</label>
+              </div>
+
+              <!-- Text Settings (shown when text is enabled) -->
+              <div v-if="localBannerData.enableText" class="space-y-4">
+                <!-- Text Content -->
+                <div>
+                  <label for="textContent" class="block text-sm font-medium mb-2">Text Content</label>
+                  <InputText
+                    id="textContent"
+                    v-model="localBannerData.textContent"
+                    class="w-full"
+                    placeholder="Enter your text..."
+                  />
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <!-- Text Size -->
+                  <div>
+                    <label for="textSize" class="block text-sm font-medium mb-2">
+                      Text Size: {{ localBannerData.textSize }}px
+                    </label>
+                    <Slider
+                      id="textSize"
+                      v-model="localBannerData.textSize"
+                      :min="12"
+                      :max="120"
+                      :step="2"
+                      class="w-full"
+                    />
+                  </div>
+
+                  <!-- Text Weight -->
+                  <div>
+                    <label for="textWeight" class="block text-sm font-medium mb-2">Text Weight</label>
+                    <Select
+                      id="textWeight"
+                      v-model="localBannerData.textWeight"
+                      :options="textWeightOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      placeholder="Select weight"
+                      class="w-full"
+                    />
+                  </div>
+                </div>
+
+                <!-- Text Color -->
+                <div>
+                  <label class="block text-sm font-medium mb-2">Text Color</label>
+                  
+                  <!-- Conference Color Presets for Text -->
+                  <div v-if="conferenceColors.length > 0" class="mb-4">
+                    <label class="block text-sm font-medium mb-2">Conference Colors</label>
+                    <div class="flex gap-2 flex-wrap">
+                      <button
+                        v-for="color in conferenceColors"
+                        :key="`text-${color.value}`"
+                        @click="useConferenceTextColor(color.value)"
+                        :class="[
+                          'w-12 h-12 rounded-lg border-2 transition-all duration-200 hover:scale-110',
+                          localBannerData.textColor === color.value ? 'border-gray-800 ring-2 ring-blue-500' : 'border-gray-300 hover:border-gray-500'
+                        ]"
+                        :style="{ backgroundColor: color.value }"
+                        :title="`Use ${color.label} for text`"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="color-picker-container">
+                    <div class="color-preview" :style="{ backgroundColor: localBannerData.textColor }"></div>
+                    <TransparentColorPicker 
+                      v-model="localBannerData.textColor"
+                      theme="light"
+                      format="hex"
+                      custom-class="text-color-picker"
+                      @update:modelValue="updateTextColor"
+                    />
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <!-- Text Alignment -->
+                  <div>
+                    <label for="textAlign" class="block text-sm font-medium mb-2">Text Alignment</label>
+                    <Select
+                      id="textAlign"
+                      v-model="localBannerData.textAlign"
+                      :options="textAlignOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      placeholder="Select alignment"
+                      class="w-full"
+                    />
+                  </div>
+
+                  <!-- Text Opacity -->
+                  <div>
+                    <label for="textOpacity" class="block text-sm font-medium mb-2">
+                      Text Opacity: {{ localBannerData.textOpacity }}%
+                    </label>
+                    <Slider
+                      id="textOpacity"
+                      v-model="localBannerData.textOpacity"
+                      :min="10"
+                      :max="100"
+                      :step="5"
+                      class="w-full"
+                    />
+                  </div>
+                </div>
+
+                <!-- Text Shadow -->
+                <div class="flex items-center">
+                  <Checkbox v-model="localBannerData.textShadow" inputId="textShadow" binary />
+                  <label for="textShadow" class="ml-2 text-sm">Add Text Shadow</label>
                 </div>
               </div>
             </div>
@@ -357,37 +530,6 @@
           </template>
         </Card>
 
-        <!-- Effects -->
-        <Card>
-          <template #title>
-            <h4 class="text-lg font-semibold">Effects</h4>
-          </template>
-          <template #content>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-0">
-              <!-- Blur Effect -->
-              <div class="flex items-center">
-                <Checkbox v-model="localBannerData.blur" inputId="blur" binary />
-                <label for="blur" class="ml-2 text-sm font-medium">Enable Blur Effect</label>
-              </div>
-
-              <!-- Blur Amount -->
-              <div v-if="localBannerData.blur">
-                <label for="blurAmount" class="block text-sm font-medium mb-2">
-                  Blur Amount: {{ localBannerData.blurAmount }}px
-                </label>
-                <Slider
-                  id="blurAmount"
-                  v-model="localBannerData.blurAmount"
-                  :min="1"
-                  :max="20"
-                  :step="1"
-                  class="w-full"
-                />
-              </div>
-            </div>
-          </template>
-        </Card>
-
         <!-- Published Checkbox -->
         <Card>
           <template #content>
@@ -441,8 +583,9 @@
               </div>
               <div class="mt-3 text-sm text-gray-600 space-y-1">
                 <p><strong>Height:</strong> {{ localBannerData.height }}px</p>
-                <p><strong>Density:</strong> {{ localBannerData.density }}%</p>
                 <p><strong>Shape:</strong> {{ getShapeLabel(localBannerData.shapeType) }}</p>
+                <p><strong>Inverted:</strong> {{ shouldShowInvertStatus ? 'Yes' : 'No' }}</p>
+                <p v-if="localBannerData.enableText"><strong>Text:</strong> {{ localBannerData.textContent || 'No text' }}</p>
               </div>
             </div>
           </template>
@@ -458,6 +601,48 @@
       @select="handleMediaSelect"
       :conferenceId="conferenceId"
     />
+
+    <!-- Paste Confirmation Dialog -->
+    <Dialog
+      v-model:visible="showPasteConfirmation"
+      header="Paste Configuration"
+      :style="{ width: '450px' }"
+      :modal="true"
+      :closable="true"
+    >
+      <div class="space-y-4">
+        <p>Are you sure you want to paste the copied configuration? This will overwrite all current settings except the component name.</p>
+        
+        <div class="bg-gray-50 p-3 rounded-lg text-sm">
+          <h4 class="font-medium mb-2">Configuration to paste:</h4>
+          <ul class="space-y-1 text-gray-600">
+            <li>Shape: {{ getShapeLabel(pendingPasteConfig?.shapeType || '') }}</li>
+            <li>Height: {{ pendingPasteConfig?.height }}px</li>
+            <li>Background: {{ pendingPasteConfig?.backgroundType === 'gradient' ? 'Gradient' : 'Solid Color' }}</li>
+            <li v-if="pendingPasteConfig?.enableText">Text: "{{ pendingPasteConfig?.textContent }}"</li>
+            <li v-if="pendingPasteConfig?.backgroundImage">Background Image: Yes</li>
+            <li v-if="pendingPasteConfig?.shapeImage">Shape Image: Yes</li>
+          </ul>
+        </div>
+      </div>
+      
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <Button
+            label="Cancel"
+            icon="pi pi-times"
+            @click="showPasteConfirmation = false"
+            outlined
+          />
+          <Button
+            label="Paste"
+            icon="pi pi-check"
+            @click="confirmPaste"
+            autofocus
+          />
+        </div>
+      </template>
+    </Dialog>
   </Dialog>
 </template>
 
@@ -475,7 +660,6 @@ interface BannerData {
   flipX: boolean;
   flipY: boolean;
   height: number;
-  density: number;
   width?: number; // For backward compatibility
   color: string;
   backgroundType: 'solid' | 'gradient';
@@ -483,19 +667,29 @@ interface BannerData {
   gradientColor2: string;
   gradientDirection: string;
   opacity: number;
-  blur: boolean;
-  blurAmount: number;
   shapeImage: string;
   backgroundImage: string;
   shapeImageOpacity: number;
   backgroundImageOpacity: number;
   imageOpacity?: number; // For backward compatibility
+  invert?: boolean; // New property for manual shape inversion control
+  enableText: boolean;
+  textContent: string;
+  textSize: number;
+  textColor: string;
+  textWeight: string;
+  textAlign: string;
+  textOpacity: number;
+  textShadow: boolean;
 }
 
 interface ConferenceColor {
   label: string;
   value: string;
 }
+
+// Key for storing/retrieving configuration from sessionStorage
+const BANNER_CONFIG_KEY = 'banner_copied_config';
 
 export default defineComponent({
   name: 'BannerEditor',
@@ -522,19 +716,25 @@ export default defineComponent({
         flipX: false,
         flipY: false,
         height: 120,
-        density: 100,
         color: '#6366f1',
         backgroundType: 'solid',
         gradientColor1: '#6366f1',
         gradientColor2: '#8b5cf6',
         gradientDirection: 'to right',
         opacity: 100,
-        blur: false,
-        blurAmount: 5,
         shapeImage: '',
         backgroundImage: '',
         shapeImageOpacity: 100,
-        backgroundImageOpacity: 100
+        backgroundImageOpacity: 100,
+        invert: false,
+        enableText: false,
+        textContent: '',
+        textSize: 32,
+        textColor: '#ffffff',
+        textWeight: '600',
+        textAlign: 'center',
+        textOpacity: 100,
+        textShadow: true
       })
     },
     isPublished: {
@@ -560,33 +760,50 @@ export default defineComponent({
         flipX: false,
         flipY: false,
         height: 120,
-        density: 100,
         color: '#6366f1',
         backgroundType: 'solid',
         gradientColor1: '#6366f1',
         gradientColor2: '#8b5cf6',
         gradientDirection: 'to right',
         opacity: 100,
-        blur: false,
-        blurAmount: 5,
         shapeImage: '',
         backgroundImage: '',
         shapeImageOpacity: 100,
-        backgroundImageOpacity: 100
+        backgroundImageOpacity: 100,
+        invert: false,
+        enableText: false,
+        textContent: '',
+        textSize: 32,
+        textColor: '#ffffff',
+        textWeight: '600',
+        textAlign: 'center',
+        textOpacity: 100,
+        textShadow: true
       } as BannerData,
       localPublished: false,
       localVisible: false,
       showMediaManager: false,
       currentImageType: '' as 'background' | 'shape',
+      // Copy/Paste related data
+      copiedConfig: null as BannerData | null,
+      copyMessage: '',
+      showPasteConfirmation: false,
+      pendingPasteConfig: null as BannerData | null,
       shapeOptions: [
         { label: 'Wave', value: 'wave' },
+        { label: 'Waves with Opacity', value: 'waves-opacity' },
         { label: 'Curve', value: 'curve' },
+        { label: 'Curve Asymmetrical', value: 'curve-asymmetrical' },
         { label: 'Triangle', value: 'triangle' },
+        { label: 'Triangle Asymmetrical', value: 'triangle-asymmetrical' },
+        { label: 'Arrow', value: 'arrow' },
+        { label: 'Book', value: 'book' },
+        { label: 'Tilt', value: 'tilt' },
+        { label: 'Split', value: 'split' },
+        // Legacy shapes for backward compatibility
         { label: 'Zigzag', value: 'zigzag' },
         { label: 'Mountains', value: 'mountains' },
-        { label: 'Clouds', value: 'clouds' },
-        { label: 'Book', value: 'book' },
-        { label: 'Arrow', value: 'arrow' }
+        { label: 'Clouds', value: 'clouds' }
       ],
       backgroundTypeOptions: [
         { label: 'Solid Color', value: 'solid' },
@@ -599,17 +816,36 @@ export default defineComponent({
         { label: 'Bottom to Top', value: 'to top' },
         { label: 'Diagonal ↗', value: '45deg' },
         { label: 'Diagonal ↖', value: '-45deg' }
+      ],
+      textWeightOptions: [
+        { label: 'Light', value: '300' },
+        { label: 'Normal', value: '400' },
+        { label: 'Medium', value: '500' },
+        { label: 'Semi Bold', value: '600' },
+        { label: 'Bold', value: '700' },
+        { label: 'Extra Bold', value: '800' }
+      ],
+      textAlignOptions: [
+        { label: 'Left', value: 'left' },
+        { label: 'Center', value: 'center' },
+        { label: 'Right', value: 'right' }
       ]
     };
   },
   computed: {
     previewData() {
-      // Convert density to width for the BannerPublic component
       return {
         ...this.localBannerData,
-        width: this.localBannerData.density,
+        width: 100, // Set to default width since density is removed
         imageOpacity: this.localBannerData.shapeImageOpacity // For backward compatibility
       };
+    },
+    shouldShowInvertStatus() {
+      // Show invert status based on explicit setting or auto-invert logic
+      if (this.localBannerData.invert !== undefined) {
+        return this.localBannerData.invert;
+      }
+      return this.localBannerData.position === 'bottom';
     },
 
     conferenceColors(): ConferenceColor[] {
@@ -639,6 +875,17 @@ export default defineComponent({
       }
       
       return colors;
+    },
+
+    // Copy/Paste computed properties
+    hasValidConfiguration() {
+      // Check if there's a meaningful configuration to copy
+      return this.localBannerData.shapeType && this.localBannerData.height > 0;
+    },
+
+    canPaste() {
+      // Check if there's a valid configuration to paste
+      return this.copiedConfig !== null || this.getStoredConfiguration() !== null;
     }
   },
   watch: {
@@ -647,6 +894,7 @@ export default defineComponent({
         this.localVisible = newVal;
         if (newVal) {
           this.initializeData();
+          this.loadCopiedConfiguration();
         }
       },
       immediate: true
@@ -688,19 +936,25 @@ export default defineComponent({
         flipX: bannerData.flipX || false,
         flipY: bannerData.flipY || false,
         height: bannerData.height || 120,
-        density: bannerData.density || bannerData.width || 100, // Migration support
         color: bannerData.color || '#6366f1',
         backgroundType: bannerData.backgroundType || 'solid',
         gradientColor1: bannerData.gradientColor1 || '#6366f1',
         gradientColor2: bannerData.gradientColor2 || '#8b5cf6',
         gradientDirection: bannerData.gradientDirection || 'to right',
         opacity: bannerData.opacity || 100,
-        blur: bannerData.blur || false,
-        blurAmount: bannerData.blurAmount || 5,
         shapeImage: bannerData.shapeImage || '',
         backgroundImage: bannerData.backgroundImage || '',
         shapeImageOpacity: bannerData.shapeImageOpacity || bannerData.imageOpacity || 100,
-        backgroundImageOpacity: bannerData.backgroundImageOpacity || 100
+        backgroundImageOpacity: bannerData.backgroundImageOpacity || 100,
+        invert: bannerData.invert !== undefined ? bannerData.invert : false,
+        enableText: bannerData.enableText || false,
+        textContent: bannerData.textContent || '',
+        textSize: bannerData.textSize || 32,
+        textColor: bannerData.textColor || '#ffffff',
+        textWeight: bannerData.textWeight || '600',
+        textAlign: bannerData.textAlign || 'center',
+        textOpacity: bannerData.textOpacity || 100,
+        textShadow: bannerData.textShadow !== undefined ? bannerData.textShadow : true
       };
       
       this.localPublished = this.isPublished;
@@ -771,6 +1025,10 @@ export default defineComponent({
       this.localBannerData.gradientColor2 = color;
     },
 
+    updateTextColor(color: string) {
+      this.localBannerData.textColor = color;
+    },
+
     // Conference color methods
     useConferenceColor(color: string) {
       this.localBannerData.color = color;
@@ -781,6 +1039,158 @@ export default defineComponent({
         this.localBannerData.gradientColor1 = color;
       } else {
         this.localBannerData.gradientColor2 = color;
+      }
+    },
+
+    useConferenceTextColor(color: string) {
+      this.localBannerData.textColor = color;
+    },
+
+    // Copy/Paste methods
+    copyConfiguration() {
+      try {
+        // Create a deep copy of the current configuration
+        const configToCopy = JSON.parse(JSON.stringify(this.localBannerData));
+        
+        // Store in component state
+        this.copiedConfig = configToCopy;
+        
+        // Store in sessionStorage for persistence across component instances
+        this.storeConfiguration(configToCopy);
+        
+        // Show success message
+        this.copyMessage = 'Configuration copied successfully!';
+        
+        // Clear message after 3 seconds
+        setTimeout(() => {
+          this.copyMessage = '';
+        }, 3000);
+        
+        console.log('Banner configuration copied:', configToCopy);
+      } catch (error) {
+        console.error('Failed to copy configuration:', error);
+        this.copyMessage = 'Failed to copy configuration';
+        
+        setTimeout(() => {
+          this.copyMessage = '';
+        }, 3000);
+      }
+    },
+
+    pasteConfiguration() {
+      const configToPaste = this.copiedConfig || this.getStoredConfiguration();
+      
+      if (!configToPaste) {
+        console.warn('No configuration to paste');
+        return;
+      }
+
+      // Store the configuration to paste and show confirmation dialog
+      this.pendingPasteConfig = configToPaste;
+      this.showPasteConfirmation = true;
+    },
+
+    confirmPaste() {
+      if (!this.pendingPasteConfig) {
+        this.showPasteConfirmation = false;
+        return;
+      }
+
+      try {
+        // Apply the configuration (preserving component name)
+        const currentName = this.localComponentName;
+        this.localBannerData = JSON.parse(JSON.stringify(this.pendingPasteConfig));
+        this.localComponentName = currentName;
+        
+        console.log('Banner configuration pasted:', this.pendingPasteConfig);
+        
+        // Clear the pending config and close dialog
+        this.pendingPasteConfig = null;
+        this.showPasteConfirmation = false;
+        
+        // Show success message
+        this.copyMessage = 'Configuration pasted successfully!';
+        
+        setTimeout(() => {
+          this.copyMessage = '';
+        }, 3000);
+      } catch (error) {
+        console.error('Failed to paste configuration:', error);
+        this.showPasteConfirmation = false;
+        
+        this.copyMessage = 'Failed to paste configuration';
+        
+        setTimeout(() => {
+          this.copyMessage = '';
+        }, 3000);
+      }
+    },
+
+    clearCopiedConfig() {
+      this.copiedConfig = null;
+      this.removeStoredConfiguration();
+      this.copyMessage = 'Copied configuration cleared';
+      
+      setTimeout(() => {
+        this.copyMessage = '';
+      }, 2000);
+    },
+
+    loadCopiedConfiguration() {
+      // Load any existing copied configuration from storage
+      const stored = this.getStoredConfiguration();
+      if (stored) {
+        this.copiedConfig = stored;
+      }
+    },
+
+    storeConfiguration(config: BannerData) {
+      try {
+        // Store configuration with timestamp for potential cleanup
+        const configData = {
+          config,
+          timestamp: Date.now()
+        };
+        
+        // Use in-memory storage since we can't use sessionStorage in artifacts
+        if (typeof window !== 'undefined') {
+          (window as any).__bannerConfigStore = configData;
+        }
+      } catch (error) {
+        console.error('Failed to store configuration:', error);
+      }
+    },
+
+    getStoredConfiguration(): BannerData | null {
+      try {
+        // Retrieve from in-memory storage
+        if (typeof window !== 'undefined' && (window as any).__bannerConfigStore) {
+          const stored = (window as any).__bannerConfigStore;
+          
+          // Check if stored data is not too old (24 hours)
+          const maxAge = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+          if (Date.now() - stored.timestamp < maxAge) {
+            return stored.config;
+          } else {
+            // Clean up old data
+            this.removeStoredConfiguration();
+          }
+        }
+        
+        return null;
+      } catch (error) {
+        console.error('Failed to retrieve stored configuration:', error);
+        return null;
+      }
+    },
+
+    removeStoredConfiguration() {
+      try {
+        if (typeof window !== 'undefined') {
+          delete (window as any).__bannerConfigStore;
+        }
+      } catch (error) {
+        console.error('Failed to remove stored configuration:', error);
       }
     }
   }
@@ -835,4 +1245,5 @@ export default defineComponent({
     height: 2.5rem;
     min-width: 180px;
   }
-}</style>
+}
+</style>

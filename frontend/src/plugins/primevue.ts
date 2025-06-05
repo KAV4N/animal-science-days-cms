@@ -412,7 +412,7 @@ const defaultTheme = definePreset(Aura, {
             0: '#ffffff',
             50: '#f6f6f6',
             100: '#d2d3d6',
-            200: '#afb1b5',
+            200: '#E8EDEF',
             300: '#8b8e95',
             400: '#686c74',
             500: '#444954',
@@ -665,7 +665,7 @@ const defaultTheme = definePreset(Aura, {
   export const primevueConfig = {
     ripple: true,
     theme: {
-      preset: Aura,
+      preset: defaultTheme,
       options: {
         prefix: 'p',
         darkModeSelector: 'none',

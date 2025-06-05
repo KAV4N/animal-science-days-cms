@@ -1,4 +1,3 @@
-// components/dashboard/UserManagement/DeleteConfirmDialog.vue
 <template>
   <Dialog v-model:visible="visible" :style="{ width: '450px' }" header="Confirm" :modal="true">
     <div class="flex items-center gap-4">
