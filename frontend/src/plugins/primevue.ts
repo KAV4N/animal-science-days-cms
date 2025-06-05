@@ -411,7 +411,7 @@ const defaultTheme = definePreset(Aura, {
           surface: {
             0: '#ffffff',
             50: '#f6f6f6',
-            100: '#d2d3d6',
+            100: '#F1F5F9',
             200: '#E8EDEF',
             300: '#8b8e95',
             400: '#686c74',
