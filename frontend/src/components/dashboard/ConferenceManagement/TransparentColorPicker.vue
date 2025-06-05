@@ -7,14 +7,42 @@
 <script lang="ts">
 import { defineComponent, ref, onMounted, nextTick, watch, onBeforeUnmount } from 'vue';
 
-// You'll need to install Alwan: npm install alwan
-// @ts-ignore
-import Alwan from 'alwan';
+import AlwanLib from 'alwan';
 import 'alwan/dist/css/alwan.min.css';
+
+// Type definitions for Alwan
+interface AlwanInstance {
+  on(event: string, callback: (event: AlwanColorEvent) => void): void;
+  setColor(color: string): AlwanInstance;
+  getColor(): { hex: string; rgb: string; hsl: string; [key: string]: string };
+  trigger(event: string): AlwanInstance;
+  reset(): void;
+  destroy(): void;
+}
+
+interface AlwanColorEvent {
+  hex: string;
+  rgb: string;
+  hsl: string;
+  [key: string]: string;
+}
+
+interface AlwanOptions {
+  theme?: string;
+  format?: string;
+  color?: string;
+  inputs?: { hex?: boolean; rgb?: boolean; hsl?: boolean };
+  opacity?: boolean;
+  toggle?: boolean;
+  popover?: boolean;
+  target?: HTMLElement | null;
+  preset?: boolean;
+  classname?: string;
+}
 
 export default defineComponent({
   name: 'TransparentColorPicker',
-  
+
   props: {
     // v-model value
     modelValue: {
@@ -39,24 +67,24 @@ export default defineComponent({
       default: ''
     }
   },
-  
+
   emits: ['update:modelValue', 'color-change'],
-  
+
   setup(props, { emit }) {
     const colorPickerRef = ref<HTMLElement | null>(null);
-    const colorPicker = ref<any>(null);
-    
+    const colorPicker = ref<AlwanInstance | null>(null);
+
     const initColorPicker = () => {
       if (!colorPickerRef.value) return;
-      
+
       // Create a reference element
       const refElement = document.createElement('div');
       colorPickerRef.value.appendChild(refElement);
-      
+
       // Ensure initial color has # prefix if it's a hex value
       const initialColor = ensureHashPrefix(props.modelValue);
-      
-      colorPicker.value = new Alwan(refElement, {
+
+      colorPicker.value = new (AlwanLib as any)(refElement, {
         theme: props.theme,
         format: props.format,
         color: initialColor,
@@ -69,21 +97,23 @@ export default defineComponent({
         preset: false,                   // Don't replace with preset button
         classname: 'transparent-picker ' + props.customClass // Custom classes
       });
-      
+
       // Listen for color changes
-      colorPicker.value.on('change', (event: any) => {
-        let colorValue = event[props.format];
-        
-        // Ensure hex colors always include # prefix
-        if (props.format === 'hex' && colorValue && !colorValue.startsWith('#')) {
-          colorValue = '#' + colorValue;
-        }
-        
-        emit('update:modelValue', colorValue);
-        emit('color-change', event);
-      });
+      if (colorPicker.value) {
+        colorPicker.value.on('change', (event: AlwanColorEvent) => {
+          let colorValue = event[props.format];
+
+          // Ensure hex colors always include # prefix
+          if (props.format === 'hex' && colorValue && !colorValue.startsWith('#')) {
+            colorValue = '#' + colorValue;
+          }
+
+          emit('update:modelValue', colorValue);
+          emit('color-change', event);
+        });
+      }
     };
-    
+
     // Helper method to ensure hex colors start with #
     const ensureHashPrefix = (color: string): string => {
       if (props.format === 'hex' && color && !color.startsWith('#')) {
@@ -91,17 +121,17 @@ export default defineComponent({
       }
       return color;
     };
-    
+
     const applyTransparentBackground = () => {
       if (!colorPickerRef.value) return;
-      
+
       // Make background transparent for all relevant elements
       const elements = colorPickerRef.value.querySelectorAll('.alwan, .alwan__panel');
       elements.forEach((el: Element) => {
         (el as HTMLElement).style.backgroundColor = 'transparent';
       });
     };
-    
+
     // Public method to set color programmatically
     const setColor = (color: string) => {
       if (colorPicker.value) {
@@ -109,14 +139,14 @@ export default defineComponent({
         colorPicker.value.setColor(formattedColor).trigger('change');
       }
     };
-    
+
     // Public method to reset to default color
     const reset = () => {
       if (colorPicker.value) {
         colorPicker.value.reset();
       }
     };
-    
+
     // Clean up
     const destroyColorPicker = () => {
       if (colorPicker.value) {
@@ -124,29 +154,29 @@ export default defineComponent({
         colorPicker.value = null;
       }
     };
-    
+
     onMounted(() => {
       initColorPicker();
-      
+
       // Apply transparent background after initialization
       nextTick(() => {
         applyTransparentBackground();
       });
     });
-    
+
     // Watch for prop changes
     watch(() => props.modelValue, (newVal) => {
       if (colorPicker.value) {
         const formattedVal = ensureHashPrefix(newVal);
         const currentColor = colorPicker.value.getColor()[props.format];
         const formattedCurrentColor = ensureHashPrefix(currentColor);
-        
+
         if (formattedVal !== formattedCurrentColor) {
           colorPicker.value.setColor(formattedVal);
         }
       }
     });
-    
+
     watch(() => props.theme, () => {
       // Reinitialize if theme changes
       destroyColorPicker();
@@ -155,11 +185,11 @@ export default defineComponent({
         applyTransparentBackground();
       });
     });
-    
+
     onBeforeUnmount(() => {
       destroyColorPicker();
     });
-    
+
     // Expose methods for parent component access
     return {
       colorPickerRef,

@@ -30,7 +30,12 @@ export default defineComponent({
     }
   },
   computed: {
-    ...mapStores(useAuthStore)
+    ...mapStores(useAuthStore),
+    showGoBackHomeButton() {
+      // Hide the button on all public-facing conference pages
+      const publicRoutes = ['HomePage', 'conference', 'conferencePage', 'archive'];
+      return !publicRoutes.includes(this.$route.name as string);
+    }
   },
   setup() {
     const router = useRouter();
@@ -60,7 +65,7 @@ export default defineComponent({
           this.$emit('login');
           this.resetForm();
           this.closeDialog();
-          this.$router.push('dashboard');
+          this.$router.push('/dashboard');
         } else {
           this.errorMessage = this.authStore.error || 'Login failed';
         }
@@ -85,6 +90,7 @@ export default defineComponent({
     pt:root:class="!border-0 !bg-transparent"
     pt:mask:class="backdrop-blur-sm"
     modal
+    dismissableMask
   >
     <template #container="{ closeCallback }">
       <div class="flex flex-col px-8 py-8 gap-6 rounded-2xl" style="background-image: radial-gradient(circle at left top, var(--p-surface-400), var(--p-surface-700))">
@@ -133,6 +139,7 @@ export default defineComponent({
 
           <!-- 👇 Subtle "Go Back Home" Button -->
           <Button
+            v-if="showGoBackHomeButton"
             label="Go Back Home"
             @click="goBackHome"
             text
