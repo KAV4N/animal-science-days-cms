@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\University;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -29,6 +30,7 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            'university_id' => null, // Will be set explicitly in seeders
         ];
     }
 
@@ -39,6 +41,27 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+        ]);
+    }
+
+    /**
+     * Set a specific university for the user.
+     */
+    public function forUniversity($universityId): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'university_id' => $universityId,
+        ]);
+    }
+
+    /**
+     * Create a user with a specific name and email.
+     */
+    public function withCredentials(string $name, string $email): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'name' => $name,
+            'email' => $email,
         ]);
     }
 }

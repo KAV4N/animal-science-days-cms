@@ -296,6 +296,29 @@
                   </template>
                 </FileUpload>
               </div>
+              
+              <!-- Upload Progress -->
+              <div v-if="uploadProgress.length > 0" class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-medium">Upload Progress:</span>
+                  <span class="text-sm text-gray-600">{{ uploadProgress.filter(p => p.status === 'success').length }}/{{ uploadProgress.length }} completed</span>
+                </div>
+                <div class="max-h-32 overflow-y-auto space-y-1">
+                  <div v-for="progress in uploadProgress" :key="progress.fileName" class="flex items-center gap-2 text-sm p-2 rounded" :class="{
+                    'bg-green-50': progress.status === 'success',
+                    'bg-red-50': progress.status === 'error',
+                    'bg-blue-50': progress.status === 'uploading'
+                  }">
+                    <i class="pi" :class="{
+                      'pi-check text-green-600': progress.status === 'success',
+                      'pi-times text-red-600': progress.status === 'error',
+                      'pi-spin pi-spinner text-blue-600': progress.status === 'uploading'
+                    }"></i>
+                    <span class="flex-1 truncate">{{ progress.fileName }}</span>
+                    <span v-if="progress.status === 'error'" class="text-red-600 text-xs">{{ progress.error }}</span>
+                  </div>
+                </div>
+              </div>
             </div>
             <div class="flex flex-col sm:flex-row justify-end gap-3 pt-4">
               <Button
@@ -304,6 +327,7 @@
                 @click="cancelUpload"
                 outlined
                 class="w-full sm:w-auto"
+                :disabled="uploading"
               />
               <Button
                 label="Upload"
@@ -581,6 +605,12 @@ import type {
   FileRemoveEvent,
 } from '@/types/media';
 
+interface UploadProgress {
+  fileName: string;
+  status: 'uploading' | 'success' | 'error';
+  error?: string;
+}
+
 export default defineComponent({
   name: 'MediaManager',
   props: {
@@ -622,6 +652,7 @@ export default defineComponent({
       uploading: false,
       selectedFiles: [] as File[],
       uploadData: { collection: 'general' } as MediaUploadData,
+      uploadProgress: [] as UploadProgress[],
       showEditDialog: false,
       updating: false,
       editingMedia: null as MediaItem | null,
@@ -696,13 +727,15 @@ export default defineComponent({
         }
 
         this.hasMorePages = paginationInfo.current_page < paginationInfo.last_page;
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching media:', error);
+        
+        const errorMessage = this.getErrorMessage(error);
         this.$toast.add({
           severity: 'error',
-          summary: 'Error',
-          detail: 'Failed to fetch media files',
-          life: 3000
+          summary: 'Failed to Load Media',
+          detail: errorMessage,
+          life: 5000
         });
       } finally {
         this.loading = false;
@@ -798,28 +831,51 @@ export default defineComponent({
         icon: 'pi pi-exclamation-triangle',
         accept: async () => {
           this.deleting = true;
+          let successCount = 0;
+          let errorCount = 0;
+          const errors: string[] = [];
+
           try {
-            const deletePromises = this.selectedMedia.map(item =>
-              apiService.delete(`/v1/conference-management/conferences/${this.conferenceId}/media/${item.id}`)
-            );
+            const deletePromises = this.selectedMedia.map(async (item) => {
+              try {
+                await apiService.delete(`/v1/conference-management/conferences/${this.conferenceId}/media/${item.id}`);
+                successCount++;
+              } catch (error: any) {
+                errorCount++;
+                const errorMessage = this.getErrorMessage(error);
+                errors.push(`${item.file_name}: ${errorMessage}`);
+              }
+            });
+
             await Promise.all(deletePromises);
 
-            this.$toast.add({
-              severity: 'success',
-              summary: 'Success',
-              detail: `${this.selectedMedia.length} media item${this.selectedMedia.length > 1 ? 's' : ''} deleted`,
-              life: 3000
-            });
+            if (successCount > 0) {
+              this.$toast.add({
+                severity: 'success',
+                summary: 'Batch Delete Complete',
+                detail: `${successCount} item${successCount > 1 ? 's' : ''} deleted successfully${errorCount > 0 ? `, ${errorCount} failed` : ''}`,
+                life: 5000
+              });
+            }
+
+            if (errorCount > 0) {
+              this.$toast.add({
+                severity: 'error',
+                summary: 'Some Deletions Failed',
+                detail: `Failed to delete ${errorCount} item${errorCount > 1 ? 's' : ''}. First error: ${errors[0] || 'Unknown error'}`,
+                life: 8000
+              });
+            }
 
             this.selectedMedia = [];
             this.isBatchDeleteMode = false;
             await this.fetchMedia();
-          } catch (error) {
-            console.error('Error deleting media:', error);
+          } catch (error: any) {
+            console.error('Error during batch delete:', error);
             this.$toast.add({
               severity: 'error',
-              summary: 'Error',
-              detail: 'Failed to delete some media items',
+              summary: 'Batch Delete Failed',
+              detail: 'An unexpected error occurred during batch deletion',
               life: 5000
             });
           } finally {
@@ -831,10 +887,14 @@ export default defineComponent({
 
     onFileSelect(event: FileUploadEvent) {
       this.selectedFiles = Array.from(event.files);
+      // Reset upload progress when new files are selected
+      this.uploadProgress = [];
     },
 
     onFileRemove(event: FileRemoveEvent) {
       this.selectedFiles = this.selectedFiles.filter(file => file !== event.file);
+      // Remove from progress tracking as well
+      this.uploadProgress = this.uploadProgress.filter(p => p.fileName !== event.file.name);
     },
 
     async handleUpload() {
@@ -844,9 +904,25 @@ export default defineComponent({
       let successCount = 0;
       let errorCount = 0;
 
+      // Initialize upload progress tracking
+      this.uploadProgress = this.selectedFiles.map(file => ({
+        fileName: file.name,
+        status: 'uploading' as const,
+      }));
+
       try {
-        for (const file of this.selectedFiles) {
+        // Process files sequentially to avoid overwhelming the server
+        for (let i = 0; i < this.selectedFiles.length; i++) {
+          const file = this.selectedFiles[i];
+          const progressItem = this.uploadProgress[i];
+
           try {
+            // Pre-validate the file
+            const validation = mediaService.validateFile(file, this.uploadData.collection);
+            if (!validation.valid) {
+              throw new Error(validation.message || 'File validation failed');
+            }
+
             const formData = new FormData();
             formData.append('file', file);
             formData.append('collection', this.uploadData.collection);
@@ -854,42 +930,57 @@ export default defineComponent({
             await apiService.post(`/v1/conference-management/conferences/${this.conferenceId}/media`, formData, {
               headers: { 'Content-Type': 'multipart/form-data' }
             });
+
+            progressItem.status = 'success';
             successCount++;
-          } catch (error) {
+          } catch (error: any) {
             console.error('Error uploading file:', file.name, error);
+            
+            const errorMessage = this.getErrorMessage(error);
+            progressItem.status = 'error';
+            progressItem.error = errorMessage;
             errorCount++;
           }
         }
 
-        if (successCount > 0) {
+        // Show appropriate toast messages based on results
+        if (successCount > 0 && errorCount === 0) {
           this.$toast.add({
             severity: 'success',
-            summary: 'Upload Complete',
-            detail: `${successCount} file(s) uploaded successfully${errorCount > 0 ? `, ${errorCount} failed` : ''}`,
+            summary: 'Upload Successful',
+            detail: `All ${successCount} file${successCount > 1 ? 's' : ''} uploaded successfully`,
             life: 5000
           });
-        }
-
-        if (errorCount > 0 && successCount === 0) {
+        } else if (successCount > 0 && errorCount > 0) {
+          this.$toast.add({
+            severity: 'warn',
+            summary: 'Upload Partially Complete',
+            detail: `${successCount} file${successCount > 1 ? 's' : ''} uploaded successfully, ${errorCount} failed. Check details above.`,
+            life: 8000
+          });
+        } else if (errorCount > 0) {
+          const firstError = this.uploadProgress.find(p => p.status === 'error')?.error || 'Unknown error';
           this.$toast.add({
             severity: 'error',
             summary: 'Upload Failed',
-            detail: `Failed to upload ${errorCount} file(s)`,
-            life: 5000
+            detail: `Failed to upload ${errorCount} file${errorCount > 1 ? 's' : ''}. First error: ${firstError}`,
+            life: 8000
           });
         }
 
+        // Only close dialog and refresh if at least one file was successful
         if (successCount > 0) {
-          this.cancelUpload();
-          await this.fetchMedia();
+            this.cancelUpload();
+            this.fetchMedia();
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error during upload process:', error);
+        const errorMessage = this.getErrorMessage(error);
         this.$toast.add({
           severity: 'error',
           summary: 'Upload Error',
-          detail: 'An unexpected error occurred during upload',
-          life: 5000
+          detail: `An unexpected error occurred: ${errorMessage}`,
+          life: 8000
         });
       } finally {
         this.uploading = false;
@@ -900,6 +991,7 @@ export default defineComponent({
       this.showUploadDialog = false;
       this.selectedFiles = [];
       this.uploadData = { collection: 'general' };
+      this.uploadProgress = [];
       if (this.$refs.fileUpload) {
         (this.$refs.fileUpload as any).clear();
       }
@@ -916,10 +1008,11 @@ export default defineComponent({
         });
       } catch (error: any) {
         console.error('Download error:', error);
+        const errorMessage = this.getErrorMessage(error);
         this.$toast.add({
           severity: 'error',
           summary: 'Download Failed',
-          detail: error.response?.data?.message || `Failed to download file: ${media.file_name}`,
+          detail: `Failed to download ${media.file_name}: ${errorMessage}`,
           life: 8000
         });
       }
@@ -937,12 +1030,23 @@ export default defineComponent({
       try {
         const updateData: MediaUpdateData = { file_name: this.editData.file_name };
         await apiService.put(`/v1/conference-management/conferences/${this.conferenceId}/media/${this.editingMedia.id}`, updateData);
-        this.$toast.add({ severity: 'success', summary: 'Success', detail: 'Media updated successfully', life: 3000 });
+        this.$toast.add({
+          severity: 'success',
+          summary: 'Media Updated',
+          detail: 'File name updated successfully',
+          life: 3000
+        });
         this.cancelEdit();
         this.fetchMedia();
       } catch (error: any) {
         console.error('Error updating media:', error);
-        this.$toast.add({ severity: 'error', summary: 'Update Failed', detail: error.response?.data?.message || 'Failed to update media', life: 5000 });
+        const errorMessage = this.getErrorMessage(error);
+        this.$toast.add({
+          severity: 'error',
+          summary: 'Update Failed',
+          detail: `Failed to update media: ${errorMessage}`,
+          life: 8000
+        });
       } finally {
         this.updating = false;
       }
@@ -964,12 +1068,23 @@ export default defineComponent({
       this.deleting = true;
       try {
         await apiService.delete(`/v1/conference-management/conferences/${this.conferenceId}/media/${this.deletingMedia.id}`);
-        this.$toast.add({ severity: 'success', summary: 'Success', detail: 'Media deleted successfully', life: 3000 });
+        this.$toast.add({
+          severity: 'success',
+          summary: 'Media Deleted',
+          detail: `${this.deletingMedia.file_name} deleted successfully`,
+          life: 3000
+        });
         this.cancelDelete();
         this.fetchMedia();
       } catch (error: any) {
         console.error('Error deleting media:', error);
-        this.$toast.add({ severity: 'error', summary: 'Delete Failed', detail: error.response?.data?.message || 'Failed to delete media', life: 5000 });
+        const errorMessage = this.getErrorMessage(error);
+        this.$toast.add({
+          severity: 'error',
+          summary: 'Delete Failed',
+          detail: `Failed to delete ${this.deletingMedia?.file_name}: ${errorMessage}`,
+          life: 8000
+        });
       } finally {
         this.deleting = false;
       }
@@ -1002,6 +1117,67 @@ export default defineComponent({
 
     formatDate(dateString: string): string {
       return new Date(dateString).toLocaleDateString();
+    },
+
+    /**
+     * Extract user-friendly error message from API response
+     */
+    getErrorMessage(error: any): string {
+      // Handle validation errors (422)
+      if (error.response?.status === 422 && error.response?.data?.errors) {
+        const errors = error.response.data.errors;
+        const firstField = Object.keys(errors)[0];
+        return errors[firstField]?.[0] || 'Validation failed';
+      }
+
+      // Handle API error messages
+      if (error.response?.data?.message) {
+        return error.response.data.message;
+      }
+
+      // Handle API error details
+      if (error.response?.data?.detail) {
+        return error.response.data.detail;
+      }
+
+      // Handle different HTTP status codes
+      if (error.response?.status) {
+        switch (error.response.status) {
+          case 400:
+            return 'Bad request - please check your input';
+          case 401:
+            return 'You are not authorized to perform this action';
+          case 403:
+            return 'You do not have permission to access this resource';
+          case 404:
+            return 'The requested resource was not found';
+          case 413:
+            return 'File size is too large';
+          case 415:
+            return 'File type is not supported';
+          case 422:
+            return 'Validation failed - please check your input';
+          case 500:
+            return 'Server error - please try again later';
+          case 503:
+            return 'Service temporarily unavailable';
+          default:
+            return `Request failed with status ${error.response.status}`;
+        }
+      }
+
+      // Handle network errors
+      if (error.code === 'NETWORK_ERROR' || error.message === 'Network Error') {
+        return 'Network error - please check your connection';
+      }
+
+      // Handle timeout errors
+      if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+        return 'Request timed out - please try again';
+      }
+
+      // Fallback for any other errors
+      return error.message || 'An unexpected error occurred';
     }
   }
 });

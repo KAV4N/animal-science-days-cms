@@ -1,22 +1,22 @@
 <template>
   <div class="banner-container">
     <!-- Background Image -->
-    <div 
-      v-if="data.backgroundImage" 
+    <div
+      v-if="data.backgroundImage"
       class="background-image"
       :style="backgroundImageStyle"
     ></div>
-    
+
     <!-- Shape Divider -->
-    <div 
-      class="shape-divider" 
+    <div
+      class="shape-divider"
       :class="[
         `position-${data.position}`,
         { 'flip-x': data.flipX, 'flip-y': data.flipY }
       ]"
       :style="dividerStyle"
     >
-      <svg 
+      <svg
         viewBox="0 0 1200 120"
         width="100%"
         :height="data.height + 'px'"
@@ -24,8 +24,8 @@
         class="shape-svg"
       >
         <defs>
-          <linearGradient 
-            id="shapeGradient" 
+          <linearGradient
+            id="shapeGradient"
             :x1="gradientCoords.x1"
             :y1="gradientCoords.y1"
             :x2="gradientCoords.x2"
@@ -39,16 +39,16 @@
             <path :d="currentPath"></path>
           </clipPath>
         </defs>
-        
+
         <!-- Handle shapes with multiple paths (like waves-opacity) -->
         <g v-if="currentShapePaths.length > 1">
-          <path 
+          <path
             v-for="(pathData, index) in currentShapePaths"
             :key="index"
             v-if="!data.shapeImage"
-            :d="pathData.d" 
+            :d="pathData.d"
             :fill="fillColor"
-            :opacity="pathData.opacity || 1"
+            :opacity="'opacity' in pathData ? pathData.opacity : 1"
           />
           <image
             v-if="data.shapeImage"
@@ -62,12 +62,12 @@
             :style="{ opacity: (data.shapeImageOpacity || data.imageOpacity) / 100 }"
           />
         </g>
-        
+
         <!-- Handle shapes with single path -->
         <g v-else>
-          <path 
+          <path
             v-if="!data.shapeImage"
-            :d="currentPath" 
+            :d="currentPath"
             :fill="fillColor"
           />
           <image
@@ -86,8 +86,8 @@
     </div>
 
     <!-- Text Overlay -->
-    <div 
-      v-if="data.enableText && data.textContent" 
+    <div
+      v-if="data.enableText && data.textContent"
       class="text-overlay"
       :style="textStyle"
     >
@@ -123,7 +123,7 @@ interface BannerData {
   textSize?: number;
   textColor?: string;
   textWeight?: string;
-  textAlign?: string;
+  textAlign?: 'left' | 'center' | 'right' | 'justify' | 'start' | 'end';
   textOpacity?: number;
   textShadow?: boolean;
 }
@@ -170,7 +170,7 @@ export default defineComponent({
         normal: 'M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z',
         inverted: 'M985.66,92.83C906.67,72,823.78,31,743.84,14.19c-82.26-17.34-168.06-16.33-250.45.39-57.84,11.73-114,31.07-172,41.86A600.21,600.21,0,0,1,0,27.35V120H1200V95.8C1132.19,118.92,1055.71,111.31,985.66,92.83Z'
       },
-      
+
       // Waves with opacity (multiple paths)
       'waves-opacity': [
         {
@@ -186,66 +186,66 @@ export default defineComponent({
           opacity: 1
         }
       ],
-      
+
       // Curve shape
       curve: {
         normal: 'M0,0V7.23C0,65.52,268.63,112.77,600,112.77S1200,65.52,1200,7.23V0Z',
         inverted: 'M600,112.77C268.63,112.77,0,65.52,0,7.23V120H1200V7.23C1200,65.52,931.37,112.77,600,112.77Z'
       },
-      
+
       // Asymmetrical curve
       'curve-asymmetrical': {
         normal: 'M0,0V6c0,21.6,291,111.46,741,110.26,445.39,3.6,459-88.3,459-110.26V0Z',
         inverted: 'M741,116.23C291,117.43,0,27.57,0,6V120H1200V6C1200,27.93,1186.4,119.83,741,116.23Z'
       },
-      
+
       // Triangle shape
       triangle: {
         normal: 'M1200 0L0 0 598.97 114.72 1200 0z',
         inverted: 'M598.97 114.72L0 0 0 120 1200 120 1200 0 598.97 114.72z'
       },
-      
+
       // Asymmetrical triangle
       'triangle-asymmetrical': {
         normal: 'M1200 0L0 0 892.25 114.72 1200 0z',
         inverted: 'M892.25 114.72L0 0 0 120 1200 120 1200 0 892.25 114.72z'
       },
-      
+
       // Arrow shape
       arrow: {
         normal: 'M649.97 0L550.03 0 599.91 54.12 649.97 0z',
         inverted: 'M649.97 0L599.91 54.12 550.03 0 0 0 0 120 1200 120 1200 0 649.97 0z'
       },
-      
+
       // Book shape
       book: {
         normal: 'M1200,0H0V120H281.94C572.9,116.24,602.45,3.86,602.45,3.86h0S632,116.24,923,120h277Z',
         inverted: 'M602.45,3.86h0S572.9,116.24,281.94,120H923C632,116.24,602.45,3.86,602.45,3.86Z'
       },
-      
+
       // Tilt shape (create inverted variant)
       tilt: {
         normal: 'M1200 120L0 16.48 0 0 1200 0 1200 120z',
         inverted: 'M0 0L1200 103.52 1200 120 0 120 0 0z'
       },
-      
+
       // Split shape
       split: {
         normal: 'M0,0V3.6H580.08c11,0,19.92,5.09,19.92,13.2,0-8.14,8.88-13.2,19.92-13.2H1200V0Z',
         inverted: 'M600,16.8c0-8.11-8.88-13.2-19.92-13.2H0V120H1200V3.6H619.92C608.88,3.6,600,8.66,600,16.8Z'
       },
-      
+
       // Legacy shapes - create proper inverted variants
       zigzag: {
         normal: 'M0,96L200,32L400,96L600,32L800,96L1000,32L1200,96L1200,120L0,120Z',
         inverted: 'M0,0L0,24L200,88L400,24L600,88L800,24L1000,88L1200,24L1200,0L0,0Z'
       },
-      
+
       mountains: {
         normal: 'M0,120L200,40L400,80L600,20L800,60L1000,30L1200,40L1200,120L0,120Z',
         inverted: 'M0,0L0,100L200,80L400,40L600,100L800,60L1000,90L1200,80L1200,0L0,0Z'
       },
-      
+
       clouds: {
         normal: 'M0,96C200,32,400,88,600,96C800,32,1000,88,1200,96L1200,120L0,120Z',
         inverted: 'M0,0L0,24C200,88,400,32,600,24C800,88,1000,32,1200,24L1200,0L0,0Z'
@@ -264,23 +264,23 @@ export default defineComponent({
     const currentShapePaths = computed(() => {
       const shapeKey = props.data.shapeType;
       const shape = shapes[shapeKey as keyof typeof shapes];
-      
+
       if (!shape) {
         // Fallback to wave if shape not found
         const waveShape = shapes.wave;
         return [{ d: shouldInvert.value ? waveShape.inverted : waveShape.normal }];
       }
-      
+
       // Handle array shapes (like waves-opacity) - these don't invert
       if (Array.isArray(shape)) {
         return shape;
       }
-      
+
       // Handle object shapes with normal/inverted variants
       if (typeof shape === 'object' && 'normal' in shape) {
         return [{ d: shouldInvert.value ? shape.inverted : shape.normal }];
       }
-      
+
       // Handle simple string shapes (shouldn't happen with updated definitions)
       return [{ d: shape as string }];
     });
@@ -299,7 +299,7 @@ export default defineComponent({
 
     const gradientCoords = computed(() => {
       const direction = props.data.gradientDirection;
-      
+
       switch (direction) {
         case 'to right':
           return { x1: '0%', y1: '0%', x2: '100%', y2: '0%' };
@@ -320,7 +320,7 @@ export default defineComponent({
 
     const dividerStyle = computed(() => {
       let transformValue = '';
-      
+
       // Handle manual flip transforms
       if (props.data.flipX && props.data.flipY) {
         transformValue = 'scaleX(-1) scaleY(-1)';
@@ -353,15 +353,15 @@ export default defineComponent({
     }));
 
     const textStyle = computed(() => {
-      const textShadowValue = props.data.textShadow 
-        ? '2px 2px 4px rgba(0, 0, 0, 0.5)' 
+      const textShadowValue = props.data.textShadow
+        ? '2px 2px 4px rgba(0, 0, 0, 0.5)'
         : 'none';
 
       return {
         fontSize: (props.data.textSize || 32) + 'px',
         color: props.data.textColor || '#ffffff',
         fontWeight: props.data.textWeight || '600',
-        textAlign: props.data.textAlign || 'center',
+        textAlign: (props.data.textAlign || 'center') as 'left' | 'center' | 'right' | 'justify' | 'start' | 'end',
         opacity: (props.data.textOpacity || 100) / 100,
         textShadow: textShadowValue,
         position: 'absolute' as const,

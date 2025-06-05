@@ -1089,7 +1089,7 @@ export default defineComponent({
       try {
         const currentMenus = this.pageMenuStore.menus;
         const maxOrder = currentMenus.length > 0
-          ? Math.max(...currentMenus.map(m => m.order))
+          ? Math.max(...currentMenus.map(m => m.order ?? 0))
           : -1;
         await this.pageMenuStore.createMenu({
           title: this.newMenuTitle.trim(),
@@ -1207,7 +1207,7 @@ export default defineComponent({
       }
     },
     async editComponent(componentId: number) {
-      const component = this.pageMenuStore.selectedMenu?.page_data.find(c => c.id === componentId);
+      const component = this.pageMenuStore.selectedMenu?.page_data?.find(c => c.id === componentId);
       if (component) {
         this.editComponentId = componentId;
         this.editComponentType = component.component_type;

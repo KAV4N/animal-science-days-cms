@@ -38,7 +38,7 @@
       </div>
 
       <!-- Main Content -->
-      <div v-else-if="currentPublicConference" class="min-h-screen">
+      <div v-else-if="currentPublicConference" class="min-h-screen mb-10">
 
         <div class="relative overflow-hidden" :style="{ background: `linear-gradient(to right, ${currentPublicConference?.primary_color || '#1E3A8A'}, ${currentPublicConference?.secondary_color || '#6B7280'})` }">
           <div class="absolute inset-0 bg-black/20"></div>
@@ -69,7 +69,7 @@
               </p>
             </div>
           </div>
-          
+
           <!-- Decorative Elements -->
           <div class="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
             <div class="absolute -top-24 -right-24 w-96 h-96 bg-white/5 rounded-full"></div>
@@ -79,7 +79,7 @@
 
         <!-- Navigation & Content -->
         <div class="flex min-h-[calc(100vh-280px)]">
-          
+
           <!-- Sidebar -->
           <div class="hidden lg:block w-80 bg-white border-r border-slate-200">
             <div class="sticky top-0 h-screen overflow-y-auto">
@@ -209,7 +209,7 @@
                 </div>
               </div>
 
-            
+
               <!-- Page Components -->
               <div v-if="activePage?.page_data?.length" class="space-y-1">
                 <div
@@ -217,7 +217,7 @@
                   :key="pageData.id"
                   class="border-0 shadow-sm bg-white overflow-hidden"
                 >
-                 
+
                     <div class="">
                       <!-- Dynamic Component Rendering -->
                       <component
@@ -263,24 +263,6 @@
           </div>
         </div>
 
-        <!-- Footer -->
-        <div class="bg-gray-900 text-white mt-16">
-          <div class="max-w-7xl mx-auto px-4 py-12">
-            <div class="text-center">
-              <h3 class="text-2xl font-bold mb-4">{{ currentPublicConference.title }}</h3>
-              <div class="flex flex-col lg:flex-row items-center justify-center space-y-2 lg:space-y-0 lg:space-x-8 text-gray-300">
-                <div class="flex items-center space-x-2">
-                  <i class="pi pi-map-marker"></i>
-                  <span>{{ currentPublicConference.location }}</span>
-                </div>
-                <div class="flex items-center space-x-2">
-                  <i class="pi pi-calendar"></i>
-                  <span>{{ formatDate(currentPublicConference.start_date) }} - {{ formatDate(currentPublicConference.end_date) }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
     </div>
