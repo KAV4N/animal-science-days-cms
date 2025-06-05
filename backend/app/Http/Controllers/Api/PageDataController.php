@@ -12,7 +12,6 @@ use App\Models\PageMenu;
 use App\Models\PageData;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class PageDataController extends Controller
 {
@@ -74,16 +73,13 @@ class PageDataController extends Controller
             $lastOrder = $menu->pageData()->max('order') ?? 0;
             $validated['order'] = $lastOrder + 1;
         } else {
-            // If order is specified, make room for the new item and adjust existing orders
-            DB::beginTransaction();
             try {
-                // Increment order of all items that have order >= specified order
+                // If order is specified, make room for the new item and adjust existing orders
                 $menu->pageData()
                     ->where('order', '>=', $validated['order'])
                     ->increment('order');
                     
                 $pageData = PageData::create($validated);
-                DB::commit();
                 
                 return $this->successResponse(
                     new PageDataResource($pageData),
@@ -91,7 +87,6 @@ class PageDataController extends Controller
                     201
                 );
             } catch (\Exception $e) {
-                DB::rollBack();
                 return $this->errorResponse('Failed to create component: ' . $e->getMessage(), 500);
             }
         }
@@ -144,7 +139,6 @@ class PageDataController extends Controller
 
         // Handle order update if specified
         if (isset($validated['order']) && $validated['order'] !== null && $validated['order'] !== $data->order) {
-            DB::beginTransaction();
             try {
                 $oldOrder = $data->order;
                 $newOrder = $validated['order'];
@@ -166,9 +160,7 @@ class PageDataController extends Controller
                 }
 
                 $data->update($validated);
-                DB::commit();
             } catch (\Exception $e) {
-                DB::rollBack();
                 return $this->errorResponse('Failed to update component: ' . $e->getMessage(), 500);
             }
         } else {
@@ -195,8 +187,6 @@ class PageDataController extends Controller
             return $this->errorResponse('Resource not found', 404);
         }
 
-        DB::beginTransaction();
-        
         try {
             $currentOrder = $data->order;
             
@@ -207,15 +197,12 @@ class PageDataController extends Controller
             $menu->pageData()
                 ->where('order', '>', $currentOrder)
                 ->decrement('order');
-            
-            DB::commit();
 
             return $this->successResponse(
                 null,
                 'Page component deleted successfully'
             );
         } catch (\Exception $e) {
-            DB::rollBack();
             return $this->errorResponse('Failed to delete component: ' . $e->getMessage(), 500);
         }
     }
@@ -238,8 +225,6 @@ class PageDataController extends Controller
         $direction = $request->input('direction'); // 'up' or 'down'
         $currentOrder = $data->order;
 
-        DB::beginTransaction();
-        
         try {
             if ($direction === 'up') {
                 // Find the component directly above (lower order number)
@@ -249,7 +234,6 @@ class PageDataController extends Controller
                     ->first();
 
                 if (!$targetData) {
-                    DB::rollBack();
                     return $this->errorResponse('Cannot move component up - already at the top', 400);
                 }
 
@@ -266,7 +250,6 @@ class PageDataController extends Controller
                     ->first();
 
                 if (!$targetData) {
-                    DB::rollBack();
                     return $this->errorResponse('Cannot move component down - already at the bottom', 400);
                 }
 
@@ -276,11 +259,8 @@ class PageDataController extends Controller
                 $data->update(['order' => $targetOrder, 'updated_by' => auth()->id()]);
 
             } else {
-                DB::rollBack();
                 return $this->errorResponse('Invalid direction. Use "up" or "down"', 400);
             }
-
-            DB::commit();
 
             // Fetch all components in their new order for the response
             $orderedItems = $menu->pageData()
@@ -292,7 +272,6 @@ class PageDataController extends Controller
                 'Component position updated successfully'
             );
         } catch (\Exception $e) {
-            DB::rollBack();
             return $this->errorResponse('Failed to update position: ' . $e->getMessage(), 500);
         }
     }

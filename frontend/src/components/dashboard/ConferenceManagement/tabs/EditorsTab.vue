@@ -42,6 +42,8 @@
         dataKey="id"
         :paginator="true"
         :rows="filters.per_page"
+        :totalRecords="totalEditors"
+        :lazy="true"
         :rowsPerPageOptions="[5, 10, 25, 50]"
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
         :sortField="filters.sort_field"
@@ -84,7 +86,7 @@
             <Button
               icon="pi pi-trash"
               class="p-button-text p-button-rounded p-button-danger"
-              @click="confirmDetachEditor(slotProps.data)"
+              @click="detachEditor(slotProps.data)"
               v-tooltip.top="'Remove editor'"
             />
           </template>
@@ -130,6 +132,8 @@
         dataKey="id"
         :paginator="true"
         :rows="unattachedFilters.per_page"
+        :totalRecords="totalUnattached"
+        :lazy="true"
         :rowsPerPageOptions="[5, 10, 25, 50]"
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
         :sortField="unattachedFilters.sort_field"
@@ -162,7 +166,7 @@
             <Button
               icon="pi pi-plus"
               class="p-button-text p-button-rounded p-button-success"
-              @click="confirmAttachEditor(slotProps.data)"
+              @click="attachEditor(slotProps.data)"
               v-tooltip.top="'Add editor'"
             />
           </template>
@@ -178,15 +182,12 @@
         />
       </template>
     </Dialog>
-
-    <ConfirmDialog />
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent } from 'vue';
 import { useToast } from 'primevue/usetoast';
-import { useConfirm } from 'primevue/useconfirm';
 import type { User } from '@/types/user';
 import type { University } from '@/types/university';
 import apiService from '@/services/apiService';
@@ -243,8 +244,7 @@ export default defineComponent({
       } as EditorFilters,
       debouncedSearchEditors: null as unknown as () => void,
       debouncedSearchUnattached: null as unknown as () => void,
-      toast: useToast(),
-      confirm: useConfirm()
+      toast: useToast()
     };
   },
   watch: {
@@ -374,18 +374,6 @@ export default defineComponent({
       this.loadUnattachedEditors();
     },
 
-    confirmAttachEditor(editor: User) {
-      this.confirm.require({
-        message: `Are you sure you want to add ${editor.name} as an editor to this conference?`,
-        header: 'Confirm Addition',
-        icon: 'pi pi-exclamation-triangle',
-        acceptClass: 'p-button-success',
-        accept: () => {
-          this.attachEditor(editor);
-        }
-      });
-    },
-
     async attachEditor(editor: User) {
       if (!this.conferenceId) return;
 
@@ -400,7 +388,7 @@ export default defineComponent({
           this.toast.add({
             severity: 'success',
             summary: 'Success',
-            detail: 'Editor added successfully',
+            detail: `${editor.name} has been added as an editor successfully`,
             life: 3000
           });
 
@@ -424,18 +412,6 @@ export default defineComponent({
         });
         console.error('Failed to attach editor:', error);
       }
-    },
-
-    confirmDetachEditor(editor: User) {
-      this.confirm.require({
-        message: `Are you sure you want to remove ${editor.name} as an editor from this conference?`,
-        header: 'Confirm Removal',
-        icon: 'pi pi-exclamation-triangle',
-        acceptClass: 'p-button-danger',
-        accept: () => {
-          this.detachEditor(editor);
-        }
-      });
     },
 
     async detachEditor(editor: User) {
@@ -488,6 +464,7 @@ export default defineComponent({
     onSort(event: any) {
       this.filters.sort_field = event.sortField;
       this.filters.sort_order = event.sortOrder === 1 ? 'asc' : 'desc';
+      this.filters.page = 1; // Reset to first page on sort
       this.loadEditors();
     },
 
@@ -500,6 +477,7 @@ export default defineComponent({
     onSortUnattached(event: any) {
       this.unattachedFilters.sort_field = event.sortField;
       this.unattachedFilters.sort_order = event.sortOrder === 1 ? 'asc' : 'desc';
+      this.unattachedFilters.page = 1; // Reset to first page on sort
       this.loadUnattachedEditors();
     },
 

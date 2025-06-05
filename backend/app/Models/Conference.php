@@ -12,17 +12,6 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 class Conference extends Model implements HasMedia
 {
     use InteractsWithMedia;
-    protected static function boot()
-    {
-        parent::boot();
-        static::saving(function ($conference) {
-            if ($conference->is_latest) {
-                static::where('id', '!=', $conference->id)
-                    ->where('is_latest', true)
-                    ->update(['is_latest' => false]);
-            }
-        });
-    }
 
     protected $fillable = [
         'university_id',
@@ -96,6 +85,7 @@ class Conference extends Model implements HasMedia
                 'video/mp4', 'video/avi', 'video/mov'
             ]);
     }
+
     public function registerMediaConversions(Media $media = null): void
     {
         $this->addMediaConversion('thumb')
@@ -110,19 +100,18 @@ class Conference extends Model implements HasMedia
             ->performOnCollections('images', 'general');
     }
 
-        public function getImages()
-        {
-            return $this->getMedia('images');
-        }
+    public function getImages()
+    {
+        return $this->getMedia('images');
+    }
 
-        public function getDocuments()
-        {
-            return $this->getMedia('documents');
-        }
+    public function getDocuments()
+    {
+        return $this->getMedia('documents');
+    }
 
-        public function getAllMedia()
-        {
-            return $this->getMedia('general');
-        }
-
+    public function getAllMedia()
+    {
+        return $this->getMedia('general');
+    }
 }

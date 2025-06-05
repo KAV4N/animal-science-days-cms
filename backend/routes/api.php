@@ -103,15 +103,17 @@ Route::prefix('v1')->group(function () {
                     Route::post('/conferences/{conference}/editors', [ConferenceEditorController::class, 'store']);
                     Route::delete('/conferences/{conference}/editors/{editor}', [ConferenceEditorController::class, 'destroy']);
 
-                    Route::middleware('check.conference.lock')->group(function () {
-                        // Page Menu routes
-                        Route::apiResource('conferences.menus', PageMenuController::class);
-                        Route::patch('conferences/{conference}/menus/{menu}/position', [PageMenuController::class, 'updatePosition']);
+                    
+                });
 
-                        // Page Data routes
-                        Route::apiResource('conferences.menus.data', PageDataController::class);
-                        Route::patch('conferences/{conference}/menus/{menu}/data/{data}/position', [PageDataController::class, 'updatePosition']);
-                    });
+                Route::middleware('check.conference.lock')->group(function () {
+                    // Page Menu routes
+                    Route::apiResource('conferences.menus', PageMenuController::class);
+                    Route::patch('conferences/{conference}/menus/{menu}/position', [PageMenuController::class, 'updatePosition']);
+
+                    // Page Data routes
+                    Route::apiResource('conferences.menus.data', PageDataController::class);
+                    Route::patch('conferences/{conference}/menus/{menu}/data/{data}/position', [PageDataController::class, 'updatePosition']);
                 });
             });
 

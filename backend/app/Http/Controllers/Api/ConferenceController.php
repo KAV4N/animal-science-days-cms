@@ -11,7 +11,6 @@ use App\Services\ConferenceLockService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 
@@ -102,16 +101,30 @@ class ConferenceController extends Controller
      */
     public function store(ConferenceStoreRequest $request): JsonResponse
     {
-        $validated = $request->validated();
-        $validated['created_by'] = $request->user()->id;
-        
-        $conference = Conference::create($validated);
+        try {
+            $validated = $request->validated();
+            $validated['created_by'] = $request->user()->id;
+            
+            // Handle latest conference logic
+            if (isset($validated['is_latest']) && $validated['is_latest']) {
+                $this->ensureOnlyOneLatestConference(null);
+            }
+            
+            $conference = Conference::create($validated);
 
-        return $this->successResponse(
-            new ConferenceResource($conference->load(['university'])),
-            'Conference created successfully',
-            201
-        );
+            return $this->successResponse(
+                new ConferenceResource($conference->load(['university'])),
+                'Conference created successfully',
+                201
+            );
+        } catch (\Exception $e) {
+            Log::error('Failed to create conference', [
+                'error' => $e->getMessage(),
+                'data' => $validated ?? null
+            ]);
+            
+            return $this->errorResponse('Failed to create conference: ' . $e->getMessage(), 500);
+        }
     }
 
     /**
@@ -142,19 +155,33 @@ class ConferenceController extends Controller
             return $this->errorResponse('You are not authorized to update this conference', 403);
         }
         
-        $validated = $request->validated();
-        
-        $conference->update($validated);
-        
-        $lockInfo = $this->lockService->checkLock($conference->id);
-        if ($lockInfo && $lockInfo['user_id'] === $request->user()->id) {
-            $this->lockService->refreshLock($conference->id, $request->user()->id);
-        }
+        try {
+            $validated = $request->validated();
+            
+            // Handle latest conference logic
+            if (isset($validated['is_latest']) && $validated['is_latest']) {
+                $this->ensureOnlyOneLatestConference($conference->id);
+            }
+            
+            $conference->update($validated);
+            
+            $lockInfo = $this->lockService->checkLock($conference->id);
+            if ($lockInfo && $lockInfo['user_id'] === $request->user()->id) {
+                $this->lockService->refreshLock($conference->id, $request->user()->id);
+            }
 
-        return $this->successResponse(
-            new ConferenceResource($conference->fresh(['university'])),
-            'Conference updated successfully'
-        );
+            return $this->successResponse(
+                new ConferenceResource($conference->fresh(['university'])),
+                'Conference updated successfully'
+            );
+        } catch (\Exception $e) {
+            Log::error('Failed to update conference', [
+                'conference_id' => $conference->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return $this->errorResponse('Failed to update conference: ' . $e->getMessage(), 500);
+        }
     }
 
     /**
@@ -167,8 +194,6 @@ class ConferenceController extends Controller
         }
         
         try {
-            DB::beginTransaction();
-            
             // Force release any locks on this conference
             $this->lockService->forceReleaseLock($conference->id);
             
@@ -207,8 +232,6 @@ class ConferenceController extends Controller
             // Delete the conference itself
             $conference->delete();
             
-            DB::commit();
-            
             Log::info('Conference deleted successfully', [
                 'conference_id' => $conference->id,
                 'conference_name' => $conference->name
@@ -217,8 +240,6 @@ class ConferenceController extends Controller
             return $this->successResponse(null, 'Conference and all associated files deleted successfully');
             
         } catch (\Exception $e) {
-            DB::rollBack();
-            
             Log::error('Failed to delete conference', [
                 'conference_id' => $conference->id,
                 'conference_name' => $conference->name,
@@ -239,34 +260,48 @@ class ConferenceController extends Controller
             return $this->errorResponse('You are not authorized to update this conference', 403);
         }
         
-        $updates = [];
-        $message = 'Conference status updated successfully';
+        try {
+            $updates = [];
+            $message = 'Conference status updated successfully';
 
-        if ($request->has('latest')) {
-            $isLatest = filter_var($request->latest, FILTER_VALIDATE_BOOLEAN);
-            $updates['is_latest'] = $isLatest;
-            $message = $isLatest ? 'Conference set as latest successfully' : 'Conference removed from latest status';
-        }
-        
-        if ($request->has('published')) {
-            $isPublished = filter_var($request->published, FILTER_VALIDATE_BOOLEAN);
-            $updates['is_published'] = $isPublished;
-            $message = $isPublished ? 'Conference published successfully' : 'Conference unpublished successfully';
-        }
-        
-        if (!empty($updates)) {
-            $conference->update($updates);
-        }
+            if ($request->has('latest')) {
+                $isLatest = filter_var($request->latest, FILTER_VALIDATE_BOOLEAN);
+                $updates['is_latest'] = $isLatest;
+                $message = $isLatest ? 'Conference set as latest successfully' : 'Conference removed from latest status';
+                
+                // Handle latest conference logic
+                if ($isLatest) {
+                    $this->ensureOnlyOneLatestConference($conference->id);
+                }
+            }
+            
+            if ($request->has('published')) {
+                $isPublished = filter_var($request->published, FILTER_VALIDATE_BOOLEAN);
+                $updates['is_published'] = $isPublished;
+                $message = $isPublished ? 'Conference published successfully' : 'Conference unpublished successfully';
+            }
+            
+            if (!empty($updates)) {
+                $conference->update($updates);
+            }
 
-        $lockInfo = $this->lockService->checkLock($conference->id);
-        if ($lockInfo && $lockInfo['user_id'] === $request->user()->id) {
-            $this->lockService->refreshLock($conference->id, $request->user()->id);
-        }
+            $lockInfo = $this->lockService->checkLock($conference->id);
+            if ($lockInfo && $lockInfo['user_id'] === $request->user()->id) {
+                $this->lockService->refreshLock($conference->id, $request->user()->id);
+            }
 
-        return $this->successResponse(
-            new ConferenceResource($conference->fresh(['university'])),
-            $message
-        );
+            return $this->successResponse(
+                new ConferenceResource($conference->fresh(['university'])),
+                $message
+            );
+        } catch (\Exception $e) {
+            Log::error('Failed to update conference status', [
+                'conference_id' => $conference->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return $this->errorResponse('Failed to update conference status: ' . $e->getMessage(), 500);
+        }
     }
 
     /**
@@ -337,5 +372,27 @@ class ConferenceController extends Controller
             ConferenceResource::collection($conferences),
             'User conferences retrieved successfully'
         );
+    }
+
+    /**
+     * Ensure only one conference can be marked as latest
+     * 
+     * @param int|null $excludeId Conference ID to exclude from the update (the one being set as latest)
+     * @throws \Exception
+     */
+    private function ensureOnlyOneLatestConference(?int $excludeId = null): void
+    {
+        $query = Conference::where('is_latest', true);
+        
+        if ($excludeId) {
+            $query->where('id', '!=', $excludeId);
+        }
+        
+        $updated = $query->update(['is_latest' => false]);
+        
+        Log::info('Updated latest conference status', [
+            'excluded_id' => $excludeId,
+            'conferences_updated' => $updated
+        ]);
     }
 }

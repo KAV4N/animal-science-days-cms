@@ -23,7 +23,7 @@ class MediaPolicy
 
         // Editors can create media only if assigned to the conference
         if ($user->hasRole('editor')) {
-            return $user->conferences()->where('conference_id', $conference->id)->exists();
+            return $user->editedConferences()->where('conference_id', $conference->id)->exists();
         }
 
         return false;
@@ -46,14 +46,9 @@ class MediaPolicy
             return true;
         }
 
-        // If conference is published, no one except super_admin/admin can update
-        if ($conference->is_published) {
-            return false;
-        }
-
         // For unpublished conferences, editors can update if assigned to the conference
         if ($user->hasRole('editor')) {
-            return $user->conferences()->where('conference_id', $conference->id)->exists();
+            return $user->editedConferences()->where('conference_id', $conference->id)->exists();
         }
 
         return false;
@@ -76,14 +71,9 @@ class MediaPolicy
             return true;
         }
 
-        // If conference is published, no one except super_admin/admin can delete
-        if ($conference->is_published) {
-            return false;
-        }
-
         // For unpublished conferences, editors can delete if assigned to the conference
         if ($user->hasRole('editor')) {
-            return $user->conferences()->where('conference_id', $conference->id)->exists();
+            return $user->editedConferences()->where('conference_id', $conference->id)->exists();
         }
 
         return false;
@@ -102,7 +92,7 @@ class MediaPolicy
         // Editors can manage media only if assigned to the conference and it's not published
         if ($user->hasRole('editor')) {
             return !$conference->is_published && 
-                   $user->conferences()->where('conference_id', $conference->id)->exists();
+                   $user->editedConferences()->where('conference_id', $conference->id)->exists();
         }
 
         return false;
