@@ -1,6 +1,7 @@
+// src/interceptors/responseInterceptor.ts
 import { AxiosError, type AxiosInstance, type InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '@/stores/authStore';
-
+import { tokenManager } from '@/utils/tokenManager';
 
 interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
@@ -49,7 +50,7 @@ export const responseErrorInterceptor = async (error: AxiosError, api: AxiosInst
 
   if (error.response?.status === 401) {
     const authStore = useAuthStore();
-    
+
     if (originalRequest.url?.includes('/auth/refresh')) {
       console.log('Refresh endpoint failed, clearing user data');
       authStore.clearUserData();
@@ -63,9 +64,16 @@ export const responseErrorInterceptor = async (error: AxiosError, api: AxiosInst
       return Promise.reject(error);
     }
 
-
     if (originalRequest._retry) {
       console.log('Request already retried, failing:', originalRequest.url);
+      authStore.clearUserData();
+      handleApiError(error);
+      return Promise.reject(error);
+    }
+
+    // Check if refresh token exists before attempting refresh
+    if (!tokenManager.getRefreshToken()) {
+      console.log('No refresh token available, clearing user data');
       authStore.clearUserData();
       handleApiError(error);
       return Promise.reject(error);
@@ -76,13 +84,13 @@ export const responseErrorInterceptor = async (error: AxiosError, api: AxiosInst
 
       try {
         await authStore.refreshToken();
-        const newToken = authStore.getToken;
+        const newToken = tokenManager.getAccessToken();
 
         if (newToken) {
           onTokenRefreshed(newToken);
 
           originalRequest._retry = true;
-          
+
           if (originalRequest.headers) {
             originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
           }
@@ -101,7 +109,7 @@ export const responseErrorInterceptor = async (error: AxiosError, api: AxiosInst
       return new Promise(resolve => {
         subscribeTokenRefresh(token => {
           originalRequest._retry = true;
-          
+
           if (originalRequest.headers) {
             originalRequest.headers['Authorization'] = `Bearer ${token}`;
           }

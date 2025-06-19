@@ -11,7 +11,6 @@ use App\Models\Media;
 use App\Policies\ConferencePolicy;
 use App\Policies\MediaPolicy;
 
-use App\Services\AuthService;
 use App\Services\ConferenceLockService;
 
 
@@ -24,10 +23,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton(AuthService::class, function ($app) {
-            return new AuthService();
-        });
-
         $this->app->singleton(ConferenceLockService::class, function ($app) {
             return new ConferenceLockService();
         });

@@ -1,10 +1,10 @@
 // src/interceptors/requestInterceptor.ts
 import { type InternalAxiosRequestConfig } from 'axios';
-import { useAuthStore } from '@/stores/authStore';
+import { tokenManager } from '@/utils/tokenManager';
 
 export const requestInterceptor = (config: InternalAxiosRequestConfig) => {
-  const authStore = useAuthStore();
-  const accessToken = authStore.getToken;
+  // Get token from localStorage instead of Pinia store
+  const accessToken = tokenManager.getAccessToken();
   
   if (accessToken) {
     config.headers['Authorization'] = `Bearer ${accessToken}`;

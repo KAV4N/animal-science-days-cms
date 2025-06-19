@@ -75,6 +75,8 @@ import './plugins/axios'
 import DatePicker from 'primevue/datepicker'
 import Select from 'primevue/select'
 
+import { tokenManager } from '@/utils/tokenManager';
+
 startApp()
 
 async function startApp() {
@@ -82,20 +84,20 @@ async function startApp() {
   const app = createApp(App)
   
   app.use(pinia)
-  
-  try {
-    const authStore = useAuthStore()
-    const auth = await authStore.checkAuth()
-    console.log(auth)
-  } catch (error) {
-    console.error('Authentication check failed:', error)
-  }
-  
+    
   // Use PrimeVue plugins
   app.use(ToastService)
   app.use(ConfirmationService)
   app.use(PrimeVue, primevueConfig)
   
+  if (!tokenManager.hasTokens()) {
+    try {
+      const authStore = useAuthStore();
+      const auth = await authStore.checkAuth();
+    } catch (error) {
+      tokenManager.clearAllTokens();
+    }
+  }
   // Register global directives
   app.directive('ripple', Ripple)
   app.directive('tooltip', Tooltip)

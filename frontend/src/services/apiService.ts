@@ -1,7 +1,8 @@
 // src/services/apiService.ts
 import { api } from '@/plugins/axios';
+import { tokenManager } from '@/utils/tokenManager';
 import type { LoginResponse, RegisterResponse, RefreshTokenResponse, ChangePasswordResponse } from '@/types/auth';
-import type {UserResponse} from '@/types/user'
+import type { UserResponse } from '@/types/user';
 import type { AxiosRequestConfig, AxiosResponse } from 'axios';
 
 /**
@@ -29,18 +30,28 @@ const authService = {
 
   /**
    * Logout the current user
-   * No need to send refresh token in the payload since it's in the cookie
+   * Send refresh token in the payload since we're not using cookies
    */
   logout() {
-    return api.post('/v1/auth/logout');
+    const refreshToken = tokenManager.getRefreshToken();
+    return api.post('/v1/auth/logout', {
+      refresh_token: refreshToken
+    });
   },
 
   /**
    * Refresh authentication tokens
-   * Refresh token is now sent automatically via HTTP-only cookie
+   * Send refresh token in the payload
    */
   refresh() {
-    return api.post<RefreshTokenResponse>('/v1/auth/refresh');
+    const refreshToken = tokenManager.getRefreshToken();
+    if (!refreshToken) {
+      return Promise.reject(new Error('No refresh token available'));
+    }
+    
+    return api.post<RefreshTokenResponse>('/v1/auth/refresh', {
+      refresh_token: refreshToken
+    });
   },
 
   /**

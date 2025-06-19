@@ -7,26 +7,18 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Requests\Auth\ChangePasswordRequest;
 use App\Http\Resources\User\UserResource;
-use App\Services\AuthService;
 use App\Services\ConferenceLockService;
 use App\Traits\ApiResponse;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cookie;
-use Illuminate\Support\Facades\Hash; 
-use Illuminate\Support\Facades\Log; 
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
     use ApiResponse;
-
-    /**
-     * Auth service instance
-     * 
-     * @var AuthService
-     */
-    protected $authService;
 
     /**
      * Conference lock service instance
@@ -38,13 +30,11 @@ class AuthController extends Controller
     /**
      * Create a new controller instance
      * 
-     * @param AuthService $authService
      * @param ConferenceLockService $conferenceLockService
      * @return void
      */
-    public function __construct(AuthService $authService, ConferenceLockService $conferenceLockService)
+    public function __construct(ConferenceLockService $conferenceLockService)
     {
-        $this->authService = $authService;
         $this->conferenceLockService = $conferenceLockService;
     }
 
@@ -56,26 +46,21 @@ class AuthController extends Controller
      */
     public function login(LoginRequest $request): JsonResponse
     {
-        $result = $this->authService->attemptLogin(
-            $request->email, 
-            $request->password
-        );
+        $user = User::where('email', $request->email)->first();
 
-        if (!$result) {
+        if (!$user || !Hash::check($request->password, $user->password)) {
             return $this->errorResponse('The provided credentials are incorrect.', 401);
         }
 
-        $user = $result['user'];
-        $tokens = $result['tokens'];
-        
-        $refreshTokenCookie = $this->authService->createRefreshTokenCookie(
-            $tokens['refresh_token']->plainTextToken
-        );
+        $user->tokens()->delete();
+
+        $tokens = $this->createUserTokens($user);
 
         return $this->successResponse([
             'user' => new UserResource($user),
             'access_token' => $tokens['access_token']->plainTextToken,
-        ], 'Login successful')->withCookie($refreshTokenCookie);
+            'refresh_token' => $tokens['refresh_token']->plainTextToken,
+        ], 'Login successful');
     }
 
     /**
@@ -89,21 +74,19 @@ class AuthController extends Controller
         try {
             $user = $request->user();
             
-
             $this->conferenceLockService->releaseAllUserLocks($user->id);
 
-            $request->user()->tokens()->delete();
+            $user->tokens()->delete();
             
-            $refreshTokenCookie = Cookie::forget('refresh_token');
-            
-            return $this->successResponse(null, 'Logged out successfully')->withCookie($refreshTokenCookie);
+            return $this->successResponse(null, 'Logged out successfully');
         } catch (\Exception $e) {
-            return $this->errorResponse('Log out failed', false, $e->getMessage());
+            Log::error('Logout failed: ' . $e->getMessage());
+            return $this->errorResponse('Log out failed', 500);
         }
     }
 
     /**
-     * Refresh access token using refresh token cookie
+     * Refresh access token using refresh token
      * 
      * @param Request $request
      * @return JsonResponse
@@ -111,28 +94,29 @@ class AuthController extends Controller
     public function refresh(Request $request): JsonResponse
     {
         try {
-            $refreshTokenFromCookie = $request->cookie('refresh_token');
+            $refreshToken = $request->bearerToken() ?? $request->input('refresh_token');
             
-            $tokenModel = PersonalAccessToken::findToken($refreshTokenFromCookie);
+            if (!$refreshToken) {
+                return $this->errorResponse('Refresh token not provided', 401);
+            }
+            
+            $tokenModel = PersonalAccessToken::findToken($refreshToken);
             
             if (!$tokenModel || !$tokenModel->can('refresh-token') || $tokenModel->expires_at->isPast()) {
-                return $this->errorResponse('Invalid refresh token', 401);
+                return $this->errorResponse('Invalid or expired refresh token', 401);
             }
             
             $user = $tokenModel->tokenable;
 
             $user->tokens()->delete();
             
-            $tokens = $this->authService->createUserTokens($user);
-            
-            $refreshTokenCookie = $this->authService->createRefreshTokenCookie(
-                $tokens['refresh_token']->plainTextToken
-            );
+            $tokens = $this->createUserTokens($user);
 
             return $this->successResponse([
                 'user' => new UserResource($user),
                 'access_token' => $tokens['access_token']->plainTextToken,
-            ], 'Token refreshed successfully')->withCookie($refreshTokenCookie);
+                'refresh_token' => $tokens['refresh_token']->plainTextToken,
+            ], 'Token refreshed successfully');
         } catch (\Exception $e) {
             Log::error('Token refresh failed: ' . $e->getMessage());
             return $this->errorResponse('Token refresh failed', 500);
@@ -147,9 +131,10 @@ class AuthController extends Controller
      */
     public function changePassword(ChangePasswordRequest $request): JsonResponse
     {
-        $user = auth()->user();
-
         try {
+            $user = auth()->user();
+
+            // Update password
             $user->update([
                 'password' => Hash::make($request->new_password),
                 'must_change_password' => false,
@@ -157,17 +142,45 @@ class AuthController extends Controller
 
             $user->tokens()->delete();
 
-            $tokens = $this->authService->createUserTokens($user);
-            $refreshTokenCookie = $this->authService->createRefreshTokenCookie(
-                $tokens['refresh_token']->plainTextToken
-            );
+            $tokens = $this->createUserTokens($user);
 
             return $this->successResponse([
                 'user' => new UserResource($user),
                 'access_token' => $tokens['access_token']->plainTextToken,
-            ], 'Password changed successfully')->withCookie($refreshTokenCookie);
+                'refresh_token' => $tokens['refresh_token']->plainTextToken,
+            ], 'Password changed successfully');
         } catch (\Exception $e) {
+            Log::error('Password change failed: ' . $e->getMessage());
             return $this->errorResponse('Unable to change password. Please try again.', 500);
         }
+    }
+
+    /**
+     * Create standardized tokens for a user
+     * 
+     * @param User $user
+     * @return array with access token and refresh token
+     */
+    private function createUserTokens(User $user): array
+    {
+        $accessTokenExpiration = config('sanctum.access_token_expiration', 60);
+        $refreshTokenExpiration = config('sanctum.refresh_token_expiration', 30);
+        
+        $accessToken = $user->createToken(
+            'access_token',
+            ['*'],
+            now()->addMinutes($accessTokenExpiration)
+        );
+        
+        $refreshToken = $user->createToken(
+            'refresh_token',
+            ['refresh-token'],
+            now()->addDays($refreshTokenExpiration)
+        );
+        
+        return [
+            'access_token' => $accessToken,
+            'refresh_token' => $refreshToken
+        ];
     }
 }

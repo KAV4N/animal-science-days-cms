@@ -85,7 +85,7 @@
                       <div class="flex-1">
                         <div class="flex justify-between items-start">
                           <h3 class="text-xl font-medium text-primary-700 truncate" :title="conference.name + ' ' + conference.title">
-                            {{ truncateText(conference.name + ' ' + conference.title, 60) }}
+                            {{ truncateText(conference.name, 60) }}
                           </h3>
                           <Button
                             icon="pi pi-external-link"

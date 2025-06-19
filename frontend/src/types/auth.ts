@@ -1,6 +1,6 @@
+// src/types/auth.ts
 import type { ApiResponse } from './common';
 import type { User } from './user';
-
 
 export interface LoginRequest {
   email: string;
@@ -27,6 +27,7 @@ export interface ChangePasswordRequest {
 export interface AuthResponse {
   user: User;
   access_token: string;
+  refresh_token: string; // Added refresh_token to response
 }
 
 export type LoginResponse = ApiResponse<AuthResponse>;
@@ -34,4 +35,5 @@ export type RegisterResponse = ApiResponse<AuthResponse>;
 export type RefreshTokenResponse = ApiResponse<AuthResponse>;
 export type ChangePasswordResponse = ApiResponse<{
   access_token: string;
+  refresh_token?: string; // Optional refresh token on password change
 }>;

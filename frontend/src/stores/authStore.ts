@@ -1,5 +1,7 @@
+// src/stores/authStore.ts
 import { defineStore } from 'pinia';
 import apiService from '@/services/apiService';
+import { tokenManager } from '@/utils/tokenManager';
 import type { User, Role, Permission } from '@/types/user';
 import type { UserResponse } from '@/types/user';
 import router from '@/router';
@@ -18,7 +20,6 @@ import type {
 
 interface AuthState {
   user: User | null;
-  accessToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
@@ -27,7 +28,6 @@ interface AuthState {
 export const useAuthStore = defineStore('auth', {
   state: (): AuthState => ({
     user: null,
-    accessToken: null,
     isAuthenticated: false,
     isLoading: false,
     error: null,
@@ -45,7 +45,8 @@ export const useAuthStore = defineStore('auth', {
     hasRole: (state) => (roleName: string) => state.user?.roles.some(role => role.name === roleName) || false,
     hasPermission: (state) => (permissionName: string) => state.user?.permissions.some(permission => permission.name === permissionName) || false,
 
-    getToken: (state) => state.accessToken,
+    // Get token from localStorage instead of state
+    getToken: () => tokenManager.getAccessToken(),
     getUser: (state) => state.user,
     getIsAuthenticated: (state) => state.isAuthenticated,
     getIsLoading: (state) => state.isLoading,
@@ -59,16 +60,20 @@ export const useAuthStore = defineStore('auth', {
   actions: {
     setUserData(authResponse: AuthResponse) {
       this.user = authResponse.user;
-      this.accessToken = authResponse.access_token;
       this.isAuthenticated = true;
       this.error = null;
+      
+      // Store tokens in localStorage
+      tokenManager.setTokens(authResponse.access_token, authResponse.refresh_token);
     },
 
     clearUserData() {
       this.user = null;
-      this.accessToken = null;
       this.isAuthenticated = false;
       this.error = null;
+      
+      // Clear tokens from localStorage
+      tokenManager.clearAllTokens();
     },
 
     setError(error: string) {
@@ -103,7 +108,7 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    async regFister(credentials: RegisterRequest) {
+    async register(credentials: RegisterRequest) {
       this.isLoading = true;
       this.error = null;
 
@@ -135,7 +140,10 @@ export const useAuthStore = defineStore('auth', {
         router.push({ name: 'Login' });
         return true;
       } catch (error: any) {
+        // Even if logout fails on server, clear local data
+        this.clearUserData();
         this.error = error.response?.data?.message || 'Logout failed';
+        router.push({ name: 'Login' });
         return false;
       } finally {
         this.isLoading = false;
@@ -162,12 +170,18 @@ export const useAuthStore = defineStore('auth', {
 
     async tryRefreshToken() {
       try {
+        // Check if refresh token exists before attempting refresh
+        if (!tokenManager.getRefreshToken()) {
+          return false;
+        }
+
         const response = await apiService.auth.refresh();
         const authData = response.data.payload;
         this.setUserData(authData);
         return true;
       } catch (error: any) {
         console.log('Silent refresh failed:', error.response?.data?.message || 'Session expired');
+        this.clearUserData();
         return false;
       }
     },
@@ -200,7 +214,23 @@ export const useAuthStore = defineStore('auth', {
           credentials.new_password,
           credentials.new_password_confirmation
         );
-        this.accessToken = response.data.payload.access_token;
+        
+        // Update access token if provided
+        const newAccessToken = response.data.payload.access_token;
+        const currentRefreshToken = tokenManager.getRefreshToken();
+        const newRefreshToken = response.data.payload.refresh_token;
+        
+        if (newAccessToken) {
+          tokenManager.setAccessToken(newAccessToken);
+        }
+        
+        if (newRefreshToken) {
+          tokenManager.setRefreshToken(newRefreshToken);
+        } else if (currentRefreshToken) {
+          // Keep existing refresh token if new one not provided
+          tokenManager.setRefreshToken(currentRefreshToken);
+        }
+        
         return true;
       } catch (error: any) {
         this.error = error.response?.data?.message || 'Failed to change password';
@@ -211,7 +241,8 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async checkAuth() {
-      if (this.user && this.accessToken) {
+      if (this.user && tokenManager.getAccessToken()) {
+        this.isAuthenticated = true;
         return true;
       }
 
