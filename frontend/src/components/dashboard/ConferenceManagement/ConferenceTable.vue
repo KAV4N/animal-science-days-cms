@@ -10,15 +10,16 @@
 
     <Card class="card rounded-md">
       <template #content>
-        <DataTable
+       <DataTable
           ref="dt"
           v-model:selection="selectedConferences"
-          :value="conferenceStore.conferences"
+          :value="conferences"
           dataKey="id"
           :paginator="true"
           :rows="filters.per_page"
           :rowsPerPageOptions="[5, 10, 25]"
-          :totalRecords="conferenceStore.meta?.total || 0"
+          :totalRecords="totalRecords"
+          :lazy="true"
           paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
           :sortField="filters.sort_field"
           :sortOrder="filters.sort_order === 'desc' ? -1 : 1"
@@ -26,7 +27,7 @@
           responsiveLayout="stack"
           breakpoint="960px"
           class="p-datatable-sm rounded fixed-columns-table"
-          :loading="conferenceStore.loading"
+          :loading="isLoading"
           scrollable
           scrollHeight="flex"
           @page="onPage"
@@ -141,10 +142,11 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue';
+import { defineComponent, ref, computed, onMounted, nextTick } from 'vue';
 import { useConferenceStore } from '@/stores/conferenceStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useToast } from 'primevue/usetoast';
+import { useRouter } from 'vue-router';
 import type { Conference, ConferenceFilters } from '@/types/conference';
 import ConferenceToolbar from './ConferenceToolbar.vue';
 import Card from 'primevue/card';
@@ -178,82 +180,102 @@ export default defineComponent({
   },
   emits: ['edit-conference'],
   
-  data() {
-    return {
-      conferenceStore: useConferenceStore(),
-      authStore: useAuthStore(),
-      toast: useToast(),
-      filters: {
-        search: '',
-        sort_field: 'created_at',
-        sort_order: 'desc',
-        page: 1,
-        per_page: 10
-      } as ConferenceFilters,
-      selectedConferences: [] as Conference[],
-      dt: null as any,
-      debouncedSearch: debounce(function(this: any) {
-        this.filters.page = 1; // Reset to first page on search
-        this.loadConferences();
-      }, 300)
-    };
-  },
-  
-  mounted() {
-    this.loadConferences();
-  },
-  methods: {
-    async loadConferences() {
-      this.conferenceStore.loading = true;
+  setup(props, { emit }) {
+    const conferenceStore = useConferenceStore();
+    const authStore = useAuthStore();
+    const toast = useToast();
+    const router = useRouter();
+    
+    // Reactive refs
+    const selectedConferences = ref<Conference[]>([]);
+    const dt = ref<any>(null);
+    const isLoading = ref(false);
+    
+    const filters = ref<ConferenceFilters>({
+      search: '',
+      sort_field: 'created_at',
+      sort_order: 'desc',
+      page: 1,
+      per_page: 10
+    });
+
+    // Computed properties
+    const conferences = computed(() => {
+      return conferenceStore.conferences || [];
+    });
+
+    const totalRecords = computed(() => {
+      const metaTotal = conferenceStore.meta?.total || 0;
+      const actualLength = conferences.value.length;
+      
+      // Use meta total if it's available and makes sense
+      // Otherwise fall back to actual array length for non-lazy loading
+      if (metaTotal > 0) {
+        return metaTotal;
+      } else if (actualLength > 0) {
+        return actualLength;
+      }
+      return 0;
+    });
+
+    // Debounced search function
+    const debouncedSearch = debounce(() => {
+      filters.value.page = 1; // Reset to first page on search
+      loadConferences();
+    }, 300);
+
+    // Methods
+    const loadConferences = async () => {
+      isLoading.value = true;
       try {
-        const response = await this.conferenceStore.fetchConferences(this.filters);
-        if (response?.message) {
-          this.toast.add({
-            severity: 'success',
-            summary: 'Success',
-            detail: response.message,
-            life: 3000
-          });
+        const response = await conferenceStore.fetchConferences(filters.value);
+        
+        // Force reactivity update
+        await nextTick();
+        if (dt.value) {
+          dt.value.$forceUpdate();
         }
+        
       } catch (error: any) {
-        this.toast.add({
+        toast.add({
           severity: 'error',
           summary: 'Error',
-          detail: error.response?.message || 'Failed to load conferences',
+          detail: error.response?.data?.message || error.message || 'Failed to load conferences',
           life: 3000
         });
       } finally {
-        this.conferenceStore.loading = false;
+        isLoading.value = false;
       }
-    },
+    };
     
-    onPage(event: any) {
-      this.filters.page = event.page + 1; // PrimeVue uses 0-based indexing, API uses 1-based
-      this.filters.per_page = event.rows;
-      this.loadConferences();
-    },
+    const onPage = (event: any) => {
+      filters.value.page = event.page + 1; // PrimeVue uses 0-based indexing, API uses 1-based
+      filters.value.per_page = event.rows;
+      loadConferences();
+    };
 
-    onSort(event: any) {
-      this.filters.sort_field = event.sortField;
-      this.filters.sort_order = event.sortOrder === 1 ? 'asc' : 'desc';
-      this.loadConferences();
-    },
+    const onSort = (event: any) => {
+      filters.value.sort_field = event.sortField;
+      filters.value.sort_order = event.sortOrder === 1 ? 'asc' : 'desc';
+      filters.value.page = 1; // Reset to first page on sort
+      loadConferences();
+    };
 
-    clearSearch() {
-      this.filters.search = '';
-      this.filters.page = 1;
-      this.loadConferences();
-    },
+    const clearSearch = () => {
+      filters.value.search = '';
+      filters.value.page = 1;
+      loadConferences();
+    };
     
-    async editConference(conference: Conference): Promise<void> {
-      this.$emit('edit-conference', conference);
-    },
+    const editConference = async (conference: Conference): Promise<void> => {
+      emit('edit-conference', conference);
+    };
     
-    openCreateConferenceDialog(): void {
-      this.$emit('edit-conference');
-    },
+    const openCreateConferenceDialog = (): void => {
+      emit('edit-conference');
+    };
     
-    formatDate(value: string): string {
+    const formatDate = (value: string): string => {
       if (value) {
         return new Date(value).toLocaleDateString('en-US', {
           year: 'numeric',
@@ -262,9 +284,9 @@ export default defineComponent({
         });
       }
       return '';
-    },
+    };
     
-    formatDateTime(value: string): string {
+    const formatDateTime = (value: string): string => {
       if (value) {
         return new Date(value).toLocaleDateString('en-US', {
           year: 'numeric',
@@ -275,51 +297,51 @@ export default defineComponent({
         });
       }
       return '';
-    },
+    };
     
-    getStatusSeverity(isPublished: boolean): string {
+    const getStatusSeverity = (isPublished: boolean): string => {
       return isPublished ? 'success' : 'warning';
-    },
+    };
     
-    truncateText(text: string | undefined, maxLength: number): string {
+    const truncateText = (text: string | undefined, maxLength: number): string => {
       if (!text) return '';
       if (text.length <= maxLength) return text;
       return text.substring(0, maxLength - 3) + '...';
-    },
+    };
     
-    onEditPagesClick(conference: Conference): void {
-      this.$router.push({ name: 'ConferenceEdit', params: { id: conference.id.toString() } });
-    },
+    const onEditPagesClick = (conference: Conference): void => {
+      router.push({ name: 'ConferenceEdit', params: { id: conference.id.toString() } });
+    };
     
-    async confirmDeleteConference(conference: Conference): Promise<void> {
+    const confirmDeleteConference = async (conference: Conference): Promise<void> => {
       if (confirm(`Are you sure you want to delete "${conference.name}"?`)) {
-        await this.deleteConference(conference.id);
+        await deleteConference(conference.id);
       }
-    },
+    };
     
-    async deleteConference(id: number): Promise<void> {
+    const deleteConference = async (id: number): Promise<void> => {
       try {
-        const response = await this.conferenceStore.deleteConference(id);
-        this.loadConferences();
-        this.toast.add({
+        const response = await conferenceStore.deleteConference(id);
+        await loadConferences(); // Reload data after deletion
+        toast.add({
           severity: 'success',
           summary: 'Success',
           detail: response?.message || 'Conference deleted successfully',
           life: 3000
         });
       } catch (error: any) {
-        this.toast.add({
+        toast.add({
           severity: 'error',
           summary: 'Error',
-          detail: error.response?.message || (error instanceof Error ? error.message : 'Failed to delete conference'),
+          detail: error.response?.data?.message || error.message || 'Failed to delete conference',
           life: 3000
         });
       }
-    },
+    };
     
-    async confirmDeleteSelected(): Promise<void> {
-      if (this.selectedConferences.length === 0) {
-        this.toast.add({
+    const confirmDeleteSelected = async (): Promise<void> => {
+      if (selectedConferences.value.length === 0) {
+        toast.add({
           severity: 'info',
           summary: 'Info',
           detail: 'No conferences selected',
@@ -328,14 +350,14 @@ export default defineComponent({
         return;
       }
       
-      if (confirm(`Are you sure you want to delete ${this.selectedConferences.length} selected conferences?`)) {
-        await this.deleteSelectedConferences();
+      if (confirm(`Are you sure you want to delete ${selectedConferences.value.length} selected conferences?`)) {
+        await deleteSelectedConferences();
       }
-    },
+    };
     
-    async deleteSelectedConferences(): Promise<void> {
-      if (this.selectedConferences.length === 0) {
-        this.toast.add({
+    const deleteSelectedConferences = async (): Promise<void> => {
+      if (selectedConferences.value.length === 0) {
+        toast.add({
           severity: 'info',
           summary: 'Info',
           detail: 'No conferences selected for deletion',
@@ -348,25 +370,24 @@ export default defineComponent({
         let successCount = 0;
         const errors = [];
         
-        for (const conference of this.selectedConferences) {
+        for (const conference of selectedConferences.value) {
           try {
-            const response = await this.conferenceStore.deleteConference(conference.id);
+            await conferenceStore.deleteConference(conference.id);
             successCount++;
           } catch (error: any) {
-            console.error(`Failed to delete conference ${conference.id}:`, error);
             errors.push({
               id: conference.id,
               name: conference.name,
-              message: error.response?.message || 'Unknown error'
+              message: error.response?.data?.message || error.message || 'Unknown error'
             });
           }
         }
         
-        this.selectedConferences = [];
-        this.loadConferences();
+        selectedConferences.value = [];
+        await loadConferences(); // Reload data after deletion
         
         if (successCount > 0) {
-          this.toast.add({
+          toast.add({
             severity: 'success',
             summary: 'Success',
             detail: `Successfully deleted ${successCount} conferences`,
@@ -375,22 +396,63 @@ export default defineComponent({
         }
         
         if (errors.length > 0) {
-          this.toast.add({
+          toast.add({
             severity: 'warn',
             summary: 'Partial Success',
-            detail: `Deleted ${successCount} of ${this.selectedConferences.length} conferences. Some deletions failed.`,
+            detail: `Deleted ${successCount} conferences. ${errors.length} deletions failed.`,
             life: 5000
           });
         }
       } catch (error: any) {
-        this.toast.add({
+        toast.add({
           severity: 'error',
           summary: 'Error',
-          detail: error.response?.message || 'Failed to delete selected conferences',
+          detail: error.response?.data?.message || error.message || 'Failed to delete selected conferences',
           life: 3000
         });
       }
-    }
+    };
+
+    // Lifecycle
+    onMounted(() => {
+      loadConferences();
+    });
+
+    return {
+      // Stores
+      conferenceStore,
+      authStore,
+      toast,
+      router,
+      
+      // Refs
+      selectedConferences,
+      dt,
+      filters,
+      isLoading,
+      
+      // Computed
+      conferences,
+      totalRecords,
+      
+      // Methods
+      loadConferences,
+      onPage,
+      onSort,
+      clearSearch,
+      editConference,
+      openCreateConferenceDialog,
+      formatDate,
+      formatDateTime,
+      getStatusSeverity,
+      truncateText,
+      onEditPagesClick,
+      confirmDeleteConference,
+      deleteConference,
+      confirmDeleteSelected,
+      deleteSelectedConferences,
+      debouncedSearch
+    };
   }
 });
 </script>

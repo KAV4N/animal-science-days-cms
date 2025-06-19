@@ -17,78 +17,88 @@
       </div>
     </template>
     
-    <Tabs v-model:value="activeTabIndex" scrollable>
-      <TabList class="sticky top-0 z-10 bg-white dark:bg-gray-900">
-        <Tab value="0">
-          <i class="pi pi-info-circle mr-2"></i>
-          Basic Information
-        </Tab>
-        <Tab value="1">
-          <i class="pi pi-map-marker mr-2"></i>
-          Location & Dates
-        </Tab>
-        <Tab value="2">
-          <i class="pi pi-palette mr-2"></i>
-          Theme & Colors
-        </Tab>
-        <Tab value="3" v-if="isEditing">
-          <i class="pi pi-users mr-2"></i>
-          Editors
-        </Tab>
-        <Tab value="4">
-          <i class="pi pi-cog mr-2"></i>
-          Settings
-        </Tab>
-      </TabList>
-      <TabPanels>
-        <TabPanel value="0">
-          <div class="p-4">
-            <BasicInfoTab 
-              :v$="v$" 
-              :formData="formData" 
-              :universities="universities" 
-            />
-          </div>
-        </TabPanel>
-        <TabPanel value="1">
-          <div class="p-4">
-            <LocationDatesTab 
-              :v$="v$" 
-              :formData="formData" 
-            />
-          </div>
-        </TabPanel>
-        <TabPanel value="2">
-          <div class="p-4">
-            <ThemeColorsTab 
-              :v$="v$" 
-              :formData="formData" 
-            />
-          </div>
-        </TabPanel>
-        <TabPanel value="3" v-if="isEditing">
-          <div class="p-4">
-            <EditorsTab 
-              :conferenceId="currentConferenceId"
-            />
-          </div>
-        </TabPanel>
-        <TabPanel value="4">
-          <div class="p-4">
-            <SettingsTab 
-              :formData="formData" 
-              :currentConferenceId="currentConferenceId"
-              @conference-deleted="handleConferenceDeleted"
-            />
-          </div>
-        </TabPanel>
-      </TabPanels>
-    </Tabs>
+    <div class="dialog-content">
+      <Tabs v-model:value="activeTabIndex" scrollable>
+        <TabList class="sticky top-0 z-10 bg-white dark:bg-gray-900">
+          <Tab value="0">
+            <i class="pi pi-info-circle mr-2"></i>
+            Basic Information
+          </Tab>
+          <Tab value="1">
+            <i class="pi pi-map-marker mr-2"></i>
+            Location & Dates
+          </Tab>
+          <Tab value="2">
+            <i class="pi pi-palette mr-2"></i>
+            Theme & Colors
+          </Tab>
+          <Tab value="3" v-if="isEditing">
+            <i class="pi pi-users mr-2"></i>
+            Editors
+          </Tab>
+          <Tab value="4">
+            <i class="pi pi-cog mr-2"></i>
+            Settings
+          </Tab>
+        </TabList>
+        <TabPanels>
+          <TabPanel value="0">
+            <div class="p-4">
+              <BasicInfoTab 
+                :v$="v$" 
+                :formData="formData" 
+                :universities="universities" 
+              />
+            </div>
+          </TabPanel>
+          <TabPanel value="1">
+            <div class="p-4">
+              <LocationDatesTab 
+                :v$="v$" 
+                :formData="formData" 
+              />
+            </div>
+          </TabPanel>
+          <TabPanel value="2">
+            <div class="p-4">
+              <ThemeColorsTab 
+                :v$="v$" 
+                :formData="formData" 
+              />
+            </div>
+          </TabPanel>
+          <TabPanel value="3" v-if="isEditing">
+            <div class="p-4">
+              <EditorsTab 
+                :conferenceId="currentConferenceId"
+              />
+            </div>
+          </TabPanel>
+          <TabPanel value="4">
+            <div class="p-4">
+              <SettingsTab 
+                :formData="formData" 
+                :currentConferenceId="currentConferenceId"
+                @conference-deleted="handleConferenceDeleted"
+              />
+            </div>
+          </TabPanel>
+        </TabPanels>
+      </Tabs>
+    </div>
 
     <template #footer>
-      <div class="flex flex-col w-full">
+      <div class="dialog-footer">
         <Divider class="w-full m-0" />
-        <div class="flex flex-nowrap justify-end gap-2 my-4 w-full">
+        <div class="footer-buttons">
+          <Button
+            v-if="isEditing"
+            type="button"
+            label="OK"
+            icon="pi pi-check"
+            :loading="loading"
+            @click="handleSubmitAndClose"
+          />
           <Button
             v-if="isEditing"
             type="button"
@@ -504,5 +514,82 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* No lock indicator styling needed */
+/* Override PrimeVue dialog styles to ensure proper layout */
+:deep(.p-dialog) {
+  display: flex;
+  flex-direction: column;
+  height: 100vh !important;
+  max-height: 100vh !important;
+}
+
+:deep(.p-dialog-content) {
+  flex: 1;
+  overflow: hidden;
+  padding: 0 !important;
+  display: flex;
+  flex-direction: column;
+}
+
+:deep(.p-dialog-footer) {
+  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  background: var(--surface-ground);
+  border-top: 1px solid var(--surface-border);
+  z-index: 1000;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.dialog-content {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dialog-footer {
+  width: 100%;
+  background: var(--surface-ground);
+}
+
+.footer-buttons {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 1rem;
+  min-height: 2.5rem;
+  background: var(--surface-ground);
+}
+
+/* Ensure tabs content is scrollable */
+:deep(.p-tabview-panels) {
+  flex: 1;
+  overflow: auto;
+}
+
+:deep(.p-tabview-panel) {
+  padding: 0 !important;
+}
+
+/* Dark mode support */
+.p-dialog.p-component .dialog-footer,
+.footer-buttons {
+  background: var(--surface-ground);
+}
+
+/* Ensure buttons don't wrap on smaller screens */
+@media (max-width: 768px) {
+  .footer-buttons {
+    padding: 0.75rem;
+    gap: 0.375rem;
+  }
+  
+  .footer-buttons .p-button {
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+  }
+}
 </style>

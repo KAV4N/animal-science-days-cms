@@ -61,14 +61,23 @@ class ConferenceController extends Controller
             $query->where('end_date', '<=', $request->end_date_before);
         }
 
-        // Apply sorting
-        $sortField = in_array($request->sort_field, ['name', 'title', 'start_date', 'end_date', 'created_at', 'updated_at']) 
-            ? $request->sort_field 
-            : 'created_at';
+        // Apply sorting with proper handling for university sorting
+        $sortField = $request->sort_field;
         $sortOrder = in_array(strtolower($request->sort_order), ['asc', 'desc']) 
             ? strtolower($request->sort_order) 
             : 'desc';
-        $query->orderBy($sortField, $sortOrder);
+
+        // Handle university sorting by joining with universities table
+        if ($sortField === 'university') {
+            $query->join('universities', 'conferences.university_id', '=', 'universities.id')
+                  ->select('conferences.*')
+                  ->orderBy('universities.full_name', $sortOrder);
+        } else {
+            // Regular sorting for other fields
+            $allowedSortFields = ['name', 'start_date', 'end_date', 'created_at', 'updated_at'];
+            $sortField = in_array($sortField, $allowedSortFields) ? $sortField : 'created_at';
+            $query->orderBy($sortField, $sortOrder);
+        }
 
         // Handle pagination or return all results
         if ($request->has('page') || $request->has('per_page')) {

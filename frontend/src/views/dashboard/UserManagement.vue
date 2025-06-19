@@ -18,6 +18,7 @@
           :rows="filters.per_page"
           :rowsPerPageOptions="[5, 10, 25]"
           :totalRecords="meta?.total || 0"
+          :lazy="true"
           paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
           :sortField="filters.sort_field"
           :sortOrder="filters.sort_order === 'desc' ? -1 : 1"
@@ -68,7 +69,7 @@
               </span>
             </template>
           </Column>
-          <Column header="Role" sortable :sortField="'roles'" style="min-width: 10rem">
+          <Column header="Role" :sortField="'roles'" style="min-width: 10rem">
             <template #body="slotProps">
               <Tag v-for="role in slotProps.data.roles" :key="role.id"
                   :value="getRoleLabel(role.name)" :severity="getRoleSeverity(role.name)"

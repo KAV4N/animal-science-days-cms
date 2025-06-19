@@ -80,24 +80,12 @@ export default defineComponent({
       (this.$refs.conferenceDialog as any).openDialog(conference);
     },
     onConferenceUpdated(conference: Conference) {
-      this.toast.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: `Conference "${conference.name}" updated successfully`,
-        life: 3000
-      });
       this.loadConferences();
       if (this.authStore.hasAdminAccess) {
         this.loadLatestConference();
       }
     },
     onConferenceCreated(conference: Conference) {
-      this.toast.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: `Conference "${conference.name}" created successfully`,
-        life: 3000
-      });
       this.loadConferences();
       if (this.authStore.hasAdminAccess) {
         this.loadLatestConference();

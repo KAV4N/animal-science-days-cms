@@ -64,38 +64,8 @@
             @click="goToConferenceEdit"
           />
         </div>
-        <div class="p-4 rounded-lg border border-red-700 flex flex-column md:flex-row md:items-center md:justify-between gap-3">
-          <div>
-            <h4 class="font-medium text-red-700">Danger Zone</h4>
-            <p class="text-sm">Permanently delete this conference</p>
-          </div>
-          <Button 
-            label="Delete" 
-            icon="pi pi-trash" 
-            severity="danger" 
-            class="w-full md:w-auto" 
-            @click="confirmDelete" 
-          />
-        </div>
       </div>
     </div>
-
-    <!-- Delete Confirmation Dialog -->
-    <Dialog 
-      v-model:visible="deleteDialogVisible" 
-      header="Confirm Deletion" 
-      :modal="true"
-      :style="{ width: '450px' }"
-    >
-      <div class="confirmation-content flex items-center">
-        <i class="pi pi-exclamation-triangle mr-3 text-yellow-500" style="font-size: 2rem"></i>
-        <span>Are you sure you want to delete this conference?</span>
-      </div>
-      <template #footer>
-        <Button label="No" icon="pi pi-times" class="p-button-text" @click="deleteDialogVisible = false" />
-        <Button label="Yes" icon="pi pi-check" severity="danger" @click="deleteConference" />
-      </template>
-    </Dialog>
   </div>
 </template>
 
@@ -106,15 +76,13 @@ import { useRouter } from 'vue-router';
 import ToggleSwitch from 'primevue/toggleswitch';
 import Divider from 'primevue/divider';
 import Button from 'primevue/button';
-import Dialog from 'primevue/dialog';
 
 export default {
   name: 'SettingsTab',
   components: {
     ToggleSwitch,
     Divider,
-    Button,
-    Dialog
+    Button
   },
   props: {
     formData: {
@@ -126,10 +94,9 @@ export default {
       default: null
     }
   },
-  emits: ['conference-deleted', 'configure-registration'],
+  emits: ['configure-registration'],
   data() {
     return {
-      deleteDialogVisible: false,
       conferenceStore: useConferenceStore(),
       toast: useToast()
     };
@@ -161,44 +128,6 @@ export default {
     goToConferenceEdit() {
       if (this.currentConferenceId) {
         this.router.push({ name: 'ConferenceEdit', params: { id: this.currentConferenceId } });
-      }
-    },
-    confirmDelete() {
-      this.deleteDialogVisible = true;
-    },
-    async deleteConference() {
-      if (!this.currentConferenceId) {
-        this.toast.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: 'No conference selected for deletion',
-          life: 3000
-        });
-        this.deleteDialogVisible = false;
-        return;
-      }
-
-      try {
-        await this.conferenceStore.deleteConference(this.currentConferenceId);
-        this.deleteDialogVisible = false;
-        
-        this.toast.add({
-          severity: 'success',
-          summary: 'Success',
-          detail: 'Conference deleted successfully',
-          life: 3000
-        });
-        
-        this.$emit('conference-deleted');
-      } catch (error) {
-        console.error('Failed to delete conference:', error);
-        this.toast.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: 'Failed to delete conference',
-          life: 3000
-        });
-        this.deleteDialogVisible = false;
       }
     }
   }
