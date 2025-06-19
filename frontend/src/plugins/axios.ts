@@ -8,7 +8,7 @@ const API_CONFIG = {
     'Accept': 'application/json',
     'Content-Type': 'application/json',
   },
-  withCredentials: true, // This is crucial for sending/receiving cookies
+  //withCredentials: true, // This is crucial for sending/receiving cookies
 };
 
 const api: AxiosInstance = axios.create(API_CONFIG);

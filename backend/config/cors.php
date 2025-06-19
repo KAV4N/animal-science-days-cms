@@ -1,4 +1,5 @@
 <?php
+// config/cors.php
 
 return [
 
@@ -15,13 +16,23 @@ return [
     |
     */
 
-    'paths' => ['api/*', 'sanctum/csrf-cookie'],
+    'paths' => ['*', 'sanctum/csrf-cookie'],
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => explode(',', env('FRONTEND_URL', 'http://localhost')),
+    'allowed_origins' => array_filter([
+        env('FRONTEND_URL'),
+        env('FRONTEND_PROD_URL'),
 
-    'allowed_origins_patterns' => [],
+        env('APP_ENV') === 'local' ? 'http://localhost' : null,
+        env('APP_ENV') === 'local' ? 'http://localhost:5173' : null,
+        env('APP_ENV') === 'production' ? 'https://animalsciencedays.org' : null,
+    ]),
+
+    'allowed_origins_patterns' => [
+        env('APP_ENV') === 'local' ? '/^http:\/\/.*\.localhost(:\d+)?$/' : null,
+        env('APP_ENV') === 'production' ? '/^https:\/\/.*\.animalsciencedays\.org$/' : null,
+    ],
 
     'allowed_headers' => ['*'],
 

@@ -188,11 +188,7 @@ export const useAuthStore = defineStore('auth', {
 
     async fetchCurrentUser() {
       this.isLoading = true;
-
       try {
-        // Updated to use the new getCurrentUser endpoint.
-        // The endpoint /v1/user-management/users/me is expected to return UserResponse (ApiResponse<User>)
-        // UserResponse should have a 'payload' property containing the User object.
         const response = await apiService.get<UserResponse>('/v1/user-management/users/me');
         this.user = response.data.payload;
         this.isAuthenticated = true;

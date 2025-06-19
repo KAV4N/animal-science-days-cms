@@ -90,14 +90,22 @@ async function startApp() {
   app.use(ConfirmationService)
   app.use(PrimeVue, primevueConfig)
   
+  const authStore = useAuthStore();
+
+
   if (!tokenManager.hasTokens()) {
     try {
-      const authStore = useAuthStore();
-      const auth = await authStore.checkAuth();
+      await authStore.checkAuth();
     } catch (error) {
       tokenManager.clearAllTokens();
     }
   }
+
+  if (tokenManager.hasTokens()) {
+    await authStore.fetchCurrentUser();
+  }
+
+
   // Register global directives
   app.directive('ripple', Ripple)
   app.directive('tooltip', Tooltip)

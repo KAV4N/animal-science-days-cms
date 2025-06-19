@@ -1,4 +1,5 @@
 <?php
+// config/sanctum.php
 
 use Laravel\Sanctum\Sanctum;
 
@@ -16,12 +17,13 @@ return [
     */
 
     'stateful' => explode(',', env('SANCTUM_STATEFUL_DOMAINS', sprintf(
-        '%s%s',
-        'localhost,localhost:3000,127.0.0.1,127.0.0.1:8000,::1',
+        '%s%s%s',
+        'localhost,api.localhost,127.0.0.1,127.0.0.1:8000,::1,',
+        'animalsciencedays.org,api.animalsciencedays.org,',
         Sanctum::currentApplicationUrlWithPort()
     ))),
 
-    'prefix' => 'api',
+    'prefix' => null,
 
     /*
     |--------------------------------------------------------------------------
@@ -59,7 +61,7 @@ return [
     | considered expired. This is used by our custom implementation.
     |
     */
-    'access_token_expiration' => env('SANCTUM_ACCESS_TOKEN_EXPIRATION', 60),
+    'access_token_expiration' => (int) env('SANCTUM_ACCESS_TOKEN_EXPIRATION', 60),
 
     /*
     |--------------------------------------------------------------------------
@@ -70,7 +72,7 @@ return [
     | considered expired. This is used by our custom implementation.
     |
     */
-    'refresh_token_expiration' => env('SANCTUM_REFRESH_TOKEN_EXPIRATION', 30),
+    'refresh_token_expiration' => (int) env('SANCTUM_REFRESH_TOKEN_EXPIRATION', 30),
 
     /*
     |--------------------------------------------------------------------------
