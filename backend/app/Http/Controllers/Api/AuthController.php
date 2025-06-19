@@ -94,7 +94,7 @@ class AuthController extends Controller
     public function refresh(Request $request): JsonResponse
     {
         try {
-            $refreshToken = $request->bearerToken() ?? $request->input('refresh_token');
+            $refreshToken = $request->input('refresh_token');
             
             if (!$refreshToken) {
                 return $this->errorResponse('Refresh token not provided', 401);
@@ -103,7 +103,7 @@ class AuthController extends Controller
             $tokenModel = PersonalAccessToken::findToken($refreshToken);
             
             if (!$tokenModel || !$tokenModel->can('refresh-token') || $tokenModel->expires_at->isPast()) {
-                return $this->errorResponse('Invalid or expired refresh token', 401);
+                return $this->errorResponse('Invalid or expired refresh token'.$tokenModel, 401);
             }
             
             $user = $tokenModel->tokenable;

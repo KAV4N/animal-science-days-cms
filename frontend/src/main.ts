@@ -101,10 +101,10 @@ async function startApp() {
     }
   }
 
-  if (tokenManager.hasTokens()) {
+  if (tokenManager.getAccessToken()) {
     await authStore.fetchCurrentUser();
   }
-
+ 
 
   // Register global directives
   app.directive('ripple', Ripple)
