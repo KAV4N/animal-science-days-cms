@@ -67,7 +67,7 @@
     </Card>
 
     <!-- Mobile Menu Toggle -->
-    <div class="xl:hidden p-4">
+    <div class="2xl:hidden p-4">
       <div class="flex justify-between items-center">
         <Button
           :icon="showLeftPanel ? 'pi pi-times' : 'pi pi-bars'"
@@ -91,7 +91,7 @@
       <!-- Conference Overview Panel (Left) -->
       <div :class="[
         'flex flex-col transition-all duration-300 z-20 bg-surface-100 rounded shadow',
-        'xl:w-80 xl:relative xl:translate-x-0',
+        '2xl:w-80 2xl:relative 2xl:translate-x-0',
         'absolute inset-y-0 left-0 w-80 max-w-[90vw]',
         showLeftPanel ? 'translate-x-0 shadow-lg' : '-translate-x-full'
       ]">
@@ -439,7 +439,7 @@
       <!-- Pages Sidebar (Right) -->
       <div :class="[
         'flex flex-col transition-all duration-300 z-10 bg-surface-100 rounded shadow',
-        'xl:w-96 xl:relative xl:translate-x-0',
+        '2xl:w-96 2xl:relative 2xl:translate-x-0',
         'absolute inset-y-0 right-0 w-80 max-w-[90vw]',
         showRightPanel ? 'translate-x-0 shadow-lg' : 'translate-x-full'
       ]">
@@ -565,7 +565,7 @@
       <div
         v-if="(showLeftPanel || showRightPanel)"
         @click="showLeftPanel = false; showRightPanel = false"
-        class="absolute inset-0 z-5 xl:hidden"
+        class="absolute inset-0 z-5 2xl:hidden"
       ></div>
     </div>
 
@@ -972,13 +972,10 @@ export default defineComponent({
     await this.fetchMenus();
   },
   mounted() {
-    window.addEventListener('resize', this.handleResize);
+
   },
   beforeUnmount() {
-    window.removeEventListener('resize', this.handleResize);
-    if (this.pageMenuStore.isLocked) {
-      this.pageMenuStore.releaseLock();
-    }
+
   },
   methods: {
     async fetchConferenceData() {
@@ -986,12 +983,6 @@ export default defineComponent({
         await this.conferenceStore.fetchConference(this.conferenceId);
       } catch (error) {
         console.error('Error fetching conference data:', error);
-      }
-    },
-    handleResize() {
-      if (window.innerWidth >= 1280) {
-        this.showLeftPanel = false;
-        this.showRightPanel = false;
       }
     },
     async fetchMenus() {
