@@ -5,45 +5,48 @@
     modal
     maximizable
     :maximized="true"
+    :style="{ width: '100vw', height: '100vh' }"
+    :contentStyle="{ height: '100%', display: 'flex', flexDirection: 'column' }"
+    :breakpoints="{ '960px': '100vw', '641px': '100vw' }"
     @show="handleDialogShow"
     @hide="handleDialogHide"
-    class="p-fluid"
-    :style="{ width: '100vw', height: '100vh' }" 
+    class="fullscreen-dialog"
   >
     <template #header>
-      <div class="flex items-center">
-        <i class="pi pi-calendar mr-2"></i>
-        <span class="font-bold text-lg">{{ dialogHeader }}</span>
+      <div class="flex items-center w-full">
+        <i class="pi pi-calendar mr-2 text-xl"></i>
+        <span class="font-bold text-xl">{{ dialogHeader }}</span>
       </div>
     </template>
     
-    <div class="dialog-content">
-      <Tabs v-model:value="activeTabIndex" scrollable>
-        <TabList class="sticky top-0 z-10 bg-white dark:bg-gray-900">
-          <Tab value="0">
+    <div class="dialog-content flex-1 overflow-hidden">
+      <Tabs v-model:value="activeTabIndex" scrollable class="h-full flex flex-col">
+        <TabList class="sticky top-0 z-10 bg-surface-0 dark:bg-surface-900 border-b border-surface-200 dark:border-surface-700 flex-shrink-0">
+          <Tab value="0" class="flex items-center">
             <i class="pi pi-info-circle mr-2"></i>
             Basic Information
           </Tab>
-          <Tab value="1">
+          <Tab value="1" class="flex items-center">
             <i class="pi pi-map-marker mr-2"></i>
             Location & Dates
           </Tab>
-          <Tab value="2">
+          <Tab value="2" class="flex items-center">
             <i class="pi pi-palette mr-2"></i>
             Theme & Colors
           </Tab>
-          <Tab value="3" v-if="isEditing">
+          <Tab value="3" v-if="isEditing" class="flex items-center">
             <i class="pi pi-users mr-2"></i>
             Editors
           </Tab>
-          <Tab value="4">
+          <Tab value="4" class="flex items-center">
             <i class="pi pi-cog mr-2"></i>
             Settings
           </Tab>
         </TabList>
-        <TabPanels>
-          <TabPanel value="0">
-            <div class="p-4">
+        
+        <TabPanels class="flex-1 overflow-auto">
+          <TabPanel value="0" class="h-full">
+            <div class="p-6 h-full overflow-auto">
               <BasicInfoTab 
                 :v$="v$" 
                 :formData="formData" 
@@ -51,31 +54,31 @@
               />
             </div>
           </TabPanel>
-          <TabPanel value="1">
-            <div class="p-4">
+          <TabPanel value="1" class="h-full">
+            <div class="p-6 h-full overflow-auto">
               <LocationDatesTab 
                 :v$="v$" 
                 :formData="formData" 
               />
             </div>
           </TabPanel>
-          <TabPanel value="2">
-            <div class="p-4">
+          <TabPanel value="2" class="h-full">
+            <div class="p-6 h-full overflow-auto">
               <ThemeColorsTab 
                 :v$="v$" 
                 :formData="formData" 
               />
             </div>
           </TabPanel>
-          <TabPanel value="3" v-if="isEditing">
-            <div class="p-4">
+          <TabPanel value="3" v-if="isEditing" class="h-full">
+            <div class="p-6 h-full overflow-auto">
               <EditorsTab 
                 :conferenceId="currentConferenceId"
               />
             </div>
           </TabPanel>
-          <TabPanel value="4">
-            <div class="p-4">
+          <TabPanel value="4" class="h-full">
+            <div class="p-6 h-full overflow-auto">
               <SettingsTab 
                 :formData="formData" 
                 :currentConferenceId="currentConferenceId"
@@ -88,16 +91,18 @@
     </div>
 
     <template #footer>
-      <div class="dialog-footer">
-        <Divider class="w-full m-0" />
-        <div class="footer-buttons">
+      <div class="dialog-footer flex-shrink-0">
+        <Divider class="w-full m-0 mb-4" />
+        <div class="footer-buttons flex justify-end gap-3 px-6 pb-4">
           <Button
             v-if="isEditing"
             type="button"
             label="OK"
             icon="pi pi-check"
             :loading="loading"
+            severity="success"
             @click="handleSubmitAndClose"
+            class="min-w-24"
           />
           <Button
             v-if="isEditing"
@@ -105,7 +110,9 @@
             label="Apply"
             icon="pi pi-check"
             :loading="loading"
+            severity="info"
             @click="handleSubmit"
+            class="min-w-24"
           />
           <Button
             v-if="!isEditing"
@@ -113,14 +120,18 @@
             label="Create"
             icon="pi pi-check"
             :loading="loading"
+            severity="success"
             @click="handleSubmitAndClose"
+            class="min-w-24"
           />
           <Button
             type="button"
             label="Cancel"
             icon="pi pi-times"
-            text
+            severity="secondary"
+            outlined
             @click="hideConferenceDialog"
+            class="min-w-24"
           />
         </div>
       </div>
@@ -514,82 +525,80 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* Override PrimeVue dialog styles to ensure proper layout */
-:deep(.p-dialog) {
-  display: flex;
-  flex-direction: column;
+.fullscreen-dialog :deep(.p-dialog) {
+  width: 100vw !important;
   height: 100vh !important;
-  max-height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
 }
 
-:deep(.p-dialog-content) {
+.fullscreen-dialog :deep(.p-dialog-content) {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+.fullscreen-dialog :deep(.p-dialog-header) {
+  flex-shrink: 0;
+  border-radius: 0 !important;
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid var(--p-surface-200);
+}
+
+.fullscreen-dialog :deep(.p-dialog-footer) {
+  flex-shrink: 0;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  border-top: 1px solid var(--p-surface-200);
+}
+
+.fullscreen-dialog :deep(.p-tabview) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.fullscreen-dialog :deep(.p-tabview-nav-container) {
+  flex-shrink: 0;
+}
+
+.fullscreen-dialog :deep(.p-tabview-panels) {
   flex: 1;
   overflow: hidden;
-  padding: 0 !important;
-  display: flex;
-  flex-direction: column;
 }
 
-:deep(.p-dialog-footer) {
-  flex-shrink: 0;
-  position: sticky;
-  bottom: 0;
-  background: var(--surface-ground);
-  border-top: 1px solid var(--surface-border);
-  z-index: 1000;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-.dialog-content {
-  flex: 1;
-  overflow: auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.dialog-footer {
-  width: 100%;
-  background: var(--surface-ground);
-}
-
-.footer-buttons {
-  display: flex;
-  flex-wrap: nowrap;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  padding: 1rem;
-  min-height: 2.5rem;
-  background: var(--surface-ground);
-}
-
-/* Ensure tabs content is scrollable */
-:deep(.p-tabview-panels) {
-  flex: 1;
-  overflow: auto;
-}
-
-:deep(.p-tabview-panel) {
+.fullscreen-dialog :deep(.p-tabview-panel) {
+  height: 100%;
   padding: 0 !important;
 }
 
-/* Dark mode support */
-.p-dialog.p-component .dialog-footer,
-.footer-buttons {
-  background: var(--surface-ground);
-}
-
-/* Ensure buttons don't wrap on smaller screens */
-@media (max-width: 768px) {
-  .footer-buttons {
-    padding: 0.75rem;
-    gap: 0.375rem;
+@media (max-width: 960px) {
+  .fullscreen-dialog :deep(.p-dialog-header) {
+    padding: 1rem 1.5rem;
   }
   
-  .footer-buttons .p-button {
-    font-size: 0.875rem;
-    padding: 0.5rem 0.75rem;
+  .footer-buttons {
+    padding: 0 1.5rem 1rem 1.5rem !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .fullscreen-dialog :deep(.p-dialog-header) {
+    padding: 0.75rem 1rem;
+  }
+  
+  .footer-buttons {
+    padding: 0 1rem 0.75rem 1rem !important;
+    flex-direction: column;
+    gap: 0.5rem !important;
+  }
+  
+  .footer-buttons .min-w-24 {
+    min-width: 100%;
   }
 }
 </style>
