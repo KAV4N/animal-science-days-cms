@@ -328,50 +328,7 @@ class UserController extends Controller
 
         return $this->successResponse(null, 'User deleted successfully');
     }
-
-    /**
-     * Resend credentials email to a user
-     */
-    public function resendCredentialsEmail(Request $request, User $user): JsonResponse
-    {
-        if (!$request->user()->hasPermissionTo('access.admin')) {
-            return $this->errorResponse('Unauthorized', 403);
-        }
-
-        $validator = Validator::make($request->all(), [
-            'generate_new_password' => 'sometimes|boolean',
-        ]);
-
-        if ($validator->fails()) {
-            return $this->errorResponse('Validation error', 422, $validator->errors());
-        }
-
-        $password = null;
-        
-        if ($request->get('generate_new_password', false)) {
-            $password = $this->generateRandomPassword();
-            $user->password = Hash::make($password);
-            $user->must_change_password = true;
-            $user->save();
-        } else {
-            $password = $this->generateRandomPassword();
-            $user->password = Hash::make($password);
-            $user->must_change_password = true;
-            $user->save();
-        }
-
-        // Send the credentials email
-        $this->sendCredentialsEmail($user->fresh(['roles', 'university']), $password, false);
-
-        return $this->successResponse(
-            [
-                'message' => 'Credentials email sent successfully',
-                'generated_password' => $password
-            ],
-            'Email sent successfully'
-        );
-    }
-
+    
     /**
      * Send credentials email to user
      */
