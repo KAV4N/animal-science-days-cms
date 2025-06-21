@@ -14,6 +14,7 @@ use Illuminate\Support\Str;
 use App\Services\ConferenceLockService;
 use App\Models\Conference;
 use App\Mail\UserCredentials;
+use App\Mail\UserAccountDeleted;  // Add this import
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 
@@ -131,8 +132,8 @@ class UserController extends Controller
 
         $newUser->assignRole($request->role);
 
-        // Send welcome email with credentials
-        $this->sendCredentialsEmail($newUser, $password, true);
+        // Send welcome email with credentials and creator info
+        $this->sendCredentialsEmail($newUser, $password, true, [], $request->user());
 
         return $this->successResponse(
             [
@@ -258,12 +259,13 @@ class UserController extends Controller
                 $user->syncRoles([$request->role]);
             }
             
-            // Send email with updated information
+            // Send email with updated information and modifier info
             $this->sendCredentialsEmail(
                 $user->fresh(['roles', 'university']), 
                 $generatedPassword, 
                 false, 
-                $changedFields
+                $changedFields,
+                $request->user()  // Pass the current user who is making the changes
             );
         }
 
@@ -315,6 +317,9 @@ class UserController extends Controller
             return $this->errorResponse('You cannot delete your own account', 403);
         }
 
+        // Load user relationships before deletion
+        $userWithRelations = $user->load(['roles', 'university']);
+
         $conferences = Conference::where('created_by', $user->id)
             ->orWhereHas('editors', function ($q) use ($user) {
                 $q->where('users.id', $user->id);
@@ -324,6 +329,9 @@ class UserController extends Controller
             $this->lockService->releaseLock($conference->id, $user->id);
         }
 
+        // Send account deletion notification email before deleting the user
+        $this->sendAccountDeletionEmail($userWithRelations, $currentUser);
+
         $user->delete();
 
         return $this->successResponse(null, 'User deleted successfully');
@@ -332,16 +340,17 @@ class UserController extends Controller
     /**
      * Send credentials email to user
      */
-    protected function sendCredentialsEmail(User $user, string $password = null, bool $isNewUser = false, array $changedFields = []): void
+    protected function sendCredentialsEmail(User $user, string $password = null, bool $isNewUser = false, array $changedFields = [], User $createdBy = null): void
     {
         try {
-            Mail::to($user->email)->send(new UserCredentials($user, $password, $isNewUser, $changedFields));
+            Mail::to($user->email)->send(new UserCredentials($user, $password, $isNewUser, $changedFields, $createdBy));
             /*
             Log::info('Credentials email sent successfully', [
                 'user_id' => $user->id,
                 'email' => $user->email,
                 'is_new_user' => $isNewUser,
-                'changed_fields' => array_keys($changedFields)
+                'changed_fields' => array_keys($changedFields),
+                'created_by' => $createdBy ? $createdBy->id : null
             ]);
             */
         } catch (\Exception $e) {
@@ -351,7 +360,34 @@ class UserController extends Controller
                 'email' => $user->email,
                 'error' => $e->getMessage(),
                 'is_new_user' => $isNewUser,
-                'changed_fields' => array_keys($changedFields)
+                'changed_fields' => array_keys($changedFields),
+                'created_by' => $createdBy ? $createdBy->id : null
+            ]);
+            */
+        }
+    }
+    
+    /**
+     * Send account deletion notification email to user
+     */
+    protected function sendAccountDeletionEmail(User $user, User $deletedBy): void
+    {
+        try {
+            Mail::to($user->email)->send(new UserAccountDeleted($user, $deletedBy));
+            /*
+            Log::info('Account deletion email sent successfully', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'deleted_by' => $deletedBy->id
+            ]);
+            */
+        } catch (\Exception $e) {
+            /*
+            Log::error('Failed to send account deletion email', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'deleted_by' => $deletedBy->id,
+                'error' => $e->getMessage()
             ]);
             */
         }

@@ -37,6 +37,25 @@
             border-radius: 5px;
             margin-bottom: 25px;
         }
+        .created-by {
+            background-color: #e7f3ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #007bff;
+            font-size: 14px;
+        }
+        .created-by h4 {
+            margin: 0 0 10px 0;
+            color: #007bff;
+            font-size: 16px;
+        }
+        .created-by-details {
+            color: #495057;
+        }
+        .created-by-details strong {
+            color: #007bff;
+        }
         .credentials {
             background-color: #e9ecef;
             padding: 20px;
@@ -172,6 +191,22 @@
                 @endif
             </p>
         </div>
+
+        @if($createdBy)
+        <div class="created-by">
+            <h4><span class="section-icon">👤</span>
+                @if($isNewUser)
+                    Account Created By
+                @else
+                    Account Modified By
+                @endif
+            </h4>
+            <div class="created-by-details">
+                <strong>Name:</strong> {{ $createdBy->name }}<br>
+                <strong>Email:</strong> {{ $createdBy->email }}
+            </div>
+        </div>
+        @endif
 
         @if(!$isNewUser && !empty($changedFields))
         <div class="changes-section">

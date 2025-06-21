@@ -2,34 +2,30 @@
 
 namespace App\Mail;
 
-use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use App\Models\User;
 
-class UserCredentials extends Mailable
+class UserAccountDeleted extends Mailable
 {
     use Queueable, SerializesModels;
 
     public $user;
-    public $password;
-    public $isNewUser;
-    public $changedFields;
-    public $createdBy;
+    public $deletedBy;
+    public $deletedAt;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(User $user, string $password = null, bool $isNewUser = true, array $changedFields = [], User $createdBy = null)
+    public function __construct(User $user, User $deletedBy)
     {
         $this->user = $user;
-        $this->password = $password;
-        $this->isNewUser = $isNewUser;
-        $this->changedFields = $changedFields;
-        $this->createdBy = $createdBy;
+        $this->deletedBy = $deletedBy;
+        $this->deletedAt = now();
     }
 
     /**
@@ -37,12 +33,8 @@ class UserCredentials extends Mailable
      */
     public function envelope(): Envelope
     {
-        $subject = $this->isNewUser 
-            ? 'Welcome to Animal Science Days - Your Account Details' 
-            : 'Your Account Details Have Been Updated - Animal Science Days';
-
         return new Envelope(
-            subject: $subject,
+            subject: 'Your Account Has Been Deleted - Animal Science Days',
         );
     }
 
@@ -52,7 +44,7 @@ class UserCredentials extends Mailable
     public function content(): Content
     {
         return new Content(
-            html: 'emails.user-credentials',
+            html: 'emails.user-account-deleted',
         );
     }
 
