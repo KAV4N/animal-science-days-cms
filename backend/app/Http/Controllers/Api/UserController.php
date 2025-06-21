@@ -189,7 +189,7 @@ class UserController extends Controller
         $changedFields = [];
         $originalUser = $user->replicate();
         $originalRole = $user->roles->first()->name ?? null;
-        $originalUniversity = $user->university->name ?? null;
+        $originalUniversity = $user->university->full_name ?? null;
         
         $generatedPassword = null;
         $passwordChanged = false;
@@ -234,7 +234,7 @@ class UserController extends Controller
             $newUniversity = \App\Models\University::find($request->university_id);
             $changedFields['university'] = [
                 'old' => $originalUniversity,
-                'new' => $newUniversity->name ?? 'Unknown'
+                'new' => $newUniversity->full_name ?? 'Unknown'
             ];
             $user->university_id = $request->university_id;
         }
