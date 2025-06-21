@@ -13,6 +13,9 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use App\Services\ConferenceLockService;
 use App\Models\Conference;
+use App\Mail\UserCredentials;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class UserController extends Controller
 {
@@ -78,44 +81,6 @@ class UserController extends Controller
                 'Users retrieved successfully'
             );
         }
-    
-
-        if ($request->has('roles') && !empty($request->roles)) {
-            $roles = explode(',', $request->roles);
-            $query->whereHas('roles', function ($q) use ($roles) {
-                $q->whereIn('name', $roles);
-            });
-        }
-
-        if ($request->has('search') && !empty($request->search)) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%");
-            });
-        }
-
-        $sortField = in_array($request->sort_field, ['name', 'email', 'created_at', 'updated_at'])
-                ? $request->sort_field
-                : 'created_at';
-        
-        $sortOrder = in_array(strtolower($request->sort_order), ['asc', 'desc'])
-                ? strtolower($request->sort_order)
-                : 'desc';
-        
-        $query->orderBy($sortField, $sortOrder);
-
-        if ($request->has('page') || $request->has('per_page')) {
-            $perPage = min(max(intval($request->per_page ?? 15), 1), 100);
-            $users = $query->paginate($perPage)->withQueryString();
-            return $this->paginatedResponse($users, UserResource::collection($users));
-        } else {
-            $users = $query->get();
-            return $this->successResponse(
-                UserResource::collection($users),
-                'Users retrieved successfully'
-            );
-        }
     }
 
     public function current(Request $request): JsonResponse
@@ -165,6 +130,9 @@ class UserController extends Controller
         ]);
 
         $newUser->assignRole($request->role);
+
+        // Send welcome email with credentials
+        $this->sendCredentialsEmail($newUser, $password, true);
 
         return $this->successResponse(
             [
@@ -217,13 +185,28 @@ class UserController extends Controller
             }
         }
 
-        $generatedPassword = null;
+        // Track what changes are being made
+        $changedFields = [];
+        $originalUser = $user->replicate();
+        $originalRole = $user->roles->first()->name ?? null;
+        $originalUniversity = $user->university->name ?? null;
         
-        if ($request->has('name')) {
+        $generatedPassword = null;
+        $passwordChanged = false;
+        
+        if ($request->has('name') && $request->name !== $user->name) {
+            $changedFields['name'] = [
+                'old' => $user->name,
+                'new' => $request->name
+            ];
             $user->name = $request->name;
         }
         
-        if ($request->has('email')) {
+        if ($request->has('email') && $request->email !== $user->email) {
+            $changedFields['email'] = [
+                'old' => $user->email,
+                'new' => $request->email
+            ];
             $user->email = $request->email;
         }
         
@@ -231,19 +214,57 @@ class UserController extends Controller
             $generatedPassword = $this->generateRandomPassword();
             $user->password = Hash::make($generatedPassword);
             $user->must_change_password = true;
+            $passwordChanged = true;
+            $changedFields['password'] = [
+                'old' => '********',
+                'new' => $generatedPassword
+            ];
         } else if ($request->has('password') && $request->password) {
+            $generatedPassword = $request->password;
             $user->password = Hash::make($request->password);
             $user->must_change_password = true;
+            $passwordChanged = true;
+            $changedFields['password'] = [
+                'old' => '********',
+                'new' => $generatedPassword
+            ];
         }
         
-        if ($request->has('university_id')) {
+        if ($request->has('university_id') && $request->university_id != $user->university_id) {
+            $newUniversity = \App\Models\University::find($request->university_id);
+            $changedFields['university'] = [
+                'old' => $originalUniversity,
+                'new' => $newUniversity->name ?? 'Unknown'
+            ];
             $user->university_id = $request->university_id;
         }
         
-        $user->save();
-
+        // Check for role changes
+        $roleChanged = false;
         if ($request->has('role') && !empty($user->roles) && $request->role !== $user->roles->first()->name) {
-            $user->syncRoles([$request->role]);
+            $changedFields['role'] = [
+                'old' => $originalRole,
+                'new' => $request->role
+            ];
+            $roleChanged = true;
+        }
+        
+        // Save user changes
+        if (!empty($changedFields)) {
+            $user->save();
+            
+            // Update role if changed
+            if ($roleChanged) {
+                $user->syncRoles([$request->role]);
+            }
+            
+            // Send email with updated information
+            $this->sendCredentialsEmail(
+                $user->fresh(['roles', 'university']), 
+                $generatedPassword, 
+                false, 
+                $changedFields
+            );
         }
 
         $response = [
@@ -306,6 +327,77 @@ class UserController extends Controller
         $user->delete();
 
         return $this->successResponse(null, 'User deleted successfully');
+    }
+
+    /**
+     * Resend credentials email to a user
+     */
+    public function resendCredentialsEmail(Request $request, User $user): JsonResponse
+    {
+        if (!$request->user()->hasPermissionTo('access.admin')) {
+            return $this->errorResponse('Unauthorized', 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'generate_new_password' => 'sometimes|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->errorResponse('Validation error', 422, $validator->errors());
+        }
+
+        $password = null;
+        
+        if ($request->get('generate_new_password', false)) {
+            $password = $this->generateRandomPassword();
+            $user->password = Hash::make($password);
+            $user->must_change_password = true;
+            $user->save();
+        } else {
+            $password = $this->generateRandomPassword();
+            $user->password = Hash::make($password);
+            $user->must_change_password = true;
+            $user->save();
+        }
+
+        // Send the credentials email
+        $this->sendCredentialsEmail($user->fresh(['roles', 'university']), $password, false);
+
+        return $this->successResponse(
+            [
+                'message' => 'Credentials email sent successfully',
+                'generated_password' => $password
+            ],
+            'Email sent successfully'
+        );
+    }
+
+    /**
+     * Send credentials email to user
+     */
+    protected function sendCredentialsEmail(User $user, string $password = null, bool $isNewUser = false, array $changedFields = []): void
+    {
+        try {
+            Mail::to($user->email)->send(new UserCredentials($user, $password, $isNewUser, $changedFields));
+            /*
+            Log::info('Credentials email sent successfully', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'is_new_user' => $isNewUser,
+                'changed_fields' => array_keys($changedFields)
+            ]);
+            */
+        } catch (\Exception $e) {
+            /*
+            Log::error('Failed to send credentials email', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'error' => $e->getMessage(),
+                'is_new_user' => $isNewUser,
+                'changed_fields' => array_keys($changedFields)
+            ]);
+            */
+        }
     }
     
     protected function generateRandomPassword($length = 12): string

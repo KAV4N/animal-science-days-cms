@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\ConferenceLockController;
 use App\Http\Controllers\Api\PublicPageMenuController;
 use App\Http\Controllers\Api\MediaController;
 
+
 Route::prefix('v1')->group(function () {
     // Public routes for universities
     Route::get('universities', [UniversityController::class, 'index']);
@@ -124,6 +125,7 @@ Route::prefix('v1')->group(function () {
                     Route::post('/users', [UserController::class, 'store']);
                     Route::put('/users/{user}', [UserController::class, 'update']);
                     Route::delete('/users/{user}', [UserController::class, 'destroy']);
+                    Route::post('/users/{user}/resend-credentials', [UserController::class, 'resendCredentialsEmail']);
                     Route::get('/roles/available', [RoleController::class, 'availableRoles']);
                 });
             });
