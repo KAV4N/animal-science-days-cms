@@ -23,7 +23,7 @@
         <Card class="w-full max-w-sm border-0 shadow-xl bg-white/80 backdrop-blur-sm">
           <template #content>
             <div class="flex flex-col items-center space-y-4">
-              <ProgressSpinner class="w-10 h-10 text-primary-600" strokeWidth="3" />
+              <ProgressSpinner class="w-10 h-10" :style="{ color: conference?.primary_color || '#1E3A8A' }" strokeWidth="3" />
               <p class="text-lg font-semibold text-slate-700">Loading conference...</p>
             </div>
           </template>
@@ -46,7 +46,11 @@
                 label="Try Again"
                 @click="loadConference"
                 icon="pi pi-refresh"
-                class="bg-primary-600 hover:bg-primary-700 border-primary-600 px-6"
+                :style="{ 
+                  backgroundColor: conference?.primary_color || '#1E3A8A',
+                  borderColor: conference?.primary_color || '#1E3A8A'
+                }"
+                class="px-6 hover:brightness-90"
               />
             </div>
           </template>
@@ -54,7 +58,7 @@
       </div>
 
       <!-- Main Content -->
-      <div v-else-if="conference" class="min-h-screen">
+      <div v-else-if="conference" class="min-h-screen mb-10">
 
         <div class="relative overflow-hidden" :style="{ background: `linear-gradient(to right, ${conference?.primary_color || '#1E3A8A'}, ${conference?.secondary_color || '#6B7280'})` }">
           <div class="absolute inset-0 bg-black/20"></div>
@@ -109,13 +113,13 @@
             <div class="sticky top-0 h-screen overflow-y-auto">
               <div class="p-3 border-b border-slate-100 bg-slate-50">
                 <h2 class="text-sm font-medium text-slate-600 flex items-center gap-2">
-                  <i class="pi pi-list text-xs text-primary-500"></i>
+                  <i class="pi pi-list text-xs" :style="{ color: conference?.primary_color || '#1E3A8A' }"></i>
                   Pages
                 </h2>
               </div>
 
               <div v-if="pagesLoading" class="flex flex-col items-center justify-center py-12">
-                <ProgressSpinner class="w-8 h-8 text-primary-600 mb-3" strokeWidth="4" />
+                <ProgressSpinner class="w-8 h-8" :style="{ color: conference?.primary_color || '#1E3A8A' }" strokeWidth="4" />
                 <p class="text-sm text-slate-500">Loading pages...</p>
               </div>
 
@@ -127,12 +131,15 @@
                   :class="[
                     'w-full text-left p-4 mb-1 transition-all duration-200 group relative',
                     activePageId === page.id
-                      ? 'bg-primary-50 text-primary-700 shadow-sm border-l-4 border-primary-500'
+                      ? 'border-l-4'
                       : 'text-slate-700 hover:bg-slate-50 hover:shadow-sm'
                   ]"
+                  :style="activePageId === page.id ? { 
+                    color: conference?.primary_color || '#1E3A8A',
+                    borderColor: conference?.primary_color || '#1E3A8A'
+                  } : {}"
                 >
                   <div class="flex items-center gap-3">
-                    <i class="pi pi-file-o text-sm opacity-70 group-hover:opacity-100"></i>
                     <span class="font-medium flex-1">{{ page.title }}</span>
                     <!-- Preview indicator for unpublished pages -->
                     <span v-if="!page.is_published" class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800">
@@ -154,7 +161,11 @@
             <Button
               :icon="isMobileMenuOpen ? 'pi pi-times' : 'pi pi-bars'"
               @click="toggleMobileMenu"
-              class="w-14 h-14 rounded-full bg-primary-600 hover:bg-primary-700 border-primary-600 shadow-lg"
+              class="w-14 h-14 rounded-full shadow-lg"
+              :style="{ 
+                backgroundColor: conference?.primary_color || '#1E3A8A',
+                borderColor: conference?.primary_color || '#1E3A8A'
+              }"
               aria-label="Toggle Menu"
             />
           </div>
@@ -174,7 +185,7 @@
             ]"
           >
             <div class="h-full overflow-y-auto">
-              <div class="p-4 border-b border-slate-100 bg-gradient-to-r from-primary-600 to-purple-600">
+              <div class="p-4 border-b border-slate-100" :style="{ background: `linear-gradient(to right, ${conference?.primary_color || '#1E3A8A'}, ${conference?.secondary_color || '#6B7280'})` }">
                 <div class="flex items-center justify-between text-white">
                   <h2 class="text-lg font-semibold">Navigation</h2>
                   <Button
@@ -189,12 +200,12 @@
 
               <div class="p-3">
                 <h3 class="text-sm font-medium text-slate-600 mb-3 px-3 flex items-center gap-2">
-                  <i class="pi pi-list text-xs text-primary-500"></i>
+                  <i class="pi pi-list text-xs" :style="{ color: conference?.primary_color || '#1E3A8A' }"></i>
                   Pages
                 </h3>
 
                 <div v-if="pagesLoading" class="flex flex-col items-center justify-center py-8">
-                  <ProgressSpinner class="w-8 h-8 text-primary-600 mb-3" strokeWidth="4" />
+                  <ProgressSpinner class="w-8 h-8" :style="{ color: conference?.primary_color || '#1E3A8A' }" strokeWidth="4" />
                   <p class="text-sm text-slate-500">Loading pages...</p>
                 </div>
 
@@ -206,12 +217,15 @@
                     :class="[
                       'w-full text-left p-4 mb-1 transition-all duration-200 relative',
                       activePageId === page.id
-                        ? 'bg-primary-50 text-primary-700 shadow-sm border-l-4 border-primary-500'
+                        ? 'border-l-4'
                         : 'text-slate-700 hover:bg-slate-50'
                     ]"
+                    :style="activePageId === page.id ? { 
+                      color: conference?.primary_color || '#1E3A8A',
+                      borderColor: conference?.primary_color || '#1E3A8A'
+                    } : {}"
                   >
                     <div class="flex items-center gap-3">
-                      <i class="pi pi-file-o text-sm opacity-70"></i>
                       <span class="font-medium flex-1">{{ page.title }}</span>
                       <!-- Preview indicator for unpublished pages -->
                       <span v-if="!page.is_published" class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800">
@@ -231,12 +245,12 @@
 
           <!-- Main Content -->
           <div class="flex-1 bg-slate-50">
-            <div class="">
+            <div>
 
               <!-- Page Loading State -->
               <div v-if="pageDataLoading" class="flex items-center justify-center py-20">
                 <div class="text-center">
-                  <ProgressSpinner class="w-10 h-10 text-primary-600 mb-4" strokeWidth="3" />
+                  <ProgressSpinner class="w-10 h-10" :style="{ color: conference?.primary_color || '#1E3A8A' }" strokeWidth="3" />
                   <p class="text-lg font-medium text-slate-700">Loading page content...</p>
                 </div>
               </div>
@@ -256,7 +270,7 @@
                     </span>
                   </div>
                  
-                  <div class="">
+                  <div>
                     <!-- Dynamic Component Rendering -->
                     <component
                       :is="getPublicComponent(pageData.component_type)"
@@ -301,24 +315,6 @@
           </div>
         </div>
 
-        <!-- Footer -->
-        <div class="bg-gray-900 text-white mt-16">
-          <div class="max-w-7xl mx-auto px-4 py-12">
-            <div class="text-center">
-              <h3 class="text-2xl font-bold mb-4">{{ conference.title }}</h3>
-              <div class="flex flex-col lg:flex-row items-center justify-center space-y-2 lg:space-y-0 lg:space-x-8 text-gray-300">
-                <div class="flex items-center space-x-2">
-                  <i class="pi pi-map-marker"></i>
-                  <span>{{ conference.location }}</span>
-                </div>
-                <div class="flex items-center space-x-2">
-                  <i class="pi pi-calendar"></i>
-                  <span>{{ formatDate(conference.start_date) }} - {{ formatDate(conference.end_date) }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
     </div>
@@ -582,7 +578,7 @@ export default defineComponent({
           template: `
             <div class="flex items-center justify-center p-8">
               <div class="flex items-center space-x-3">
-                <i class="pi pi-spin pi-spinner text-primary-600 text-lg"></i>
+                <i class="pi pi-spin pi-spinner" :style="{ color: conference?.primary_color || '#1E3A8A' }" text-lg"></i>
                 <span class="text-slate-600 font-medium">Loading component...</span>
               </div>
             </div>
