@@ -16,7 +16,7 @@
 
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue';
-import { type User } from '@/stores/userManagement';
+import {type User} from '@/types/user'
 
 export default defineComponent({
   name: 'DeleteConfirmDialog',

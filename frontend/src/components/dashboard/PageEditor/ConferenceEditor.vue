@@ -1,4 +1,5 @@
 <template>
+  <Toast />
   <div class="conference-editor h-screen flex flex-col">
     <!-- Top Header -->
     <Card class="header shadow-sm p-4 flex-none rounded mb-2">
@@ -234,18 +235,6 @@
 
       <!-- Main Editor Area (Center) -->
       <div class="flex-1 flex flex-col min-w-0 bg-surface-100 rounded mx-2 shadow">
-        <!-- Error State -->
-        <div v-if="pageMenuStore.error" class="m-4">
-          <Card class="border-l-4 border-red-500 bg-red-50">
-            <template #content>
-              <div class="flex items-center gap-2 text-sm text-red-700 p-4">
-                <i class="pi pi-exclamation-triangle text-red-500"></i>
-                <span>{{ pageMenuStore.error }}</span>
-              </div>
-            </template>
-          </Card>
-        </div>
-
         <!-- No Page Selected State -->
         <div v-if="!pageMenuStore.selectedMenu && !pageMenuStore.loading" class="flex-1 flex items-center justify-center p-4">
           <Card class="max-w-md">
@@ -880,14 +869,17 @@
       :conference-id="conferenceId"
       :is-locked="pageMenuStore.isLocked"
     />
+
   </div>
+
 </template>
 
 <script lang="ts">
 import { defineComponent, ref, shallowRef } from 'vue';
 import { usePageMenuStore } from '@/stores/pageMenuStore';
-import { useConferenceStore } from '@/stores/conferenceStore'; // Import conference store
+import { useConferenceStore } from '@/stores/conferenceStore';
 import { useRoute } from 'vue-router';
+import { useToast } from 'primevue/usetoast';
 import apiService from '@/services/apiService';
 import MediaManager from '@/components/dashboard/PageEditor/MediaManager.vue';
 import {
@@ -897,17 +889,21 @@ import {
   getComponentDefaultData,
   getComponentDefinition
 } from '@/utils/componentRegistry';
+import Toast from 'primevue/toast';
 
 export default defineComponent({
   name: 'ConferenceEditor',
   components: {
-    MediaManager
+    MediaManager,
+    Toast
   },
   setup() {
     const currentComponentEditor = shallowRef(null);
+    const toast = useToast();
 
     return {
-      currentComponentEditor
+      currentComponentEditor,
+      toast
     };
   },
   data() {
@@ -960,7 +956,7 @@ export default defineComponent({
       return usePageMenuStore();
     },
     conferenceStore() {
-      return useConferenceStore(); // Add conference store to computed properties
+      return useConferenceStore();
     },
     conferenceId(): number {
       return Number(this.$route.params.id);
@@ -968,14 +964,14 @@ export default defineComponent({
   },
   async created() {
     this.pageMenuStore.setConferenceId(this.conferenceId);
-    await this.fetchConferenceData(); // Fetch conference data first
+    await this.fetchConferenceData();
     await this.fetchMenus();
   },
-  mounted() {
+  beforeMount() {
 
   },
   beforeUnmount() {
-
+    this.pageMenuStore.resetState();
   },
   methods: {
     async fetchConferenceData() {
@@ -1008,7 +1004,27 @@ export default defineComponent({
       }
     },
     async acquireLock() {
-      await this.pageMenuStore.acquireLock();
+      try {
+        const status = await this.pageMenuStore.acquireLock();
+        if (!status){
+            this.toast.add({
+              severity: 'error',
+              summary: 'Unable to Acquire Lock',
+              detail: 'Failed to enable editing mode. The conference may be locked by another user or there was a connection issue.',
+              life: 5000
+            });
+        }
+      } catch (error) {
+        console.error('Error acquiring lock:', error);
+        
+        // Show error toast instead of error card
+        this.toast.add({
+          severity: 'error',
+          summary: 'Unable to Acquire Lock',
+          detail: 'Failed to enable editing mode. The conference may be locked by another user or there was a connection issue.',
+          life: 5000
+        });
+      }
     },
     async openLivePreview() {
       try {

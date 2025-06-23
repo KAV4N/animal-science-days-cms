@@ -1065,8 +1065,7 @@ export default defineComponent({
         setTimeout(() => {
           this.copyMessage = '';
         }, 3000);
-        
-        console.log('Banner configuration copied:', configToCopy);
+
       } catch (error) {
         console.error('Failed to copy configuration:', error);
         this.copyMessage = 'Failed to copy configuration';
@@ -1101,8 +1100,7 @@ export default defineComponent({
         const currentName = this.localComponentName;
         this.localBannerData = JSON.parse(JSON.stringify(this.pendingPasteConfig));
         this.localComponentName = currentName;
-        
-        console.log('Banner configuration pasted:', this.pendingPasteConfig);
+
         
         // Clear the pending config and close dialog
         this.pendingPasteConfig = null;

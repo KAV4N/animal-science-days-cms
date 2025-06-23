@@ -158,14 +158,14 @@
     <Dialog v-model:visible="showPasswordDialog" header="User Password" :style="{ width: '450px' }">
       <div class="flex flex-col gap-4">
         <div class="p-3 border rounded bg-gray-50">
-          <p class="font-bold">Password has been generated for {{ passwordUserName }}</p>
-          <p class="mt-2">Please save this password. It won't be displayed again.</p>
+          <p class="font-bold">Account and login details have been sent via email</p>
+          <p class="mt-2">Password has been generated for {{ passwordUserName }}</p>
           <div class="mt-2 p-2 bg-white border rounded font-mono text-center">
             {{ generatedPassword }}
           </div>
         </div>
         <div class="flex gap-2 justify-between">
-          <Button label="Export to Text File" icon="pi pi-download" @click="exportPassword" />
+          <Button label="Export Login Details" icon="pi pi-download" @click="exportPassword" />
           <Button label="Close" icon="pi pi-times" outlined @click="closePasswordDialog" />
         </div>
       </div>

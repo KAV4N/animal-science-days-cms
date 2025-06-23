@@ -17,8 +17,15 @@
       <div v-if="!userData.id">
         <label for="password" class="block font-bold mb-2">Password</label>
         <div class="flex gap-2">
-          <Password id="password" v-model="userData.password" :feedback="false" toggleMask class="flex-1"
-            :invalid="submitted && !userData.password && !autoGeneratePassword" />
+          <Password 
+            id="password" 
+            v-model="userData.password" 
+            :feedback="false" 
+            toggleMask 
+            class="flex-1"
+            :disabled="autoGeneratePassword"
+            :invalid="submitted && !userData.password && !autoGeneratePassword" 
+          />
           <div class="flex items-center gap-2">
             <Checkbox v-model="autoGeneratePassword" binary />
             <label>Auto-generate</label>

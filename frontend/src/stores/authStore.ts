@@ -6,6 +6,10 @@ import type { User, Role, Permission } from '@/types/user';
 import type { UserResponse } from '@/types/user';
 import router from '@/router';
 
+import { usePageMenuStore } from '@/stores/pageMenuStore';
+import { useConferenceStore } from '@/stores/conferenceStore';
+import { useUniversityStore } from '@/stores/universityStore';
+
 // Import the auth types
 import type {
   LoginRequest,
@@ -17,6 +21,7 @@ import type {
   ChangePasswordResponse,
   AuthResponse,
 } from '@/types/auth';
+
 
 interface AuthState {
   user: User | null;
@@ -85,17 +90,14 @@ export const useAuthStore = defineStore('auth', {
       this.error = null;
 
       try {
-        console.log('Checking if user is already authenticated...');
         const refreshSuccess = await this.tryRefreshToken();
 
         if (refreshSuccess) {
           return true;
         }
 
-        console.log('User not authenticated, proceeding with login');
         const response = await apiService.auth.login(credentials.email, credentials.password);
         const authData = response.data.payload;
-        console.log(response);
         this.setUserData(authData);
         return true;
       } catch (error: any) {
@@ -136,19 +138,24 @@ export const useAuthStore = defineStore('auth', {
 
       try {
         await apiService.auth.logout();
-        this.clearUserData();
-        router.push({ name: 'Login' });
-        return true;
       } catch (error: any) {
-        // Even if logout fails on server, clear local data
-        this.clearUserData();
         this.error = error.response?.data?.message || 'Logout failed';
-        router.push({ name: 'Login' });
-        return false;
       } finally {
+        this.clearUserData();
+
+        const conferenceStore = useConferenceStore();
+        const universityStore = useUniversityStore();
+        const pageMenuStore = usePageMenuStore();
+        
+        conferenceStore.resetState();
+        universityStore.resetState();
+        pageMenuStore.resetState();
+
         this.isLoading = false;
+        router.push({ name: 'Login' });
       }
     },
+
 
     async refreshToken() {
       this.isLoading = true;
