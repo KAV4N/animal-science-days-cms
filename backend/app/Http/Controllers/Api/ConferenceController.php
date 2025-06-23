@@ -71,12 +71,14 @@ class ConferenceController extends Controller
         if ($sortField === 'university') {
             $query->join('universities', 'conferences.university_id', '=', 'universities.id')
                   ->select('conferences.*')
-                  ->orderBy('universities.full_name', $sortOrder);
+                  ->orderBy('universities.full_name', $sortOrder)
+                  ->orderBy('conferences.id', $sortOrder);
         } else {
             // Regular sorting for other fields
             $allowedSortFields = ['name', 'start_date', 'end_date', 'created_at', 'updated_at'];
             $sortField = in_array($sortField, $allowedSortFields) ? $sortField : 'created_at';
-            $query->orderBy($sortField, $sortOrder);
+            $query->orderBy($sortField, $sortOrder)
+                  ->orderBy('id', $sortOrder);
         }
 
         // Handle pagination or return all results
@@ -366,7 +368,12 @@ class ConferenceController extends Controller
         $sortOrder = in_array(strtolower($request->sort_order), ['asc', 'desc']) 
             ? strtolower($request->sort_order) 
             : 'desc';
+        
+        // Primary sort by the requested field
         $query->orderBy($sortField, $sortOrder);
+        
+        // Add secondary sort by id for consistent pagination
+        $query->orderBy('id', $sortOrder);
 
         $perPage = min(max(intval($request->per_page ?? 10), 1), 100);
         $conferences = $query->paginate($perPage)->withQueryString();

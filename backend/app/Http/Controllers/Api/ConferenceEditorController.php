@@ -46,6 +46,7 @@ class ConferenceEditorController extends Controller
             $query->where('users.university_id', $request->university_id);
         }
         
+        // Sort options with consistent ordering
         $sortField = $request->sort_field;
         if (in_array($sortField, ['name', 'email', 'created_at', 'updated_at'])) {
             $sortField = "users.$sortField";
@@ -56,7 +57,12 @@ class ConferenceEditorController extends Controller
         $sortOrder = in_array(strtolower($request->sort_order), ['asc', 'desc']) 
             ? strtolower($request->sort_order) 
             : 'asc';
+
+        // Primary sort by the requested field
         $query->orderBy($sortField, $sortOrder);
+        
+        // Always add a secondary sort by 'users.id' to ensure consistent pagination
+        $query->orderBy('users.id', $sortOrder);
 
         if (!$request->has('page') && !$request->has('per_page')) {
             $editors = $query->get();
@@ -99,13 +105,19 @@ class ConferenceEditorController extends Controller
             $query->where('university_id', $request->university_id);
         }
 
+        // Sort options with consistent ordering
         $sortField = in_array($request->sort_field, ['name', 'email', 'created_at', 'updated_at']) 
             ? $request->sort_field 
             : 'name';
         $sortOrder = in_array(strtolower($request->sort_order), ['asc', 'desc']) 
             ? strtolower($request->sort_order) 
             : 'asc';
+
+        // Primary sort by the requested field
         $query->orderBy($sortField, $sortOrder);
+        
+        // Always add a secondary sort by 'id' to ensure consistent pagination
+        $query->orderBy('id', $sortOrder);
         
         if (!$request->has('page') && !$request->has('per_page')) {
             $users = $query->get();

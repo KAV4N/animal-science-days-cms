@@ -18,9 +18,9 @@
           <i class="pi pi-search" />
           <InputText
             v-model="filters.search"
-            placeholder="Search editors by name/email..."
+            placeholder="Search by name or email..."
             class="w-full"
-            @input="debouncedSearchEditors"
+            @input="onSearchInputEditors"
           />
         </span>
 
@@ -32,12 +32,12 @@
           placeholder="Filter by university"
           class="w-full"
           :showClear="true"
-          @change="loadEditors"
+          @change="onUniversityFilterChange"
         />
       </div>
 
       <DataTable
-        :value="sortedEditors"
+        :value="editors"
         :loading="loading"
         dataKey="id"
         :paginator="true"
@@ -46,13 +46,13 @@
         :lazy="true"
         :rowsPerPageOptions="[5, 10, 25, 50]"
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-        :sortField="frontendSortField"
-        :sortOrder="frontendSortOrder"
+        :sortField="filters.sort_field"
+        :sortOrder="filters.sort_order === 'desc' ? -1 : 1"
         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} editors"
         responsiveLayout="scroll"
         class="p-datatable-sm"
         @page="onPage"
-        @sort="onFrontendSort"
+        @sort="onSort"
       >
         <template #empty>
           <div class="text-center p-4">
@@ -66,17 +66,17 @@
         </template>
         <Column field="name" header="Name" sortable />
         <Column field="email" header="Email" sortable />
-        <Column header="University" sortable sortField="university.full_name">
+        <Column field="university.full_name" header="University" sortable>
           <template #body="slotProps">
             {{ slotProps.data.university?.full_name || '-' }}
           </template>
         </Column>
-        <Column header="Assigned At" sortable sortField="pivot.created_at">
+        <Column field="pivot.created_at" header="Assigned At" sortable>
           <template #body="slotProps">
             {{ formatDate(slotProps.data.pivot?.created_at) }}
           </template>
         </Column>
-        <Column header="Assigned By" sortable sortField="pivot.assigned_by_user.name">
+        <Column field="pivot.assigned_by_user.name" header="Assigned By" sortable>
           <template #body="slotProps">
             {{ slotProps.data.pivot?.assigned_by_user?.name || '-' }}
           </template>
@@ -107,9 +107,9 @@
             <i class="pi pi-search" />
             <InputText
               v-model="unattachedFilters.search"
-              placeholder="Search editors by name/email"
+              placeholder="Search by name or email..."
               class="w-full"
-              @input="debouncedSearchUnattached"
+              @input="onSearchInputUnattached"
             />
           </span>
 
@@ -121,13 +121,13 @@
             placeholder="Filter by university"
             class="w-full"
             :showClear="true"
-            @change="loadUnattachedEditors"
+            @change="onUniversityFilterChangeUnattached"
           />
         </div>
       </div>
 
       <DataTable
-        :value="sortedUnattachedEditors"
+        :value="unattachedEditors"
         :loading="loadingUnattached"
         dataKey="id"
         :paginator="true"
@@ -136,12 +136,12 @@
         :lazy="true"
         :rowsPerPageOptions="[5, 10, 25, 50]"
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-        :sortField="frontendSortFieldUnattached"
-        :sortOrder="frontendSortOrderUnattached"
+        :sortField="unattachedFilters.sort_field"
+        :sortOrder="unattachedFilters.sort_order === 'desc' ? -1 : 1"
         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} available editors"
         responsiveLayout="scroll"
         class="p-datatable-sm"
-        @sort="onFrontendSortUnattached"
+        @sort="onSortUnattached"
         @page="onPageUnattached"
       >
         <template #empty>
@@ -156,7 +156,7 @@
         </template>
         <Column field="name" header="Name" sortable />
         <Column field="email" header="Email" sortable />
-        <Column header="University" sortable sortField="university.full_name">
+        <Column field="university.full_name" header="University" sortable>
           <template #body="slotProps">
             {{ slotProps.data.university?.full_name || '-' }}
           </template>
@@ -186,7 +186,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, computed } from 'vue';
+import { defineComponent } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import type { User } from '@/types/user';
 import type { University } from '@/types/university';
@@ -200,6 +200,8 @@ import type { Editor } from '@/types';
 interface EditorFilters {
   search?: string;
   university_id?: number | null;
+  sort_field?: string;
+  sort_order?: 'asc' | 'desc';
   page?: number;
   per_page?: number;
 }
@@ -211,16 +213,6 @@ export default defineComponent({
       type: Number,
       default: null
     }
-  },
-  setup() {
-    // Helper function to get nested property values
-    const getNestedProperty = (obj: any, path: string): any => {
-      return path.split('.').reduce((current, key) => current?.[key], obj);
-    };
-
-    return {
-      getNestedProperty
-    };
   },
   data() {
     return {
@@ -234,24 +226,19 @@ export default defineComponent({
       universities: [] as University[],
       universityStore: useUniversityStore(),
       conferenceStore: useConferenceStore(),
-      
-      // Frontend sorting state for editors
-      frontendSortField: 'name',
-      frontendSortOrder: 1, // 1 for asc, -1 for desc
-      
-      // Frontend sorting state for unattached editors
-      frontendSortFieldUnattached: 'name',
-      frontendSortOrderUnattached: 1,
-      
       filters: {
         search: '',
         university_id: null as number | null,
+        sort_field: 'name',
+        sort_order: 'asc' as 'asc' | 'desc',
         page: 1,
         per_page: 10
       } as EditorFilters,
       unattachedFilters: {
         search: '',
         university_id: null as number | null,
+        sort_field: 'name',
+        sort_order: 'asc' as 'asc' | 'desc',
         page: 1,
         per_page: 10
       } as EditorFilters,
@@ -260,93 +247,12 @@ export default defineComponent({
       toast: useToast()
     };
   },
-  computed: {
-    sortedEditors() {
-      if (!this.editors || this.editors.length === 0) {
-        return [];
-      }
-
-      const sorted = [...this.editors].sort((a: any, b: any) => {
-        let aVal = this.getNestedProperty(a, this.frontendSortField);
-        let bVal = this.getNestedProperty(b, this.frontendSortField);
-
-        // Handle special cases for nested properties
-        if (this.frontendSortField === 'university.full_name') {
-          aVal = a.university?.full_name || '';
-          bVal = b.university?.full_name || '';
-        } else if (this.frontendSortField === 'pivot.created_at') {
-          aVal = a.pivot?.created_at || '';
-          bVal = b.pivot?.created_at || '';
-        } else if (this.frontendSortField === 'pivot.assigned_by_user.name') {
-          aVal = a.pivot?.assigned_by_user?.name || '';
-          bVal = b.pivot?.assigned_by_user?.name || '';
-        }
-
-        // Handle null/undefined values
-        if (aVal == null && bVal == null) return 0;
-        if (aVal == null) return 1;
-        if (bVal == null) return -1;
-
-        // Handle dates
-        if (this.frontendSortField === 'pivot.created_at') {
-          aVal = new Date(aVal).getTime();
-          bVal = new Date(bVal).getTime();
-        }
-
-        // Handle string comparison
-        if (typeof aVal === 'string' && typeof bVal === 'string') {
-          return this.frontendSortOrder * aVal.localeCompare(bVal);
-        }
-
-        // Handle numeric comparison
-        if (aVal < bVal) return -1 * this.frontendSortOrder;
-        if (aVal > bVal) return 1 * this.frontendSortOrder;
-        return 0;
-      });
-
-      return sorted;
-    },
-
-    sortedUnattachedEditors() {
-      if (!this.unattachedEditors || this.unattachedEditors.length === 0) {
-        return [];
-      }
-
-      const sorted = [...this.unattachedEditors].sort((a: any, b: any) => {
-        let aVal = this.getNestedProperty(a, this.frontendSortFieldUnattached);
-        let bVal = this.getNestedProperty(b, this.frontendSortFieldUnattached);
-
-        // Handle special cases for nested properties
-        if (this.frontendSortFieldUnattached === 'university.full_name') {
-          aVal = a.university?.full_name || '';
-          bVal = b.university?.full_name || '';
-        }
-
-        // Handle null/undefined values
-        if (aVal == null && bVal == null) return 0;
-        if (aVal == null) return 1;
-        if (bVal == null) return -1;
-
-        // Handle string comparison
-        if (typeof aVal === 'string' && typeof bVal === 'string') {
-          return this.frontendSortOrderUnattached * aVal.localeCompare(bVal);
-        }
-
-        // Handle numeric comparison
-        if (aVal < bVal) return -1 * this.frontendSortOrderUnattached;
-        if (aVal > bVal) return 1 * this.frontendSortOrderUnattached;
-        return 0;
-      });
-
-      return sorted;
-    }
-  },
   watch: {
     conferenceId: {
       immediate: true,
       handler(newVal) {
         if (newVal) {
-          this.loadEditors();
+          this.resetEditorsFiltersAndLoad();
         }
       }
     }
@@ -366,18 +272,56 @@ export default defineComponent({
       }
     },
 
+    // Reset filters and pagination for editors table
+    resetEditorsFiltersAndLoad() {
+      this.filters.page = 1;
+      this.loadEditors();
+    },
+
+    // Reset filters and pagination for unattached editors table
+    resetUnattachedFiltersAndLoad() {
+      this.unattachedFilters.page = 1;
+      this.loadUnattachedEditors();
+    },
+
+    // Handle search input for editors table with immediate page reset
+    onSearchInputEditors() {
+      this.filters.page = 1;
+      this.debouncedSearchEditors();
+    },
+
+    // Handle search input for unattached editors table with immediate page reset
+    onSearchInputUnattached() {
+      this.unattachedFilters.page = 1;
+      this.debouncedSearchUnattached();
+    },
+
+    // Handle university filter change for editors table
+    onUniversityFilterChange() {
+      this.filters.page = 1;
+      this.loadEditors();
+    },
+
+    // Handle university filter change for unattached editors table
+    onUniversityFilterChangeUnattached() {
+      this.unattachedFilters.page = 1;
+      this.loadUnattachedEditors();
+    },
+
     async loadEditors() {
       if (!this.conferenceId) return;
 
       this.loading = true;
       try {
-        const { search, university_id, page, per_page } = this.filters;
+        const { search, university_id, sort_field, sort_order, page, per_page } = this.filters;
         const queryParams = new URLSearchParams();
 
         if (search) queryParams.append('search', search);
         if (university_id) queryParams.append('university_id', String(university_id));
         if (page) queryParams.append('page', String(page));
         if (per_page) queryParams.append('per_page', String(per_page));
+        if (sort_field) queryParams.append('sort_field', sort_field);
+        if (sort_order) queryParams.append('sort_order', sort_order);
 
         const url = `/v1/conference-management/conferences/${this.conferenceId}/editors?${queryParams.toString()}`;
         const response = await apiService.get(url);
@@ -406,13 +350,15 @@ export default defineComponent({
 
       this.loadingUnattached = true;
       try {
-        const { search, university_id, page, per_page } = this.unattachedFilters;
+        const { search, university_id, sort_field, sort_order, page, per_page } = this.unattachedFilters;
         const queryParams = new URLSearchParams();
 
         if (search) queryParams.append('search', search);
         if (university_id) queryParams.append('university_id', String(university_id));
         if (page) queryParams.append('page', String(page));
         if (per_page) queryParams.append('per_page', String(per_page));
+        if (sort_field) queryParams.append('sort_field', sort_field);
+        if (sort_order) queryParams.append('sort_order', sort_order);
 
         const url = `/v1/conference-management/conferences/${this.conferenceId}/editors/unattached?${queryParams.toString()}`;
         const response = await apiService.get(url);
@@ -453,15 +399,15 @@ export default defineComponent({
 
     openAddEditorsDialog() {
       this.addEditorsDialogVisible = true;
+      // Reset unattached filters when opening dialog
       this.unattachedFilters = {
         search: '',
         university_id: null,
+        sort_field: 'name',
+        sort_order: 'asc',
         page: 1,
         per_page: 10
       };
-      // Reset sorting for unattached editors
-      this.frontendSortFieldUnattached = 'name';
-      this.frontendSortOrderUnattached = 1;
       this.loadUnattachedEditors();
     },
 
@@ -483,8 +429,9 @@ export default defineComponent({
             life: 3000
           });
 
-          await this.loadEditors();
-          await this.loadUnattachedEditors();
+          // Reset pagination and reload both tables
+          await this.resetEditorsFiltersAndLoad();
+          await this.resetUnattachedFiltersAndLoad();
           await this.refreshConferenceInStore();
         } else {
           this.toast.add({
@@ -519,8 +466,9 @@ export default defineComponent({
             life: 3000
           });
 
-          await this.loadEditors();
-          await this.loadUnattachedEditors();
+          // Reset pagination and reload both tables
+          await this.resetEditorsFiltersAndLoad();
+          await this.resetUnattachedFiltersAndLoad();
           await this.refreshConferenceInStore();
         }
       } catch (error) {
@@ -552,10 +500,12 @@ export default defineComponent({
       }
     },
 
-    onFrontendSort(event: any) {
-      this.frontendSortField = event.sortField;
-      this.frontendSortOrder = event.sortOrder;
-      // No API call needed - sorting happens in computed property
+    onSort(event: any) {
+      // Reset to first page when sorting
+      this.filters.page = 1;
+      this.filters.sort_field = event.sortField;
+      this.filters.sort_order = event.sortOrder === 1 ? 'asc' : 'desc';
+      this.loadEditors();
     },
 
     onPage(event: any) {
@@ -564,10 +514,12 @@ export default defineComponent({
       this.loadEditors();
     },
 
-    onFrontendSortUnattached(event: any) {
-      this.frontendSortFieldUnattached = event.sortField;
-      this.frontendSortOrderUnattached = event.sortOrder;
-      // No API call needed - sorting happens in computed property
+    onSortUnattached(event: any) {
+      // Reset to first page when sorting
+      this.unattachedFilters.page = 1;
+      this.unattachedFilters.sort_field = event.sortField;
+      this.unattachedFilters.sort_order = event.sortOrder === 1 ? 'asc' : 'desc';
+      this.loadUnattachedEditors();
     },
 
     onPageUnattached(event: any) {

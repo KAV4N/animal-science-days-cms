@@ -59,7 +59,7 @@ class UserController extends Controller
             $query->where('university_id', $request->university_id);
         }
 
-        // Sort options
+        // Sort options with consistent ordering
         $sortField = in_array($request->sort_field, ['name', 'email', 'created_at', 'updated_at'])
                 ? $request->sort_field
                 : 'created_at';
@@ -68,7 +68,9 @@ class UserController extends Controller
                 ? strtolower($request->sort_order)
                 : 'desc';
         
+        // Primary sort by the requested field
         $query->orderBy($sortField, $sortOrder);
+        $query->orderBy('id', $sortOrder);
 
         // Pagination
         if ($request->has('page') || $request->has('per_page')) {

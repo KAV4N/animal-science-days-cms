@@ -13,7 +13,7 @@
        <DataTable
           ref="dt"
           v-model:selection="selectedConferences"
-          :value="sortedConferences"
+          :value="conferences"
           dataKey="id"
           :paginator="true"
           :rows="filters.per_page"
@@ -21,8 +21,8 @@
           :totalRecords="totalRecords"
           :lazy="true"
           paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-          :sortField="frontendSortField"
-          :sortOrder="frontendSortOrder"
+          :sortField="filters.sort_field"
+          :sortOrder="filters.sort_order === 'desc' ? -1 : 1"
           currentPageReportTemplate="Showing {first} to {last} of {totalRecords} conferences"
           responsiveLayout="stack"
           breakpoint="960px"
@@ -31,7 +31,7 @@
           scrollable
           scrollHeight="flex"
           @page="onPage"
-          @sort="onFrontendSort"
+          @sort="onSort"
         >
           <template #header>
             <div class="flex flex-column md:flex-row md:justify-between md:items-center gap-2">
@@ -40,7 +40,7 @@
                 <InputGroupAddon>
                   <i class="pi pi-search" />
                 </InputGroupAddon>
-                <InputText v-model="filters.search" placeholder="Search by name..." class="w-full" @input="debouncedSearch" />
+                <InputText v-model="filters.search" placeholder="Search by name..." class="w-full" @input="onSearchInput" />
                 <InputGroupAddon v-if="filters.search">
                   <Button icon="pi pi-times" @click="clearSearch" class="p-button-text p-button-plain" />
                 </InputGroupAddon>
@@ -58,7 +58,7 @@
               </span>
             </template>
           </Column>
-          <Column header="University" sortable sortField="university.full_name" style="min-width: 12rem">
+          <Column field="university" header="University" sortable style="min-width: 12rem">
             <template #body="slotProps">
               <span v-tooltip.top="slotProps.data.university?.full_name" class="truncate block">
                 {{ truncateText(slotProps.data.university?.full_name, 25) }}
@@ -75,7 +75,7 @@
               {{ formatDate(slotProps.data.end_date) }}
             </template>
           </Column>
-          <Column field="is_published" header="Status" style="min-width: 10rem">
+          <Column field="is_published" header="Status" sortable style="min-width: 10rem">
             <template #body="slotProps">
               <Tag :value="slotProps.data.is_published ? 'Published' : 'Draft'" :severity="getStatusSeverity(slotProps.data.is_published)" />
             </template>
@@ -161,12 +161,6 @@ import Divider from 'primevue/divider';
 import Tooltip from 'primevue/tooltip';
 import debounce from 'lodash/debounce';
 
-interface ConferenceFiltersLocal {
-  search: string;
-  page: number;
-  per_page: number;
-}
-
 export default defineComponent({
   name: 'ConferenceTable',
   components: {
@@ -197,72 +191,17 @@ export default defineComponent({
     const dt = ref<any>(null);
     const isLoading = ref(false);
     
-    // Frontend sorting state
-    const frontendSortField = ref('created_at');
-    const frontendSortOrder = ref(-1); // -1 for desc, 1 for asc
-    
-    const filters = ref<ConferenceFiltersLocal>({
+    const filters = ref<ConferenceFilters>({
       search: '',
+      sort_field: 'created_at',
+      sort_order: 'desc',
       page: 1,
       per_page: 10
     });
 
-    // Helper function to get nested property values
-    const getNestedProperty = (obj: any, path: string): any => {
-      return path.split('.').reduce((current, key) => current?.[key], obj);
-    };
-
     // Computed properties
     const conferences = computed(() => {
       return conferenceStore.conferences || [];
-    });
-
-    const sortedConferences = computed(() => {
-      if (!conferences.value || conferences.value.length === 0) {
-        return [];
-      }
-
-      const sorted = [...conferences.value].sort((a: any, b: any) => {
-        let aVal = getNestedProperty(a, frontendSortField.value);
-        let bVal = getNestedProperty(b, frontendSortField.value);
-
-        // Handle special cases
-        if (frontendSortField.value === 'university.full_name') {
-          aVal = a.university?.full_name || '';
-          bVal = b.university?.full_name || '';
-        }
-
-        // Handle null/undefined values
-        if (aVal == null && bVal == null) return 0;
-        if (aVal == null) return 1;
-        if (bVal == null) return -1;
-
-        // Handle dates
-        if (frontendSortField.value === 'created_at' || 
-            frontendSortField.value === 'updated_at' || 
-            frontendSortField.value === 'start_date' || 
-            frontendSortField.value === 'end_date') {
-          aVal = new Date(aVal).getTime();
-          bVal = new Date(bVal).getTime();
-        }
-
-        // Handle boolean values
-        if (typeof aVal === 'boolean' && typeof bVal === 'boolean') {
-          return frontendSortOrder.value * (aVal === bVal ? 0 : aVal ? 1 : -1);
-        }
-
-        // Handle string comparison
-        if (typeof aVal === 'string' && typeof bVal === 'string') {
-          return frontendSortOrder.value * aVal.localeCompare(bVal);
-        }
-
-        // Handle numeric comparison
-        if (aVal < bVal) return -1 * frontendSortOrder.value;
-        if (aVal > bVal) return 1 * frontendSortOrder.value;
-        return 0;
-      });
-
-      return sorted;
     });
 
     const totalRecords = computed(() => {
@@ -279,26 +218,11 @@ export default defineComponent({
       return 0;
     });
 
-    // Debounced search function
-    const debouncedSearch = debounce(() => {
-      filters.value.page = 1; // Reset to first page on search
-      loadConferences();
-    }, 300);
-
     // Methods
     const loadConferences = async () => {
       isLoading.value = true;
       try {
-        // Only pass server-side filtering parameters
-        const serverFilters: ConferenceFilters = {
-          search: filters.value.search,
-          sort_field: 'created_at', // Default sort for server, we'll handle sorting on frontend
-          sort_order: 'desc',
-          page: filters.value.page,
-          per_page: filters.value.per_page
-        };
-        
-        const response = await conferenceStore.fetchConferences(serverFilters);
+        const response = await conferenceStore.fetchConferences(filters.value);
         
         // Force reactivity update
         await nextTick();
@@ -318,21 +242,45 @@ export default defineComponent({
       }
     };
     
+    // Debounced search function with page reset
+    const debouncedSearch = debounce(() => {
+      // Reset to first page when searching
+      filters.value.page = 1;
+      loadConferences();
+    }, 300);
+
+    // Handle search input with immediate page reset
+    const onSearchInput = () => {
+      // Reset page immediately when user starts typing
+      filters.value.page = 1;
+      debouncedSearch();
+    };
+    
     const onPage = (event: any) => {
       filters.value.page = event.page + 1; // PrimeVue uses 0-based indexing, API uses 1-based
       filters.value.per_page = event.rows;
       loadConferences();
     };
 
-    const onFrontendSort = (event: any) => {
-      frontendSortField.value = event.sortField;
-      frontendSortOrder.value = event.sortOrder;
-      // No API call needed - sorting happens in computed property
+    const onSort = (event: any) => {
+      // Reset to first page when sorting
+      filters.value.page = 1;
+      filters.value.sort_field = event.sortField;
+      filters.value.sort_order = event.sortOrder === 1 ? 'asc' : 'desc';
+      loadConferences();
     };
 
     const clearSearch = () => {
       filters.value.search = '';
+      // Reset to first page when clearing search
       filters.value.page = 1;
+      loadConferences();
+    };
+
+    // Additional method to reset pagination and reload data
+    const resetPaginationAndReload = () => {
+      filters.value.page = 1;
+      selectedConferences.value = []; // Clear selection
       loadConferences();
     };
     
@@ -391,7 +339,8 @@ export default defineComponent({
     const deleteConference = async (id: number): Promise<void> => {
       try {
         const response = await conferenceStore.deleteConference(id);
-        await loadConferences(); // Reload data after deletion
+        // Reset pagination and reload data after deletion
+        await resetPaginationAndReload();
         toast.add({
           severity: 'success',
           summary: 'Success',
@@ -452,8 +401,8 @@ export default defineComponent({
           }
         }
         
-        selectedConferences.value = [];
-        await loadConferences(); // Reload data after deletion
+        // Reset pagination and reload data after deletion
+        await resetPaginationAndReload();
         
         if (successCount > 0) {
           toast.add({
@@ -499,19 +448,18 @@ export default defineComponent({
       dt,
       filters,
       isLoading,
-      frontendSortField,
-      frontendSortOrder,
       
       // Computed
       conferences,
-      sortedConferences,
       totalRecords,
       
       // Methods
       loadConferences,
       onPage,
-      onFrontendSort,
+      onSort,
       clearSearch,
+      onSearchInput,
+      resetPaginationAndReload,
       editConference,
       openCreateConferenceDialog,
       formatDate,

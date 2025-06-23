@@ -12,7 +12,7 @@
         <DataTable
           ref="dt"
           v-model:selection="selectedUsers"
-          :value="sortedUsers"
+          :value="users"
           dataKey="id"
           :paginator="true"
           :rows="filters.per_page"
@@ -20,8 +20,8 @@
           :totalRecords="meta?.total || 0"
           :lazy="true"
           paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-          :sortField="frontendSortField"
-          :sortOrder="frontendSortOrder"
+          :sortField="filters.sort_field"
+          :sortOrder="filters.sort_order === 'desc' ? -1 : 1"
           currentPageReportTemplate="Showing {first} to {last} of {totalRecords} users"
           responsiveLayout="stack"
           breakpoint="960px"
@@ -30,7 +30,7 @@
           scrollable
           scrollHeight="flex"
           @page="onPage"
-          @sort="onFrontendSort"
+          @sort="onSort"
         >
           <template #header>
             <div class="flex flex-column md:flex-row md:justify-between md:items-center gap-2">
@@ -43,7 +43,7 @@
                   <InputGroupAddon>
                     <i class="pi pi-search" />
                   </InputGroupAddon>
-                  <InputText v-model="filters.search" placeholder="Search by name..." class="w-full" @input="debouncedSearch" />
+                  <InputText v-model="filters.search" placeholder="Search by name or email..." class="w-full" @input="debouncedSearch" />
                   <InputGroupAddon v-if="filters.search">
                     <Button icon="pi pi-times" @click="clearSearch" class="p-button-text p-button-plain" />
                   </InputGroupAddon>
@@ -79,7 +79,7 @@
               {{ slotProps.data.roles ? slotProps.data.roles.map((role: Role) => role.name).join(', ') : '' }}
             </template>
           </Column>
-          <Column header="University" style="min-width: 16rem" sortable sortField="university.full_name">
+          <Column header="University" style="min-width: 16rem">
             <template #body="slotProps">
               <span v-tooltip.top="slotProps.data.university ? slotProps.data.university.full_name : 'Not Assigned'" class="truncate block">
                 {{ truncateText(slotProps.data.university ? slotProps.data.university.full_name : 'Not Assigned', 25) }}
@@ -201,6 +201,8 @@ interface UserFilters {
   search: string;
   roles: string | null;
   university_id: number | null;
+  sort_field: string;
+  sort_order: string;
   page: number;
   per_page: number;
 }
@@ -256,14 +258,12 @@ export default defineComponent({
       selectedUser: null as User | null,
       currentUserRole: '',
 
-      // Frontend sorting state
-      frontendSortField: 'created_at',
-      frontendSortOrder: -1, // -1 for desc, 1 for asc
-
       filters: {
         search: '',
         roles: null,
         university_id: null,
+        sort_field: 'created_at',
+        sort_order: 'desc',
         page: 1,
         per_page: 10
       } as UserFilters,
@@ -283,54 +283,6 @@ export default defineComponent({
 
     canManageAdmins(): boolean {
       return this.authStore.hasPermission('manage.admin');
-    },
-
-    sortedUsers(): User[] {
-      if (!this.users || this.users.length === 0) {
-        return [];
-      }
-
-      const sorted = [...this.users].sort((a: any, b: any) => {
-        let aVal = this.getNestedProperty(a, this.frontendSortField);
-        let bVal = this.getNestedProperty(b, this.frontendSortField);
-
-        // Handle special cases
-        if (this.frontendSortField === 'roles') {
-          aVal = a.roles?.[0]?.name || '';
-          bVal = b.roles?.[0]?.name || '';
-        } else if (this.frontendSortField === 'university.full_name') {
-          aVal = a.university?.full_name || '';
-          bVal = b.university?.full_name || '';
-        }
-
-        // Handle null/undefined values
-        if (aVal == null && bVal == null) return 0;
-        if (aVal == null) return 1;
-        if (bVal == null) return -1;
-
-        // Handle dates
-        if (this.frontendSortField === 'created_at' || this.frontendSortField === 'updated_at') {
-          aVal = new Date(aVal).getTime();
-          bVal = new Date(bVal).getTime();
-        }
-
-        // Handle boolean values
-        if (typeof aVal === 'boolean' && typeof bVal === 'boolean') {
-          return this.frontendSortOrder * (aVal === bVal ? 0 : aVal ? 1 : -1);
-        }
-
-        // Handle string comparison
-        if (typeof aVal === 'string' && typeof bVal === 'string') {
-          return this.frontendSortOrder * aVal.localeCompare(bVal);
-        }
-
-        // Handle numeric comparison
-        if (aVal < bVal) return -1 * this.frontendSortOrder;
-        if (aVal > bVal) return 1 * this.frontendSortOrder;
-        return 0;
-      });
-
-      return sorted;
     }
   },
 
@@ -357,10 +309,6 @@ export default defineComponent({
   },
 
   methods: {
-    getNestedProperty(obj: any, path: string): any {
-      return path.split('.').reduce((current, key) => current?.[key], obj);
-    },
-
     applyPermissionBasedFilters(): void {
       // If user can only manage editors, filter by editor role initially
       if (this.canManageEditors && !this.canManageAdmins) {
@@ -506,7 +454,7 @@ export default defineComponent({
     async fetchUsers(): Promise<void> {
       this.loading = true;
       try {
-        // Build query parameters - only include server-side filtering parameters
+        // Build query parameters
         const params = new URLSearchParams();
 
         if (this.filters.search) {
@@ -521,6 +469,8 @@ export default defineComponent({
           params.append('university_id', this.filters.university_id.toString());
         }
 
+        params.append('sort_field', this.filters.sort_field);
+        params.append('sort_order', this.filters.sort_order);
         params.append('page', this.filters.page.toString());
         params.append('per_page', this.filters.per_page.toString());
 
@@ -540,10 +490,11 @@ export default defineComponent({
       this.fetchUsers();
     },
 
-    onFrontendSort(event: any): void {
-      this.frontendSortField = event.sortField;
-      this.frontendSortOrder = event.sortOrder;
-      // No API call needed - sorting happens in computed property
+    onSort(event: any): void {
+      this.filters.page = 1; // Reset to first page on sort
+      this.filters.sort_field = event.sortField;
+      this.filters.sort_order = event.sortOrder === 1 ? 'asc' : 'desc';
+      this.fetchUsers();
     },
 
     onRoleFilterChange(): void {
