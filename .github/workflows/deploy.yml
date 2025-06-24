@@ -93,7 +93,7 @@ jobs:
 
     # Set permissions 
     - name: Set Laravel permissions via FTP
-      uses: pressidium/lftp-mirror-action@v1.1
+      uses: pressidium/lftp-mirror-action@v1
       with:
         host: ${{ secrets.FTP_HOST }}
         user: ${{ secrets.FTP_LOGIN }}
