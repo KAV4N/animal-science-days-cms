@@ -53,12 +53,11 @@ jobs:
 
     # Deploy frontend to web directory
     - name: Deploy Frontend via FTP
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      uses: SamKirkland/FTP-Deploy-Action@v4.1.0
       with:
         server: ${{ secrets.FTP_HOST }}
         username: ${{ secrets.FTP_LOGIN }}
         password: ${{ secrets.FTP_PASSWORD }}
-        protocol: ftps
         port: 21
         local-dir: ./frontend/dist/
         server-dir: /animalsciencedays.org/web/
@@ -71,12 +70,11 @@ jobs:
 
     # Deploy backend to API directory
     - name: Deploy Backend via FTP
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      uses: SamKirkland/FTP-Deploy-Action@v4.1.0
       with:
         server: ${{ secrets.FTP_HOST }}
         username: ${{ secrets.FTP_LOGIN }}
         password: ${{ secrets.FTP_PASSWORD }}
-        protocol: ftps
         port: 21
         local-dir: ./backend/
         server-dir: /animalsciencedays.org/sub/api/
