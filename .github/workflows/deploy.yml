@@ -1,0 +1,107 @@
+name: FTP Deploy
+
+on:
+  push:
+    branches: [ main, master ]  
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:  
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # Setup Node.js for Vue.js frontend
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    # Setup PHP for Laravel backend
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, dom, filter, gd, iconv, json, mbstring, pdo
+        tools: composer:v2
+
+    # Build Vue.js frontend
+    - name: Install frontend dependencies
+      working-directory: ./frontend
+      run: npm ci
+
+    - name: Build frontend
+      working-directory: ./frontend
+      run: npm run build
+
+    # Prepare Laravel backend
+    - name: Install backend dependencies
+      working-directory: ./backend
+      run: composer install --optimize-autoloader --no-dev
+
+    - name: Create Laravel environment file
+      working-directory: ./backend
+      run: |
+        cp .env.example .env
+        php artisan key:generate
+
+    # Deploy frontend to web directory
+    - name: Deploy Frontend via FTP
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      with:
+        server: ${{ secrets.FTP_HOST }}
+        username: ${{ secrets.FTP_LOGIN }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        port: 21
+        local-dir: ./frontend/dist/
+        server-dir: /animalsciencedays.org/web/
+        exclude: |
+          **/.git*
+          **/.git*/**
+          **/node_modules/**
+          **/.DS_Store
+          **/.vscode/**
+
+    # Deploy backend to API directory
+    - name: Deploy Backend via FTP
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      with:
+        server: ${{ secrets.FTP_HOST }}
+        username: ${{ secrets.FTP_LOGIN }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        port: 21
+        local-dir: ./backend/
+        server-dir: /animalsciencedays.org/sub/api/
+        exclude: |
+          **/.git*
+          **/.git*/**
+          **/node_modules/**
+          **/tests/**
+          **/.phpunit.result.cache
+          **/.DS_Store
+          **/.vscode/**
+          **/storage/logs/**
+          .env.example
+          README.md
+          package*.json
+
+    # Set permissions 
+    - name: Set Laravel permissions via FTP
+      uses: pressidium/lftp-mirror-action@v1.1
+      with:
+        host: ${{ secrets.FTP_HOST }}
+        user: ${{ secrets.FTP_LOGIN }}
+        pass: ${{ secrets.FTP_PASSWORD }}
+        port: 21
+        localDir: "empty" 
+        remoteDir: "/animalsciencedays.org/sub/api/"
+        options: "--verbose"
+        customCommands: |
+          chmod -R 755 /animalsciencedays.org/sub/api/storage
+          chmod -R 755 /animalsciencedays.org/sub/api/bootstrap/cache
