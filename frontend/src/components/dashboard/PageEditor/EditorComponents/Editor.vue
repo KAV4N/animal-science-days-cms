@@ -170,13 +170,122 @@
       </div>
     </template>
   </Dialog>
+
+  <!-- URL Media Dialog -->
+  <Dialog
+    v-model:visible="showUrlMediaDialog"
+    header="Insert Media from URL"
+    :style="{ width: '90vw', maxWidth: '800px' }"
+    :modal="true"
+    :closable="true"
+  >
+    <div class="flex flex-col gap-4">
+      <div>
+        <label for="mediaUrl" class="block text-sm font-medium mb-2">Media URL</label>
+        <InputText
+          id="mediaUrl"
+          v-model="urlMediaData.url"
+          placeholder="https://example.com/image.jpg or https://youtube.com/watch?v=..."
+          class="w-full"
+          autofocus
+          @input="handleUrlChange"
+        />
+        <small class="text-gray-500">
+          Supports images, videos, YouTube, Vimeo, and other embeddable content
+        </small>
+      </div>
+
+      <div>
+        <label for="mediaTagType" class="block text-sm font-medium mb-2">Insert As</label>
+        <Dropdown
+          id="mediaTagType"
+          v-model="urlMediaData.tagType"
+          :options="tagTypeOptions"
+          optionLabel="label"
+          optionValue="value"
+          class="w-full"
+          placeholder="Select how to insert the media"
+        />
+        <small class="text-gray-500">Choose how the media should be inserted</small>
+      </div>
+
+      <div>
+        <label for="mediaAltText" class="block text-sm font-medium mb-2">Alt Text / Caption</label>
+        <InputText
+          id="mediaAltText"
+          v-model="urlMediaData.altText"
+          placeholder="Describe the media content"
+          class="w-full"
+        />
+        <small class="text-gray-500">Important for accessibility and SEO</small>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label for="mediaWidth" class="block text-sm font-medium mb-2">Width</label>
+          <InputText
+            id="mediaWidth"
+            v-model="urlMediaData.width"
+            placeholder="auto, 100%, 500px"
+            class="w-full"
+          />
+        </div>
+        <div>
+          <label for="mediaHeight" class="block text-sm font-medium mb-2">Height</label>
+          <InputText
+            id="mediaHeight"
+            v-model="urlMediaData.height"
+            placeholder="auto, 300px"
+            class="w-full"
+          />
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2" v-if="urlMediaData.detectedType === 'video' && urlMediaData.tagType === 'video'">
+        <Checkbox v-model="urlMediaData.autoplay" inputId="mediaAutoplay" binary />
+        <label for="mediaAutoplay" class="text-sm font-medium">Autoplay (if supported)</label>
+      </div>
+
+      <div class="flex items-center gap-2" v-if="urlMediaData.detectedType === 'video' && urlMediaData.tagType === 'video'">
+        <Checkbox v-model="urlMediaData.controls" inputId="mediaControls" binary />
+        <label for="mediaControls" class="text-sm font-medium">Show controls</label>
+      </div>
+
+      <div class="flex items-center gap-2" v-if="['youtube', 'vimeo'].includes(urlMediaData.detectedType) && urlMediaData.tagType === 'iframe'">
+        <Checkbox v-model="urlMediaData.autoplay" inputId="mediaAutoplayEmbed" binary />
+        <label for="mediaAutoplayEmbed" class="text-sm font-medium">Autoplay (if supported)</label>
+      </div>
+
+      <div class="flex items-center gap-2" v-if="urlMediaData.tagType === 'iframe'">
+        <Checkbox v-model="urlMediaData.responsive" inputId="mediaResponsive" binary />
+        <label for="mediaResponsive" class="text-sm font-medium">Make responsive (16:9 aspect ratio)</label>
+      </div>
+    </div>
+    
+    <template #footer>
+      <div class="flex justify-end gap-2">
+        <Button
+          label="Cancel"
+          icon="pi pi-times"
+          @click="closeUrlMediaDialog"
+          outlined
+        />
+        <Button
+          label="Insert Media"
+          icon="pi pi-check"
+          @click="insertUrlMedia"
+          :disabled="!urlMediaData.url || !urlMediaData.tagType"
+        />
+      </div>
+    </template>
+  </Dialog>
 </template>
 
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue';
 import Editor from '@hugerte/hugerte-vue';
 import MediaManager from '@/components/dashboard/PageEditor/MediaManager.vue'; 
-import apiService from '@/services/apiService';
+import Dropdown from 'primevue/dropdown';
 
 interface ComponentData {
   content: string;
@@ -207,11 +316,24 @@ interface LinkData {
   noFollow: boolean;
 }
 
+interface UrlMediaData {
+  url: string;
+  altText: string;
+  width: string;
+  height: string;
+  autoplay: boolean;
+  controls: boolean;
+  responsive: boolean;
+  detectedType: string;
+  tagType: string;
+}
+
 export default defineComponent({
   name: 'EditorComponent',
   components: {
     Editor,
-    MediaManager
+    MediaManager,
+    Dropdown
   },
   props: {
     visible: {
@@ -244,11 +366,11 @@ export default defineComponent({
       localVisible: false,
       showMediaManager: false,
       showLinkDialog: false,
+      showUrlMediaDialog: false,
       mediaSelectionMode: 'single' as 'single' | 'multiple',
       allowedMimeTypes: [] as string[],
       editorInstance: null as any,
       filePickerCallback: null as Function | null,
-      linkCallback: null as Function | null,
       isEditingExistingLink: false,
       linkData: {
         url: '',
@@ -256,7 +378,25 @@ export default defineComponent({
         title: '',
         openInNewTab: false,
         noFollow: false
-      } as LinkData
+      } as LinkData,
+      urlMediaData: {
+        url: '',
+        altText: '',
+        width: '',
+        height: '',
+        autoplay: false,
+        controls: true,
+        responsive: true,
+        detectedType: '',
+        tagType: ''
+      } as UrlMediaData,
+      tagTypeOptions: [
+        { label: 'Link', value: 'link' },
+        { label: 'Image', value: 'image' },
+        { label: 'Video', value: 'video' },
+        { label: 'Audio', value: 'audio' },
+        { label: 'Iframe/Embed', value: 'iframe' }
+      ]
     };
   },
   computed: {
@@ -267,20 +407,19 @@ export default defineComponent({
         plugins: [
           'accordion', 'advlist', 'anchor', 'autolink', 'autoresize', 
           'charmap', 'code', 'codesample', 'directionality', 'fullscreen', 
-          'insertdatetime', 'link', 'lists', 'nonbreaking',
+          'insertdatetime', 'lists', 'nonbreaking',
           'pagebreak', 
           'table', 'template', 'visualblocks', 'visualchars', 'wordcount', 
-          'emoticons', 'help'
+          'emoticons', 'help', 'media'
         ].join(' '),
         toolbar: [
           'undo redo | formatselect | bold italic backcolor | alignleft aligncenter alignright alignjustify',
-          'bullist numlist outdent indent | customlink unlink | removeformat | help'
+          'bullist numlist outdent indent | urlmedia | removeformat | help'
         ].join(' | '),
         mobile: {
           menubar: false,
-          toolbar: 'undo redo | bold italic | bullist numlist | customlink | insert'
+          toolbar: 'undo redo | bold italic | bullist numlist | urlmedia | insert'
         },
-        // Link configuration
         link_assume_external_targets: true,
         link_context_toolbar: true,
         default_link_target: '_blank',
@@ -288,30 +427,24 @@ export default defineComponent({
           { title: 'Same window', value: '' },
           { title: 'New window', value: '_blank' }
         ],
-        // Disable image upload functionality
         images_upload_url: false,
         images_upload_handler: (blobInfo: any, success: Function, failure: Function) => {
           failure('Direct image upload is not allowed. Please use the Media Library or insert images by URL.');
         },
-        // Disable automatic uploads
         automatic_uploads: false,
-        // Disable paste data images
         paste_data_images: false,
-        // Disable drag and drop file uploads
         paste_block_drop: true,
         setup: (editor: any) => {
           this.editorInstance = editor;
-          
-          // Custom Link button
-          editor.ui.registry.addButton('customlink', {
-            icon: 'link',
-            tooltip: 'Insert/Edit Link',
+
+          editor.ui.registry.addButton('urlmedia', {
+            icon: 'embed',
+            tooltip: 'Insert Media from URL',
             onAction: () => {
-              this.openLinkDialog();
+              this.openUrlMediaDialog();
             }
           });
 
-          // Custom Media Library button
           editor.ui.registry.addMenuItem('media_library', {
             text: 'Media Library...',
             icon: 'browse',
@@ -322,7 +455,6 @@ export default defineComponent({
             }
           });
 
-          // Custom Downloadable Files button
           editor.ui.registry.addMenuItem('downloadable_files', {
             text: 'Downloadable Files...',
             icon: 'download',
@@ -332,15 +464,22 @@ export default defineComponent({
               this.allowedMimeTypes = [];
             }
           });
+
+          editor.ui.registry.addMenuItem('url_media', {
+            text: 'Media from URL...',
+            icon: 'embed',
+            onAction: () => {
+              this.openUrlMediaDialog();
+            }
+          });
           
-          // Custom Insert menu
           editor.ui.registry.addMenuButton('insert', {
             text: 'Insert',
             fetch: (callback: Function) => {
               const items = [
                 'media_library',
+                'url_media',
                 '|',
-                'link',
                 'anchor',
                 '|',
                 'insertdatetime',
@@ -352,20 +491,19 @@ export default defineComponent({
             }
           });
 
-          // Custom Media Files submenu
           editor.ui.registry.addNestedMenuItem('media_files', {
             text: 'Media Files',
             icon: 'embed',
             getSubmenuItems: () => [
               'media_library',
-              'downloadable_files'
+              'downloadable_files',
+              'url_media'
             ]
           });
           
-          // Override default image button to use Media Library
           editor.ui.registry.addButton('image', {
             icon: 'image',
-            tooltip: 'Insert Image from Media Library',
+            tooltip: 'Insert Image',
             onAction: () => {
               this.showMediaManager = true;
               this.mediaSelectionMode = 'single';
@@ -373,7 +511,6 @@ export default defineComponent({
             }
           });
 
-          // Handle double-click on links to edit them
           editor.on('dblclick', (e: any) => {
             const target = e.target;
             if (target.tagName === 'A') {
@@ -382,7 +519,6 @@ export default defineComponent({
             }
           });
 
-          // Block drag and drop uploads
           editor.on('dragover dragenter', (e: Event) => {
             e.preventDefault();
             e.stopPropagation();
@@ -392,7 +528,6 @@ export default defineComponent({
             e.preventDefault();
             e.stopPropagation();
             
-            // Check if files are being dropped
             if (e.dataTransfer?.files?.length > 0) {
               editor.notificationManager.open({
                 text: 'Direct file uploads are not allowed. Please use the Media Library to insert images and files.',
@@ -403,7 +538,6 @@ export default defineComponent({
             }
           });
 
-          // Block paste with files
           editor.on('paste', (e: any) => {
             const clipboardData = e.clipboardData || e.originalEvent?.clipboardData;
             if (clipboardData?.files?.length > 0) {
@@ -417,7 +551,6 @@ export default defineComponent({
             }
           });
         },
-        // Custom file picker that only allows Media Library
         file_picker_callback: (callback: Function, value: string, meta: any) => {
           if (meta.filetype === 'image' || meta.filetype === 'media') {
             this.filePickerCallback = callback;
@@ -429,11 +562,11 @@ export default defineComponent({
         menu: {
           insert: {
             title: 'Insert',
-            items: 'media_library | link anchor | insertdatetime nonbreakingspace pagebreak horizontalrule'
+            items: 'media_library url_media | anchor | insertdatetime nonbreakingspace pagebreak horizontalrule'
           },
           media: {
             title: 'Media',
-            items: 'media_library downloadable_files'
+            items: 'media_library downloadable_files url_media'
           }
         },
         content_style: `
@@ -450,6 +583,25 @@ export default defineComponent({
             max-width: 100%;
             height: auto;
           }
+          iframe {
+            max-width: 100%;
+          }
+          .responsive-media {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            height: 0;
+            overflow: hidden;
+            max-width: 100%;
+            margin: 10px 0;
+          }
+          .responsive-media iframe,
+          .responsive-media video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+          }
           a {
             color: #3b82f6;
             text-decoration: underline;
@@ -458,7 +610,6 @@ export default defineComponent({
             color: #1d4ed8;
           }
         `,
-        // Add convert_urls configuration to handle URL conversion properly
         convert_urls: false,
         relative_urls: false,
         remove_script_host: false,
@@ -524,13 +675,11 @@ export default defineComponent({
     },
     
     getBaseUrl(): string {
-      // Get the current base URL for the application
       const protocol = window.location.protocol;
       const host = window.location.host;
       return `${protocol}//${host}`;
     },
     
-    // Link Dialog Methods
     openLinkDialog() {
       this.resetLinkData();
       
@@ -538,11 +687,9 @@ export default defineComponent({
         const selection = this.editorInstance.selection;
         const selectedText = selection.getContent({ format: 'text' });
         
-        // Check if we're editing an existing link
         const linkElement = this.editorInstance.dom.getParent(selection.getNode(), 'a');
         
         if (linkElement) {
-          // Editing existing link
           this.isEditingExistingLink = true;
           this.linkData.url = linkElement.getAttribute('href') || '';
           this.linkData.text = linkElement.textContent || '';
@@ -550,7 +697,6 @@ export default defineComponent({
           this.linkData.openInNewTab = linkElement.getAttribute('target') === '_blank';
           this.linkData.noFollow = (linkElement.getAttribute('rel') || '').includes('nofollow');
         } else {
-          // Creating new link
           this.isEditingExistingLink = false;
           this.linkData.text = selectedText;
         }
@@ -569,7 +715,6 @@ export default defineComponent({
       this.linkData.openInNewTab = linkElement.getAttribute('target') === '_blank';
       this.linkData.noFollow = (linkElement.getAttribute('rel') || '').includes('nofollow');
       
-      // Select the link in the editor
       if (this.editorInstance) {
         this.editorInstance.selection.select(linkElement);
       }
@@ -592,13 +737,11 @@ export default defineComponent({
         return;
       }
       
-      // Ensure URL has protocol
       let url = this.linkData.url;
       if (!url.match(/^https?:\/\//)) {
         url = 'https://' + url;
       }
       
-      // Build link attributes
       const attributes: any = {
         href: url
       };
@@ -609,7 +752,6 @@ export default defineComponent({
       
       if (this.linkData.openInNewTab) {
         attributes.target = '_blank';
-        // Add rel="noopener" for security when opening in new tab
         attributes.rel = 'noopener';
       }
       
@@ -619,33 +761,27 @@ export default defineComponent({
       }
       
       if (this.isEditingExistingLink) {
-        // Update existing link
         const selection = this.editorInstance.selection;
         const linkElement = this.editorInstance.dom.getParent(selection.getNode(), 'a');
         
         if (linkElement) {
-          // Update attributes
           Object.keys(attributes).forEach(key => {
             linkElement.setAttribute(key, attributes[key]);
           });
           
-          // Update text if changed
           if (this.linkData.text && linkElement.textContent !== this.linkData.text) {
             linkElement.textContent = this.linkData.text;
           }
         }
       } else {
-        // Create new link
         const linkText = this.linkData.text || this.linkData.url;
         
         const selection = this.editorInstance.selection;
         const selectedContent = selection.getContent();
         
         if (selectedContent) {
-          // Wrap selected content in link
           this.editorInstance.execCommand('mceInsertLink', false, attributes);
         } else {
-          // Insert new link with text
           const linkHtml = this.buildLinkHtml(linkText, attributes);
           this.editorInstance.insertContent(linkHtml);
         }
@@ -674,13 +810,275 @@ export default defineComponent({
       
       return `<a ${attrString}>${text}</a>`;
     },
+
+    openUrlMediaDialog() {
+      this.resetUrlMediaData();
+      this.showUrlMediaDialog = true;
+    },
+
+    closeUrlMediaDialog() {
+      this.showUrlMediaDialog = false;
+      this.resetUrlMediaData();
+    },
+
+    resetUrlMediaData() {
+      this.urlMediaData = {
+        url: '',
+        altText: '',
+        width: '',
+        height: '',
+        autoplay: false,
+        controls: true,
+        responsive: true,
+        detectedType: '',
+        tagType: ''
+      };
+    },
+
+    handleUrlChange() {
+      this.urlMediaData.detectedType = this.detectMediaType(this.urlMediaData.url);
+      switch (this.urlMediaData.detectedType) {
+        case 'image':
+          this.urlMediaData.tagType = 'image';
+          break;
+        case 'video':
+          this.urlMediaData.tagType = 'video';
+          break;
+        case 'audio':
+          this.urlMediaData.tagType = 'audio';
+          break;
+        case 'youtube':
+        case 'vimeo':
+        case 'embed':
+          this.urlMediaData.tagType = 'iframe';
+          break;
+        default:
+          this.urlMediaData.tagType = 'link';
+          break;
+      }
+    },
+
+    detectMediaType(url: string): string {
+      if (!url) return '';
+
+      // YouTube detection - supports various formats
+      const youtubeRegex = /(?:youtube(?:-nocookie)?\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+      if (youtubeRegex.test(url)) {
+        return 'youtube';
+      }
+
+      // Vimeo detection
+      const vimeoRegex = /(?:vimeo\.com\/)(?:.*#|.*\/|)([\d]+)/;
+      if (vimeoRegex.test(url)) {
+        return 'vimeo';
+      }
+
+      // Twitter/X embed detection
+      if (url.includes('twitter.com/') || url.includes('x.com/')) {
+        return 'embed';
+      }
+
+      // Instagram embed detection
+      if (url.includes('instagram.com/')) {
+        return 'embed';
+      }
+
+      // TikTok embed detection
+      if (url.includes('tiktok.com/')) {
+        return 'embed';
+      }
+
+      // Generic iframe/embed detection
+      if (url.includes('embed') || url.includes('iframe')) {
+        return 'embed';
+      }
+
+      // Image file extensions
+      const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)(\?.*)?$/i;
+      if (imageExtensions.test(url)) {
+        return 'image';
+      }
+
+      // Video file extensions
+      const videoExtensions = /\.(mp4|webm|ogg|avi|mov|wmv|flv|mkv|m4v)(\?.*)?$/i;
+      if (videoExtensions.test(url)) {
+        return 'video';
+      }
+
+      // Audio file extensions
+      const audioExtensions = /\.(mp3|wav|ogg|aac|flac|m4a|wma)(\?.*)?$/i;
+      if (audioExtensions.test(url)) {
+        return 'audio';
+      }
+
+      return 'embed';
+    },
+
+    getYouTubeId(url: string): string {
+      const regex = /(?:youtube(?:-nocookie)?\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+      const match = url.match(regex);
+      return match ? match[1] : '';
+    },
+
+    getVimeoId(url: string): string {
+      const regex = /(?:vimeo\.com\/)(?:.*#|.*\/|)([\d]+)/;
+      const match = url.match(regex);
+      return match ? match[1] : '';
+    },
+
+    buildStyleAttribute(includeResponsive: boolean = false): string {
+      const styles: string[] = [];
+      
+      if (!includeResponsive) {
+        if (this.urlMediaData.width) {
+          const width = this.urlMediaData.width.includes('px') || this.urlMediaData.width.includes('%') || this.urlMediaData.width === 'auto' 
+            ? this.urlMediaData.width 
+            : this.urlMediaData.width + 'px';
+          styles.push(`width: ${width}`);
+        }
+        
+        if (this.urlMediaData.height) {
+          const height = this.urlMediaData.height.includes('px') || this.urlMediaData.height.includes('%') || this.urlMediaData.height === 'auto' 
+            ? this.urlMediaData.height 
+            : this.urlMediaData.height + 'px';
+          styles.push(`height: ${height}`);
+        }
+      }
+      
+      return styles.length > 0 ? ` style="${styles.join('; ')}"` : '';
+    },
+
+    insertUrlMedia() {
+      if (!this.urlMediaData.url || !this.urlMediaData.tagType || !this.editorInstance) {
+        return;
+      }
+
+      let content = '';
+      const url = this.urlMediaData.url;
+      const altText = this.urlMediaData.altText || 'Media content';
+      
+      switch (this.urlMediaData.tagType) {
+        case 'image':
+          const imageStyle = this.buildStyleAttribute();
+          content = `<p><img src="${url}" alt="${altText}" style="max-width: 100%; height: auto;${imageStyle ? ' ' + imageStyle.replace(' style="', '').replace('"', '') : ''}" /></p>`;
+          break;
+
+        case 'video':
+          const videoAttrs = [];
+          if (this.urlMediaData.controls) videoAttrs.push('controls');
+          if (this.urlMediaData.autoplay) videoAttrs.push('autoplay');
+          
+          const videoStyle = this.buildStyleAttribute();
+          content = `<p><video ${videoAttrs.join(' ')} style="max-width: 100%; height: auto;${videoStyle ? ' ' + videoStyle.replace(' style="', '').replace('"', '') : ''}"${videoStyle}>
+            <source src="${url}" type="video/mp4">
+            Your browser does not support the video tag.
+          </video></p>`;
+          break;
+
+        case 'audio':
+          const audioStyle = this.buildStyleAttribute();
+          content = `<p><audio controls${audioStyle}>
+            <source src="${url}" type="audio/mpeg">
+            Your browser does not support the audio element.
+          </audio></p>`;
+          break;
+
+        case 'iframe':
+          content = this.generateIframeContent(url, altText);
+          break;
+
+        case 'link':
+          content = `<p><a href="${url}" target="_blank" rel="noopener">${altText || url}</a></p>`;
+          break;
+
+        default:
+          content = `<p><a href="${url}" target="_blank" rel="noopener">${altText || url}</a></p>`;
+          break;
+      }
+
+      if (content) {
+        this.editorInstance.insertContent(content);
+        this.closeUrlMediaDialog();
+      }
+    },
+
+    generateIframeContent(url: string, altText: string): string {
+      const detectedType = this.urlMediaData.detectedType;
+      
+      if (detectedType === 'youtube') {
+        return this.generateYouTubeEmbed(url, altText);
+      } else if (detectedType === 'vimeo') {
+        return this.generateVimeoEmbed(url, altText);
+      } else if (detectedType === 'embed' && (url.includes('twitter.com') || url.includes('x.com'))) {
+        return this.generateTwitterEmbed(url, altText);
+      } else if (detectedType === 'embed' && url.includes('instagram.com')) {
+        return this.generateInstagramEmbed(url, altText);
+      } else if (detectedType === 'embed' && url.includes('tiktok.com')) {
+        return this.generateTikTokEmbed(url, altText);
+      } else {
+        return this.generateGenericIframe(url, altText);
+      }
+    },
+
+    generateYouTubeEmbed(url: string, altText: string): string {
+      const youtubeId = this.getYouTubeId(url);
+      if (!youtubeId) {
+        return `<p><a href="${url}" target="_blank" rel="noopener">${altText}</a></p>`;
+      }
+
+      const autoplayParam = this.urlMediaData.autoplay ? '&autoplay=1' : '';
+      const embedUrl = `https://www.youtube.com/embed/${youtubeId}?rel=0${autoplayParam}`;
+      
+      const style = this.buildStyleAttribute();
+      const width = this.urlMediaData.width || '560';
+      const height = this.urlMediaData.height || '315';
+      return `<p><iframe width="${width}" height="${height}" src="${embedUrl}" title="${altText}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen${style}></iframe></p>`;
+    },
+
+    generateVimeoEmbed(url: string, altText: string): string {
+      const vimeoId = this.getVimeoId(url);
+      if (!vimeoId) {
+        return `<p><a href="${url}" target="_blank" rel="noopener">${altText}</a></p>`;
+      }
+
+      const autoplayParam = this.urlMediaData.autoplay ? '&autoplay=1' : '';
+      const embedUrl = `https://player.vimeo.com/video/${vimeoId}?${autoplayParam}`;
+      
+      const style = this.buildStyleAttribute();
+      const width = this.urlMediaData.width || '640';
+      const height = this.urlMediaData.height || '360';
+      return `<p><iframe width="${width}" height="${height}" src="${embedUrl}" title="${altText}" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen${style}></iframe></p>`;
+    },
+
+    generateTwitterEmbed(url: string, altText: string): string {
+      // For Twitter/X embeds, we'll create a simple iframe or link
+      // Note: Twitter embeds typically require their script, so we'll fallback to a link
+      return `<p><a href="${url}" target="_blank" rel="noopener">${altText} (Twitter/X Post)</a></p>`;
+    },
+
+    generateInstagramEmbed(url: string, altText: string): string {
+      // For Instagram embeds, we'll create a link since Instagram embeds require their script
+      return `<p><a href="${url}" target="_blank" rel="noopener">${altText} (Instagram Post)</a></p>`;
+    },
+
+    generateTikTokEmbed(url: string, altText: string): string {
+      // For TikTok embeds, we'll create a link since TikTok embeds require their script
+      return `<p><a href="${url}" target="_blank" rel="noopener">${altText} (TikTok Video)</a></p>`;
+    },
+
+    generateGenericIframe(url: string, altText: string): string {
+      const style = this.buildStyleAttribute();
+      const width = this.urlMediaData.width || '100%';
+      const height = this.urlMediaData.height || '400';
+      
+      return `<p><iframe src="${url}" width="${width}" height="${height}" title="${altText}" frameborder="0" allowfullscreen${style}></iframe></p>`;
+    },
     
     buildFullUrl(selectedItem: MediaItemWithLinkType, linkType?: 'serve' | 'download'): string {
       const baseUrl = this.getBaseUrl();
       const type = linkType || selectedItem.linkType || 'serve';
       
       if (type === 'download') {
-        // Use download URL
         if (selectedItem.download_url && selectedItem.download_url.startsWith('http')) {
           return selectedItem.download_url;
         }
@@ -692,10 +1090,8 @@ export default defineComponent({
           return `${baseUrl}/${cleanUrl}`;
         }
         
-        // Fallback: construct download URL manually
         return `${baseUrl}/api/v1/conferences/${this.conferenceId}/media/${selectedItem.id}/download`;
       } else {
-        // Use serve URL (default)
         if (selectedItem.url && selectedItem.url.startsWith('http')) {
           return selectedItem.url;
         }
@@ -707,7 +1103,6 @@ export default defineComponent({
           return `${baseUrl}/${cleanUrl}`;
         }
         
-        // Fallback: construct serve URL manually
         return `${baseUrl}/api/v1/conferences/${this.conferenceId}/media/${selectedItem.id}/serve`;
       }
     },
@@ -724,21 +1119,23 @@ export default defineComponent({
           let content = '';
           
           if (linkType === 'download') {
-            // Create download link regardless of file type
             const fileIcon = this.getFileIconForDisplay(selectedItem.mime_type);
             content = `<p><a href="${fullUrl}" target="_blank" download="${selectedItem.file_name}" title="Download ${selectedItem.file_name}">
               ${fileIcon} ${selectedItem.file_name}
             </a></p>`;
           } else {
-            // Create serve link - different behavior for different file types
             if (this.isImage(selectedItem.mime_type)) {
-              content = `<img src="${fullUrl}" alt="${selectedItem.file_name}" style="max-width: 100%; height: auto;" />`;
+              content = `<p><img src="${fullUrl}" alt="${selectedItem.file_name}" style="max-width: 100%; height: auto;" /></p>`;
             } else if (this.isVideo(selectedItem.mime_type)) {
-              // Embed video with controls
-              content = `<video width="100%" height="auto" controls style="max-width: 100%;">
+              content = `<p><video width="100%" height="auto" controls style="max-width: 100%;">
                 <source src="${fullUrl}" type="${selectedItem.mime_type}">
                 Your browser does not support the video tag.
-              </video>`;
+              </video></p>`;
+            } else if (this.isAudio(selectedItem.mime_type)) {
+              content = `<p><audio controls style="width: 100%; max-width: 500px;">
+                <source src="${fullUrl}" type="${selectedItem.mime_type}">
+                Your browser does not support the audio element.
+              </audio></p>`;
             } else {
               const fileIcon = this.getFileIconForDisplay(selectedItem.mime_type);
               content = `<p><a href="${fullUrl}" target="_blank" title="View ${selectedItem.file_name}">
@@ -758,11 +1155,21 @@ export default defineComponent({
       if (mimeType === 'application/pdf') return '📄';
       if (this.isDocument(mimeType)) return '📄';
       if (this.isVideo(mimeType)) return '🎥';
+      if (this.isAudio(mimeType)) return '🎵';
+      if (this.isArchive(mimeType)) return '📦';
       return '📁';
     },
     
     isImage(mimeType: string): boolean {
       return mimeType.startsWith('image/');
+    },
+    
+    isVideo(mimeType: string): boolean {
+      return mimeType.startsWith('video/');
+    },
+
+    isAudio(mimeType: string): boolean {
+      return mimeType.startsWith('audio/');
     },
     
     isDocument(mimeType: string): boolean {
@@ -771,12 +1178,23 @@ export default defineComponent({
         'application/msword',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-powerpoint',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'text/plain',
+        'text/csv',
+        'application/rtf'
       ].includes(mimeType);
     },
-    
-    isVideo(mimeType: string): boolean {
-      return mimeType.startsWith('video/');
+
+    isArchive(mimeType: string): boolean {
+      return [
+        'application/zip',
+        'application/x-rar-compressed',
+        'application/x-7z-compressed',
+        'application/x-tar',
+        'application/gzip'
+      ].includes(mimeType);
     }
   }
 });

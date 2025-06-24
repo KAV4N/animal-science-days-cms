@@ -259,6 +259,11 @@ class UserController extends Controller
             // Update role if changed
             if ($roleChanged) {
                 $user->syncRoles([$request->role]);
+                
+                // If user was changed from editor to admin or super_admin, remove from conference editors
+                if ($originalRole === 'editor' && in_array($request->role, ['admin', 'super_admin'])) {
+                    $this->removeFromConferenceEditors($user);
+                }
             }
             
             // Send email with updated information and modifier info
@@ -337,6 +342,40 @@ class UserController extends Controller
         $user->delete();
 
         return $this->successResponse(null, 'User deleted successfully');
+    }
+    
+    /**
+     * Remove user from all conference editor relationships
+     */
+    protected function removeFromConferenceEditors(User $user): void
+    {
+        try {
+            // Get all conferences where the user is an editor
+            $conferences = Conference::whereHas('editors', function ($q) use ($user) {
+                $q->where('users.id', $user->id);
+            })->get();
+
+            foreach ($conferences as $conference) {
+                // Release any locks the user might have on the conference
+                $this->lockService->releaseLock($conference->id, $user->id);
+                
+                // Remove the user from the conference editors
+                $conference->editors()->detach($user->id);
+            }
+
+            Log::info('User removed from conference editors', [
+                'user_id' => $user->id,
+                'user_email' => $user->email,
+                'conferences_count' => $conferences->count(),
+                'conference_ids' => $conferences->pluck('id')->toArray()
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to remove user from conference editors', [
+                'user_id' => $user->id,
+                'user_email' => $user->email,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
     
     /**

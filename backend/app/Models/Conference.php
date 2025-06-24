@@ -115,3 +115,4 @@ class Conference extends Model implements HasMedia
         return $this->getMedia('general');
     }
 }
+
