@@ -53,7 +53,7 @@ jobs:
 
     # Deploy frontend to web directory
     - name: Deploy Frontend via FTP
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      uses: SamKirkland/FTP-Deploy-Action@v3.1.2
       with:
         server: ${{ secrets.FTP_HOST }}
         username: ${{ secrets.FTP_LOGIN }}
@@ -70,7 +70,7 @@ jobs:
 
     # Deploy backend to API directory
     - name: Deploy Backend via FTP
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      uses: SamKirkland/FTP-Deploy-Action@v3.1.2
       with:
         server: ${{ secrets.FTP_HOST }}
         username: ${{ secrets.FTP_LOGIN }}
