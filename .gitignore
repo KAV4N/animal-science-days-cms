@@ -1,2 +1,7 @@
 .env
 git/
+package.json
+package-lock.json
+deploy.js
+deploy_config.json
+/node_modules

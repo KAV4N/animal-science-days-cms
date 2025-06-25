@@ -148,7 +148,7 @@ export default defineComponent({
 </script>
 
 <template>
-  <nav class="landing-container fixed left-1/2 -translate-x-1/2 w-full z-[1000] transition-all duration-300 "
+  <nav class="landing-container fixed left-1/2 -translate-x-1/2 w-full z-[60] transition-all duration-300 "
     :class="{ 'lg:max-w-[1600px] backdrop-blur-[5px]': !isScrolled, 'md:max-w-[1400px] lg:max-w-[1400px]': isScrolled }">
     <div
       class="bg-surface-50 py-2 pl-4 md:pl-4 pr-4 rounded-3xl md:rounded-full lg:rounded-full border border-transparent transition-all duration-300"
@@ -214,7 +214,7 @@ export default defineComponent({
         <button @click="toggleMobileMenu"
           class="flex md:hidden items-center justify-center rounded-lg w-9 h-9 border transition-all flex-shrink-0"
           :class="{ 'border-white/30 hover:bg-white/20': !isScrolled, 'border-gray-200 hover:bg-gray-100': isScrolled }">
-          <i class="leading-none pi pi-bars"></i>
+          <i class="leading-none pi" :class="isMobileMenuOpen ? 'pi-times' : 'pi-chevron-down'"></i>
         </button>
       </div>
 

@@ -157,7 +157,7 @@
           </div>
 
           <!-- Mobile Menu Button -->
-          <div class="lg:hidden fixed bottom-6 right-6 z-50">
+          <div class="lg:hidden fixed bottom-6 right-6 z-[70]">
             <Button
               :icon="isMobileMenuOpen ? 'pi pi-times' : 'pi pi-bars'"
               @click="toggleMobileMenu"
@@ -173,14 +173,14 @@
           <!-- Mobile Sidebar Overlay -->
           <div
             v-if="isMobileMenuOpen"
-            class="lg:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+            class="lg:hidden fixed inset-0 z-[65] bg-black/50 backdrop-blur-sm"
             @click="closeMobileMenu"
           ></div>
 
           <!-- Mobile Sidebar -->
           <div
             :class="[
-              'lg:hidden fixed top-0 left-0 h-full w-80 max-w-[90vw] z-50 bg-white shadow-2xl transform transition-transform duration-300',
+              'lg:hidden fixed top-0 left-0 h-full w-80 max-w-[90vw] z-[68] bg-white shadow-2xl transform transition-transform duration-300',
               isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
             ]"
           >
