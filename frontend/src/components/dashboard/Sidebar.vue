@@ -79,7 +79,7 @@
         <div class="overflow-y-auto flex-grow">
           <!-- Navigation Items -->
           <ul class="list-none p-2 m-0">
-            <li v-if="hasAdminAccess">
+            <li>
               <router-link 
                 v-ripple 
                 to="/dashboard/conferences" 
@@ -102,11 +102,6 @@
                 <i class="pi pi-user-edit mr-2"></i>
                 <span class="font-medium">User Management</span>
               </router-link>
-            </li>
-            <!-- Show message if no admin access -->
-            <li v-if="!hasAdminAccess" class="p-2 text-sm text-gray-500">
-              <i class="pi pi-lock mr-2"></i>
-              <span>Admin access required</span>
             </li>
           </ul>
         </div>
