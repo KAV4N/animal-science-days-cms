@@ -65,7 +65,12 @@ class Conference extends Model implements HasMedia
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('images')
-            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
+            ->acceptsMimeTypes([
+                'image/jpeg',
+                'image/png',
+                'image/gif',
+                'image/webp', // Retained from original
+            ]);
 
         $this->addMediaCollection('documents')
             ->acceptsMimeTypes([
@@ -74,30 +79,45 @@ class Conference extends Model implements HasMedia
                 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                 'application/vnd.ms-excel',
                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-powerpoint',
+                'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                'text/csv',
             ]);
 
         $this->addMediaCollection('general')
             ->acceptsMimeTypes([
-                'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+                'image/jpeg',
+                'image/png',
+                'image/gif',
+                'image/webp', // Retained from original
                 'application/pdf',
                 'application/msword',
                 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                'video/mp4', 'video/avi', 'video/mov'
+                'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-powerpoint',
+                'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                'text/csv',
+                'video/mp4',
+                'video/avi', // Retained from original
+                'video/mov', // Retained from original
+                'audio/mpeg',
+                'audio/wav',
             ]);
     }
 
     public function registerMediaConversions(Media $media = null): void
     {
-        $this->addMediaConversion('thumb')
-            ->width(300)
-            ->height(300)
-            ->sharpen(10)
-            ->performOnCollections('images', 'general');
+        if ($media && str_starts_with($media->mime_type, 'image/')) {
+            $this->addMediaConversion('thumb')
+                ->width(300)
+                ->height(300)
+                ->sharpen(10);
 
-        $this->addMediaConversion('preview')
-            ->width(800)
-            ->height(600)
-            ->performOnCollections('images', 'general');
+            $this->addMediaConversion('preview')
+                ->width(800)
+                ->height(600);
+        }
     }
 
     public function getImages()
@@ -115,4 +135,3 @@ class Conference extends Model implements HasMedia
         return $this->getMedia('general');
     }
 }
-

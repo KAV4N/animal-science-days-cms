@@ -17,6 +17,44 @@ class MediaController extends Controller
 {
     use ApiResponse;
 
+    private const ALLOWED_MIME_TYPES = [
+        'images' => [
+            'image/jpeg',
+            'image/png',
+            'image/gif',
+            'image/webp', // Retained from original to keep existing support
+        ],
+        'documents' => [
+            'application/pdf',
+            'application/msword', // .doc
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+            'application/vnd.ms-excel', // .xls
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+            'application/vnd.ms-powerpoint', // .ppt
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation', // .pptx
+            'text/csv', // .csv
+        ],
+        'general' => [
+            'image/jpeg',
+            'image/png',
+            'image/gif',
+            'image/webp', // Retained from original
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-powerpoint',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'text/csv',
+            'video/mp4',
+            'video/avi', // Retained from original
+            'video/mov', // Retained from original
+            'audio/mpeg', // .mp3
+            'audio/wav',
+        ]
+    ];
+
     /**
      * Display a listing of media for a specific conference.
      */
@@ -34,24 +72,20 @@ class MediaController extends Controller
 
         $query = $conference->media();
 
-        // Filter by collection if specified
         if ($request->filled('collection')) {
             $query->where('collection_name', $request->collection);
         }
 
-        // Search functionality - only search in file_name
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where('file_name', 'like', "%{$search}%");
         }
 
-        // Order by most recent first
         $query->orderBy('created_at', 'desc');
 
         $perPage = $request->get('per_page', 15);
         $media = $query->paginate($perPage);
 
-        // Transform media data
         $transformedMedia = $media->getCollection()->map(function ($mediaItem) use ($conference) {
             return [
                 'id' => $mediaItem->id,
@@ -82,7 +116,6 @@ class MediaController extends Controller
      */
     public function store(Request $request, Conference $conference): JsonResponse
     {
-        // Check if user can create media for this conference
         if (!Gate::allows('create', [Media::class, $conference])) {
             return $this->errorResponse('You are not authorized to create media for this conference', 403);
         }
@@ -103,7 +136,6 @@ class MediaController extends Controller
         $file = $request->file('file');
         $collection = $request->collection;
 
-        // Validate file type based on collection
         $mimeValidation = $this->validateMimeType($file, $collection);
         if (!$mimeValidation['valid']) {
             return $this->errorResponse($mimeValidation['message'], 422);
@@ -145,7 +177,6 @@ class MediaController extends Controller
      */
     public function show(Conference $conference, Media $media): JsonResponse
     {
-        // Ensure media belongs to the conference
         if ($media->model_id !== $conference->id || $media->model_type !== Conference::class) {
             return $this->errorResponse('Media not found for this conference', 404);
         }
@@ -176,12 +207,10 @@ class MediaController extends Controller
      */
     public function update(Request $request, Conference $conference, Media $media): JsonResponse
     {
-        // Ensure media belongs to the conference
         if ($media->model_id !== $conference->id || $media->model_type !== Conference::class) {
             return $this->errorResponse('Media not found for this conference', 404);
         }
 
-        // Check if user can update this media
         if (!Gate::allows('update', $media)) {
             return $this->errorResponse('You are not authorized to update this media', 403);
         }
@@ -195,7 +224,6 @@ class MediaController extends Controller
         }
 
         try {
-            // Update file_name if provided
             if ($request->filled('file_name')) {
                 $media->file_name = $request->file_name;
             }
@@ -232,12 +260,10 @@ class MediaController extends Controller
      */
     public function destroy(Conference $conference, Media $media): JsonResponse
     {
-        // Ensure media belongs to the conference
         if ($media->model_id !== $conference->id || $media->model_type !== Conference::class) {
             return $this->errorResponse('Media not found for this conference', 404);
         }
 
-        // Check if user can delete this media
         if (!Gate::allows('delete', $media)) {
             return $this->errorResponse('You are not authorized to delete this media', 403);
         }
@@ -255,7 +281,6 @@ class MediaController extends Controller
      */
     public function download(Conference $conference, $mediaId): mixed
     {
-        // Find media by ID manually instead of relying on route model binding
         $media = $conference->media()->where('id', $mediaId)->first();
         
         if (!$media) {
@@ -265,12 +290,10 @@ class MediaController extends Controller
         try {
             $path = $media->getPath();
             
-            // Check if file exists
             if (!file_exists($path)) {
                 return $this->errorResponse('File not found on disk', 404);
             }
             
-            // Check if file is readable
             if (!is_readable($path)) {
                 return $this->errorResponse('File is not readable', 500);
             }
@@ -298,7 +321,6 @@ class MediaController extends Controller
      */
     public function serve(Conference $conference, $mediaId): mixed
     {
-        // Find media by ID manually instead of relying on route model binding
         $media = $conference->media()->where('id', $mediaId)->first();
         
         if (!$media) {
@@ -308,29 +330,25 @@ class MediaController extends Controller
         try {
             $path = $media->getPath();
             
-            // Check if file exists
             if (!file_exists($path)) {
                 return $this->errorResponse('File not found on disk', 404);
             }
             
-            // Check if file is readable
             if (!is_readable($path)) {
                 return $this->errorResponse('File is not readable', 500);
             }
             
-            // Get file contents
             $fileContent = file_get_contents($path);
             
             if ($fileContent === false) {
                 return $this->errorResponse('Unable to read file', 500);
             }
             
-            // Set appropriate headers for inline display
             $headers = [
                 'Content-Type' => $media->mime_type,
                 'Content-Length' => $media->size,
                 'Content-Disposition' => 'inline; filename="' . $media->file_name . '"',
-                'Cache-Control' => 'public, max-age=31536000', // Cache for 1 year
+                'Cache-Control' => 'public, max-age=31536000',
                 'Expires' => gmdate('D, d M Y H:i:s \G\M\T', time() + 31536000),
                 'Last-Modified' => gmdate('D, d M Y H:i:s \G\M\T', filemtime($path)),
                 'ETag' => '"' . md5_file($path) . '"',
@@ -374,26 +392,8 @@ class MediaController extends Controller
      */
     private function validateMimeType($file, string $collection): array
     {
-        $allowedMimeTypes = [
-            'images' => ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
-            'documents' => [
-                'application/pdf',
-                'application/msword',
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                'application/vnd.ms-excel',
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            ],
-            'general' => [
-                'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-                'application/pdf',
-                'application/msword',
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                'video/mp4', 'video/avi', 'video/mov'
-            ]
-        ];
-
+        $allowed = self::ALLOWED_MIME_TYPES[$collection] ?? [];
         $fileMimeType = $file->getMimeType();
-        $allowed = $allowedMimeTypes[$collection] ?? [];
 
         if (!in_array($fileMimeType, $allowed)) {
             return [

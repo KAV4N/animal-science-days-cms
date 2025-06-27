@@ -270,7 +270,7 @@
             <ul>
                 <li>You will be required to change your password upon first login</li>
                 <li>Please keep your login credentials secure and do not share them</li>
-                <li>If you suspect your account has been compromised, contact your administrator immediately</li>
+                <li>If you suspect that your account has been compromised or that you have forgotten your password, contact your administrator immediately.</li>
             </ul>
         </div>
         @endif

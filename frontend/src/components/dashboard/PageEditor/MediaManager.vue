@@ -278,7 +278,7 @@
                   ref="fileUpload"
                   mode="advanced"
                   :multiple="true"
-                  accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,video/*"
+                  accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.csv,video/*"
                   :maxFileSize="52428800"
                   :showUploadButton="false"
                   :showCancelButton="false"
@@ -662,7 +662,6 @@ export default defineComponent({
       showDeleteDialog: false,
       deleting: false,
       deletingMedia: null as MediaItem | null,
-      // New properties for link type selection
       showLinkTypeDialog: false,
       pendingMediaSelection: null as MediaItem | null,
     };
@@ -720,7 +719,6 @@ export default defineComponent({
 
         if (reset) {
           this.media = newMedia || [];
-          // Clear selection when refreshing
           this.selectedMedia = [];
         } else {
           this.media.push(...(newMedia || []));
@@ -769,7 +767,6 @@ export default defineComponent({
     },
 
     selectSingle(item: MediaItem) {
-      // Show link type selection dialog for single selection
       if (this.selectionMode === 'single') {
         this.pendingMediaSelection = item;
         this.showLinkTypeDialog = true;
@@ -785,7 +782,6 @@ export default defineComponent({
     },
 
     handleCardClick(item: MediaItem, event: Event) {
-      // Prevent card click when clicking on action buttons or checkboxes
       const target = event.target as HTMLElement;
       if (target.closest('button') || target.closest('.p-checkbox')) {
         return;
@@ -796,13 +792,11 @@ export default defineComponent({
       } else if (this.selectionMode === 'multiple' || this.isBatchDeleteMode) {
         this.toggleItemSelection(item);
       } else {
-        // Default view mode
         this.viewingMedia = item;
         this.showViewDialog = true;
       }
     },
 
-    // New methods for link type selection
     selectLinkType(linkType: 'serve' | 'download') {
       if (!this.pendingMediaSelection) return;
 
@@ -887,13 +881,11 @@ export default defineComponent({
 
     onFileSelect(event: FileUploadEvent) {
       this.selectedFiles = Array.from(event.files);
-      // Reset upload progress when new files are selected
       this.uploadProgress = [];
     },
 
     onFileRemove(event: FileRemoveEvent) {
       this.selectedFiles = this.selectedFiles.filter(file => file !== event.file);
-      // Remove from progress tracking as well
       this.uploadProgress = this.uploadProgress.filter(p => p.fileName !== event.file.name);
     },
 
@@ -904,20 +896,17 @@ export default defineComponent({
       let successCount = 0;
       let errorCount = 0;
 
-      // Initialize upload progress tracking
       this.uploadProgress = this.selectedFiles.map(file => ({
         fileName: file.name,
         status: 'uploading' as const,
       }));
 
       try {
-        // Process files sequentially to avoid overwhelming the server
         for (let i = 0; i < this.selectedFiles.length; i++) {
           const file = this.selectedFiles[i];
           const progressItem = this.uploadProgress[i];
 
           try {
-            // Pre-validate the file
             const validation = mediaService.validateFile(file, this.uploadData.collection);
             if (!validation.valid) {
               throw new Error(validation.message || 'File validation failed');
@@ -943,7 +932,6 @@ export default defineComponent({
           }
         }
 
-        // Show appropriate toast messages based on results
         if (successCount > 0 && errorCount === 0) {
           this.$toast.add({
             severity: 'success',
@@ -968,7 +956,6 @@ export default defineComponent({
           });
         }
 
-        // Only close dialog and refresh if at least one file was successful
         if (successCount > 0) {
             this.cancelUpload();
             this.fetchMedia();
@@ -1119,28 +1106,21 @@ export default defineComponent({
       return new Date(dateString).toLocaleDateString();
     },
 
-    /**
-     * Extract user-friendly error message from API response
-     */
     getErrorMessage(error: any): string {
-      // Handle validation errors (422)
       if (error.response?.status === 422 && error.response?.data?.errors) {
         const errors = error.response.data.errors;
         const firstField = Object.keys(errors)[0];
         return errors[firstField]?.[0] || 'Validation failed';
       }
 
-      // Handle API error messages
       if (error.response?.data?.message) {
         return error.response.data.message;
       }
 
-      // Handle API error details
       if (error.response?.data?.detail) {
         return error.response.data.detail;
       }
 
-      // Handle different HTTP status codes
       if (error.response?.status) {
         switch (error.response.status) {
           case 400:
@@ -1166,17 +1146,14 @@ export default defineComponent({
         }
       }
 
-      // Handle network errors
       if (error.code === 'NETWORK_ERROR' || error.message === 'Network Error') {
         return 'Network error - please check your connection';
       }
 
-      // Handle timeout errors
       if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
         return 'Request timed out - please try again';
       }
 
-      // Fallback for any other errors
       return error.message || 'An unexpected error occurred';
     }
   }

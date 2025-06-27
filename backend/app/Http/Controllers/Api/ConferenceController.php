@@ -345,10 +345,10 @@ class ConferenceController extends Controller
 
         $query = Conference::query();
 
-        $query->where('created_by', $user->id)
-              ->orWhereHas('editors', function ($q) use ($user) {
-                  $q->where('users.id', $user->id);
-              });
+        $query->whereHas('editors', function ($q) use ($user) {
+            $q->where('users.id', $user->id);
+        });
+
 
         if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;

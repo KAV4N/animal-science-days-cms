@@ -1,4 +1,3 @@
-// services/mediaService.ts
 import apiService from './apiService';
 import type {
   MediaItem,
@@ -10,9 +9,6 @@ import type {
 } from '@/types/media';
 
 class MediaService {
-  /**
-   * Get media files for a conference
-   */
   async getMedia(conferenceId: number, params?: MediaFilterParams): Promise<MediaPaginatedData> {
     try {
       const response = await apiService.get(`/v1/conference-management/conferences/${conferenceId}/media`, { params });
@@ -23,9 +19,6 @@ class MediaService {
     }
   }
 
-  /**
-   * Upload a new media file
-   */
   async uploadMedia(conferenceId: number, file: File, data: MediaUploadData): Promise<MediaItem> {
     try {
       const formData = new FormData();
@@ -43,9 +36,6 @@ class MediaService {
     }
   }
 
-  /**
-   * Update media file metadata
-   */
   async updateMedia(conferenceId: number, mediaId: number, data: MediaUpdateData): Promise<MediaItem> {
     try {
       const response = await apiService.put(`/v1/conference-management/conferences/${conferenceId}/media/${mediaId}`, data);
@@ -56,9 +46,6 @@ class MediaService {
     }
   }
 
-  /**
-   * Delete a media file
-   */
   async deleteMedia(conferenceId: number, mediaId: number): Promise<void> {
     try {
       await apiService.delete(`/v1/conference-management/conferences/${conferenceId}/media/${mediaId}`);
@@ -68,16 +55,12 @@ class MediaService {
     }
   }
 
-  /**
-   * Download a media file
-   */
   async downloadMediaFile(conferenceId: number, media: MediaItem): Promise<void> {
     try {
       const response = await apiService.get(`/v1/conferences/${conferenceId}/media/${media.id}/download`, {
         responseType: 'blob'
       });
 
-      // Create a blob URL and trigger download
       const blob = new Blob([response.data], { type: media.mime_type });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -93,25 +76,16 @@ class MediaService {
     }
   }
 
-  /**
-   * Get the serve URL for a media item
-   */
   getServeUrl(conferenceId: number, mediaId: number): string {
     const baseUrl = this.getBaseUrl();
     return `${baseUrl}/api/v1/conferences/${conferenceId}/media/${mediaId}/serve`;
   }
 
-  /**
-   * Get the download URL for a media item
-   */
   getDownloadUrl(conferenceId: number, mediaId: number): string {
     const baseUrl = this.getBaseUrl();
     return `${baseUrl}/api/v1/conferences/${conferenceId}/media/${mediaId}/download`;
   }
 
-  /**
-   * Get the appropriate URL based on link type
-   */
   getUrlByType(conferenceId: number, media: MediaItemWithLinkType, linkType?: 'serve' | 'download'): string {
     const type = linkType || media.linkType || 'serve';
 
@@ -122,21 +96,16 @@ class MediaService {
     }
   }
 
-  /**
-   * Create HTML content for inserting media into editor
-   */
   createMediaContent(conferenceId: number, media: MediaItemWithLinkType, linkType?: 'serve' | 'download'): string {
     const type = linkType || media.linkType || 'serve';
     const url = this.getUrlByType(conferenceId, media, type);
     const fileIcon = this.getFileIconEmoji(media.mime_type);
 
     if (type === 'download') {
-      // Always create download link regardless of file type
       return `<p><a href="${url}" target="_blank" download="${media.file_name}" title="Download ${media.file_name}">
         ${fileIcon} ${media.file_name}
       </a></p>`;
     } else {
-      // Create serve link - different behavior for images vs other files
       if (this.isImage(media.mime_type)) {
         return `<img src="${url}" alt="${media.file_name}" style="max-width: 100%; height: auto;" />`;
       } else {
@@ -147,9 +116,6 @@ class MediaService {
     }
   }
 
-  /**
-   * Batch delete multiple media items
-   */
   async batchDeleteMedia(conferenceId: number, mediaIds: number[]): Promise<void> {
     try {
       const deletePromises = mediaIds.map(id =>
@@ -162,25 +128,42 @@ class MediaService {
     }
   }
 
-  /**
-   * Validate file before upload
-   */
   validateFile(file: File, collection: string): { valid: boolean; message?: string } {
     const allowedMimeTypes: Record<string, string[]> = {
-      images: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+      images: [
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp', // Retained from original
+      ],
       documents: [
         'application/pdf',
         'application/msword',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-powerpoint',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'text/csv',
       ],
       general: [
-        'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp', // Retained from original
         'application/pdf',
         'application/msword',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'video/mp4', 'video/avi', 'video/mov'
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-powerpoint',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'text/csv',
+        'video/mp4',
+        'video/avi', // Retained from original
+        'video/mov', // Retained from original
+        'audio/mpeg',
+        'audio/wav',
       ]
     };
 
@@ -204,9 +187,6 @@ class MediaService {
     return { valid: true };
   }
 
-  /**
-   * Format file size in human-readable format
-   */
   formatFileSize(bytes: number): string {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -215,88 +195,63 @@ class MediaService {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 
-  /**
-   * Check if file is an image
-   */
   isImage(mimeType: string): boolean {
     return mimeType.startsWith('image/');
   }
 
-  /**
-   * Check if file is a document
-   */
   isDocument(mimeType: string): boolean {
     return [
       'application/pdf',
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'text/csv'
     ].includes(mimeType);
   }
 
-  /**
-   * Check if file is a video
-   */
   isVideo(mimeType: string): boolean {
     return mimeType.startsWith('video/');
   }
 
-  /**
-   * Get file icon class for UI
-   */
   getFileIcon(mimeType: string): string {
     if (this.isImage(mimeType)) return 'pi pi-image';
     if (mimeType === 'application/pdf') return 'pi pi-file-pdf';
     if (this.isDocument(mimeType)) return 'pi pi-file';
     if (this.isVideo(mimeType)) return 'pi pi-video';
+    if (mimeType.startsWith('audio/')) return 'pi pi-music';
     return 'pi pi-file';
   }
 
-  /**
-   * Get file icon emoji for content
-   */
   getFileIconEmoji(mimeType: string): string {
     if (this.isImage(mimeType)) return '🖼️';
     if (mimeType === 'application/pdf') return '📄';
     if (this.isDocument(mimeType)) return '📄';
     if (this.isVideo(mimeType)) return '🎥';
+    if (mimeType.startsWith('audio/')) return '🎵';
     return '📁';
   }
 
-  /**
-   * Get base URL for the application
-   */
   private getBaseUrl(): string {
     const protocol = window.location.protocol;
     const host = window.location.host;
     return `${protocol}//${host}`;
   }
 
-  /**
-   * Generate thumbnail URL if available
-   */
   getThumbnailUrl(media: MediaItem): string {
     return media.conversions?.thumb || media.url;
   }
 
-  /**
-   * Generate preview URL if available
-   */
   getPreviewUrl(media: MediaItem): string {
     return media.conversions?.preview || media.url;
   }
 
-  /**
-   * Check if media has conversions
-   */
   hasConversions(media: MediaItem): boolean {
     return !!(media.conversions?.thumb || media.conversions?.preview);
   }
 
-  /**
-   * Get collection display name
-   */
   getCollectionDisplayName(collection: string): string {
     const collectionNames: Record<string, string> = {
       images: 'Images',
@@ -306,9 +261,6 @@ class MediaService {
     return collectionNames[collection] || collection;
   }
 
-  /**
-   * Filter media by MIME types
-   */
   filterByMimeTypes(media: MediaItem[], allowedMimeTypes: string[]): MediaItem[] {
     if (allowedMimeTypes.length === 0) return media;
 
@@ -324,6 +276,5 @@ class MediaService {
   }
 }
 
-// Export singleton instance
 const mediaService = new MediaService();
 export default mediaService;
