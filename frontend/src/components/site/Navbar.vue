@@ -4,7 +4,6 @@ import Button from 'primevue/button';
 import Avatar from 'primevue/avatar';
 import ConfirmDialog from 'primevue/confirmdialog'; // Add this import
 import LoginCard from '../auth/LoginCard.vue';
-import Tooltip from 'primevue/tooltip';
 import { useAuthStore } from '@/stores/authStore';
 import { useConfirm } from 'primevue/useconfirm';
 
@@ -70,17 +69,17 @@ export default defineComponent({
     },
     getUserRole(): string {
       if (!this.currentUser?.roles?.length) return 'User';
-      
+
       // Prioritize role display: super_admin > admin > editor > other roles
       const roleHierarchy = ['super_admin', 'admin', 'editor'];
       const userRoleNames = this.currentUser.roles.map((role: any) => role.name);
-      
+
       for (const role of roleHierarchy) {
         if (userRoleNames.includes(role)) {
           return role.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
         }
       }
-      
+
       // Return first role if none match hierarchy
       return this.currentUser.roles[0].name.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
     },
@@ -136,9 +135,6 @@ export default defineComponent({
   beforeUnmount() {
     window.removeEventListener('scroll', this.handleScroll);
   },
-  directives: {
-    Tooltip
-  },
   setup() {
     const authStore = useAuthStore();
     const confirm = useConfirm();
@@ -179,22 +175,17 @@ export default defineComponent({
               <div class="font-medium">{{ currentUser?.name || 'User' }}</div>
               <div class="text-gray-500">{{ getUserRole }}</div>
             </div>
-            <Avatar 
-              :label="getUserInitials" 
-              size="normal" 
-              shape="circle" 
+            <Avatar
+              :label="getUserInitials"
+              size="normal"
+              shape="circle"
               class="bg-primary-100 text-primary-600 flex-shrink-0"
-              v-tooltip.bottom="{ 
-                value: `${currentUser?.name} (${getUserRole})`, 
-                pt: { text: 'px-3 py-1 text-xs rounded-2xl bg-neutral-900 text-white shadow border-none' } 
-              }" 
             />
           </div>
 
           <Button v-if="isAuthenticated" variant="outlined"
             class="flex items-center rounded-full transition-all duration-200 flex-shrink-0"
             :class="{ 'border-none hover:bg-white/20': !isScrolled, 'bg-white/60 hover:bg-gray-200': isScrolled }"
-            v-tooltip.bottom="{ value: 'Go to dashboard', pt: { text: 'px-3 py-1 text-xs rounded-2xl bg-neutral-900 text-white shadow border-none' } }"
             @click="$router.push({ name: 'ConferenceManagement' })">
             <i class="pi pi-th-large text-sm"></i>
           </Button>
@@ -206,7 +197,7 @@ export default defineComponent({
           <Button v-else @click="confirmLogout" variant="outlined"
             class="flex items-center rounded-full transition-all duration-200 flex-shrink-0"
             :class="{ 'border-none hover:bg-white/20': !isScrolled, 'bg-white/60 hover:bg-gray-200': isScrolled }"
-            v-tooltip.bottom="{ value: 'Logout from your account', pt: { text: 'px-3 py-1 text-xs rounded-2xl bg-neutral-900 text-white shadow border-none' } }">
+>
             <i class="pi pi-sign-out text-sm"></i>
           </Button>
         </div>
@@ -235,10 +226,10 @@ export default defineComponent({
           <div class="flex flex-col items-center gap-4 pb-4">
             <!-- User info display in mobile -->
             <div v-if="isAuthenticated" class="flex items-center gap-3 w-full p-3 bg-gray-50 rounded-lg">
-              <Avatar 
-                :label="getUserInitials" 
-                size="normal" 
-                shape="circle" 
+              <Avatar
+                :label="getUserInitials"
+                size="normal"
+                shape="circle"
                 class="bg-primary-100 text-primary-600"
               />
               <div class="flex-1">
@@ -266,7 +257,7 @@ export default defineComponent({
         </div>
       </div>
     </div>
-    
+
     <!-- Add ConfirmDialog component -->
     <ConfirmDialog />
     <LoginCard v-model:visible="loginCardVisible" @login="handleLoginSubmit" />

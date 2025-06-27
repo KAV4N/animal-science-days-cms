@@ -9,7 +9,6 @@
             text
             rounded
             size="small"
-            v-tooltip.bottom="{ value: 'Go to public home page', pt: { text: 'px-3 py-1 text-xs rounded-2xl bg-neutral-900 text-white shadow border-none' } }"
             @click="$router.push({ name: 'HomePage' })"
           />
         </div>
@@ -21,7 +20,6 @@
 <script>
 import Button from 'primevue/button';
 import Card from 'primevue/card';
-import Tooltip from 'primevue/tooltip';
 import { useAuthStore } from '@/stores/authStore';
 
 export default {
@@ -29,9 +27,6 @@ export default {
   components: {
     Button,
     Card
-  },
-  directives: {
-    Tooltip
   },
   props: {
     sidebarVisible: {
@@ -48,7 +43,7 @@ export default {
       }
     };
   },
-  
+
   setup() {
     const authStore = useAuthStore();
     return { authStore };
